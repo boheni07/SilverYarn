@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-09-07T20:28:00.540Z",
+  "lastUpdated": "2026-09-07T20:35:12.069Z",
   "activeFeatures": [
     "silveryarn-platform",
     "presentations",
@@ -122,7 +122,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:01:39.998Z",
-        "lastUpdated": "2026-09-07T20:27:10.556Z"
+        "lastUpdated": "2026-09-07T20:34:23.659Z"
       },
       "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\main.py"
     },
@@ -174,9 +174,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:04.724Z",
-        "lastUpdated": "2026-09-07T20:25:25.623Z"
+        "lastUpdated": "2026-09-07T20:32:54.022Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\care\\domain\\conversation_chunk.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\schedule\\domain\\schedule_item.py"
     },
     "infrastructure": {
       "phase": "do",
@@ -187,9 +187,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:12.145Z",
-        "lastUpdated": "2026-09-07T20:26:04.205Z"
+        "lastUpdated": "2026-09-07T20:33:15.205Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\care\\infrastructure\\conversation_chunk_repository.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\schedule\\infrastructure\\schedule_item_repository.py"
     },
     "application": {
       "phase": "do",
@@ -200,9 +200,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:24.319Z",
-        "lastUpdated": "2026-09-07T20:26:22.626Z"
+        "lastUpdated": "2026-09-07T20:33:33.228Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\care\\application\\conversation_chunk_service.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\schedule\\application\\schedule_item_service.py"
     },
     "api": {
       "phase": "do",
@@ -213,9 +213,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:38.061Z",
-        "lastUpdated": "2026-09-07T20:26:27.251Z"
+        "lastUpdated": "2026-09-07T20:33:38.560Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\care\\api\\__init__.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\schedule\\api\\__init__.py"
     },
     "v1": {
       "phase": "do",
@@ -226,9 +226,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:40.284Z",
-        "lastUpdated": "2026-09-07T20:26:51.079Z"
+        "lastUpdated": "2026-09-07T20:34:04.997Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\care\\api\\v1\\conversation_chunks.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\schedule\\api\\v1\\schedule_items.py"
     },
     "devices": {
       "phase": "do",
@@ -291,9 +291,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:06:14.107Z",
-        "lastUpdated": "2026-09-07T14:06:14.107Z"
+        "lastUpdated": "2026-09-07T20:35:12.066Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\schedule\\__init__.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\schedule\\test_schedule_item_service.py"
     },
     "migrations": {
       "phase": "do",
@@ -304,7 +304,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:06:53.446Z",
-        "lastUpdated": "2026-09-07T20:27:21.799Z"
+        "lastUpdated": "2026-09-07T20:34:35.879Z"
       },
       "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\migrations\\env.py"
     },
@@ -389,7 +389,7 @@
   "session": {
     "startedAt": "2026-09-05T08:17:53.299Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-09-07T20:28:00.540Z"
+    "lastActivity": "2026-09-07T20:35:12.069Z"
   },
   "history": [
     {
@@ -1361,6 +1361,90 @@
     {
       "timestamp": "2026-09-07T20:28:00.540Z",
       "feature": "care",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:32:54.024Z",
+      "feature": "domain",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:32:59.025Z",
+      "feature": "infrastructure",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:33:15.207Z",
+      "feature": "infrastructure",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:33:20.037Z",
+      "feature": "application",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:33:33.230Z",
+      "feature": "application",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:33:38.563Z",
+      "feature": "api",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:33:43.402Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:34:04.998Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:34:16.226Z",
+      "feature": "core_service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:34:23.662Z",
+      "feature": "core_service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:34:35.881Z",
+      "feature": "migrations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:34:45.513Z",
+      "feature": "schedule",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:34:50.235Z",
+      "feature": "schedule",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:35:12.068Z",
+      "feature": "schedule",
       "phase": "do",
       "action": "updated"
     }
