@@ -1,0 +1,9 @@
+{
+  "feature": "silveryarn-platform",
+  "workflowId": "default-pdca",
+  "automationLevel": 2,
+  "dependsOn": [],
+  "createdAt": "2026-09-05T08:19:04.662Z",
+  "updatedAt": "2026-09-05T08:19:04.662Z",
+  "history": []
+}

@@ -1,0 +1,1 @@
+- [킥오프 아키텍처 심사 결과](bkit-enterprise-expert/project_kickoff_architecture_review.md) — Design v0.2 Go with conditions 판정과 착수 전 Blocker 6건 (파일로 남지 않은 유일 기록)

@@ -1,0 +1,50 @@
+# ==== OS ====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==== Editors/IDE ====
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# ==== Python (services/*, FastAPI) ====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ==== Node / Next.js (apps/web, apps/admin) ====
+node_modules/
+.next/
+out/
+dist/
+build/
+.turbo/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ==== Kotlin / Android (apps/mobile) ====
+*.iml
+.gradle/
+/local.properties
+/apps/mobile/build/
+/apps/mobile/**/build/
+captures/
+.cxx/
+
+# ==== Env & secrets ====
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ==== Logs ====
+*.log

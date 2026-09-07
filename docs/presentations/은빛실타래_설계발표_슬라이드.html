@@ -1,0 +1,1155 @@
+<title>은빛실타래 설계발표</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700;900&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* ============ Design Tokens — 은빛실타래 BI 가이드 기반, 단일 라이트 테마 ============ */
+  :root{
+    --paper:#F4F2EE; --surface:#FFFFFF; --subtle:#ECE8E1; --subtle2:#F7F5F1;
+    --border:#DEDACF; --border-strong:#B7AD9B;
+    --ink:#20242B; --ink-muted:#4A525E; --ink-faint:#70767F;
+    --silver:#8E97A6; --silver-deep:#4B5563;
+    --teal:#1E7A8C; --teal-deep:#155C6B; --teal-tint:#E4F0F2;
+    --gold:#B8935A; --gold-deep:#8A6A3C; --gold-tint:#F3E9D8;
+    --red:#A23F35; --red-tint:#F5E3E1;
+    --green:#33684C; --green-tint:#E1EDE6;
+    --font-serif:'Noto Serif KR', 'Nanum Myeongjo', serif;
+    --font-sans:'Pretendard', -apple-system, 'Malgun Gothic', sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', Consolas, 'Nanum Gothic Coding', monospace;
+    --stage-w:1920px; --stage-h:1080px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--ink);
+    font-family:var(--font-sans);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  ::selection{background:var(--teal-tint); color:var(--teal-deep);}
+
+  /* ============ Stage scaffolding ============ */
+  #stage-outer{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(ellipse at 20% -10%, #2a3140 0%, transparent 55%),
+      radial-gradient(ellipse at 100% 110%, #1a3c42 0%, transparent 50%),
+      var(--ink);
+  }
+  #stage{
+    width:var(--stage-w); height:var(--stage-h);
+    position:relative; background:var(--paper);
+    box-shadow:0 40px 120px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.2);
+    transform-origin:center center;
+    overflow:hidden;
+    flex:0 0 auto;
+  }
+  #slide-root{position:absolute; inset:0;}
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding:64px 96px 108px 96px;
+    opacity:0; transform:translateY(22px);
+  }
+  .slide.active{
+    opacity:1; transform:none;
+    transition:opacity .5s cubic-bezier(.2,.8,.2,1), transform .5s cubic-bezier(.2,.8,.2,1);
+  }
+  @media (prefers-reduced-motion: reduce){
+    .slide{transition:none !important; transform:none !important;}
+    [data-step]{transition:none !important;}
+  }
+
+  /* keep-all: 한글 단어/조사 단위 줄바꿈 보존 */
+  .slide, .slide *{ word-break:keep-all; overflow-wrap:break-word; line-break:strict; }
+
+  /* ============ Header (kicker + title) ============ */
+  .hd{margin-bottom:34px; flex:0 0 auto;}
+  .kicker{
+    font-family:var(--font-sans); font-weight:700; font-size:22px; letter-spacing:.14em;
+    color:var(--teal-deep); text-transform:uppercase; margin:0 0 14px 0;
+  }
+  .title{
+    font-family:var(--font-serif); font-weight:700; font-size:54px; line-height:1.28;
+    color:var(--ink); margin:0; text-wrap:balance; letter-spacing:-.01em;
+  }
+  .subtitle{ font-family:var(--font-sans); font-weight:500; font-size:26px; color:var(--ink-muted); margin:14px 0 0 0; }
+
+  .content{flex:1 1 auto; min-height:0; display:flex; flex-direction:column;}
+
+  /* ============ Reveal mechanics ============ */
+  [data-step]{
+    opacity:0; transform:translateY(18px);
+  }
+  [data-step].shown{
+    opacity:1; transform:none;
+  }
+  @media (prefers-reduced-motion: no-preference){
+    [data-step]{ transition:opacity .45s cubic-bezier(.2,.8,.2,1), transform .45s cubic-bezier(.2,.8,.2,1); }
+  }
+
+  /* ============ Bullets ============ */
+  .b-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:22px; overflow-y:auto; }
+  .b-item{ position:relative; padding-left:40px; font-size:32px; line-height:1.55; color:var(--ink); font-weight:500; }
+  .b-item::before{
+    content:'▸'; position:absolute; left:0; top:2px; color:var(--teal); font-size:28px;
+  }
+  .b-item.lvl1{ font-size:26px; padding-left:70px; color:var(--ink-muted); font-weight:400; }
+  .b-item.lvl1::before{ content:'—'; left:38px; color:var(--silver-deep); font-size:22px; }
+  .b-item.tone-accent{ color:var(--teal-deep); font-weight:700; }
+  .b-item.tone-accent::before{ color:var(--teal-deep); }
+  .b-item.tone-warn{ color:var(--gold-deep); font-weight:700; }
+  .b-item.tone-warn::before{ color:var(--gold-deep); content:'⚠'; }
+  .b-item.tone-crit{ color:var(--red); font-weight:700; }
+  .b-item.tone-crit::before{ color:var(--red); content:'✕'; }
+  .b-item.tone-good{ color:var(--green); font-weight:700; }
+  .b-item.tone-good::before{ color:var(--green); content:'✓'; }
+
+  .note{ margin-top:26px; padding:16px 22px; background:var(--gold-tint); border-left:5px solid var(--gold); border-radius:4px; font-size:22px; color:var(--gold-deep); font-weight:600; }
+  .note.crit{ background:var(--red-tint); border-color:var(--red); color:var(--red); }
+
+  /* ============ Two-column ============ */
+  .twocol{ display:grid; grid-template-columns:1fr 1fr; gap:56px; flex:1; min-height:0; }
+  .col{ background:var(--surface); border:1.5px solid var(--border-strong); border-radius:14px; padding:34px 38px; display:flex; flex-direction:column; min-height:0; }
+  .col-label{ font-family:var(--font-sans); font-weight:800; font-size:24px; letter-spacing:.03em; margin:0 0 20px 0; padding-bottom:14px; border-bottom:2px solid var(--border); }
+  .col.left .col-label{ color:var(--teal-deep); }
+  .col.right .col-label{ color:var(--red); }
+  .col .b-list{ gap:16px; }
+  .col .b-item{ font-size:24px; padding-left:34px; }
+  .col .b-item::before{ font-size:20px; top:3px; }
+  .col .b-item.lvl1{ font-size:21px; padding-left:58px; }
+
+  /* ============ Table ============ */
+  .tbl-wrap{ flex:1; min-height:0; overflow:auto; border-radius:12px; border:1.5px solid var(--border-strong); }
+  table.dt{ width:100%; border-collapse:collapse; background:var(--surface); font-size:24px; }
+  table.dt th{
+    background:var(--ink); color:var(--surface); text-align:left; font-weight:700;
+    padding:16px 22px; font-size:22px; letter-spacing:.02em; position:sticky; top:0;
+  }
+  table.dt td{ padding:15px 22px; border-top:1px solid var(--border); color:var(--ink); vertical-align:top; font-variant-numeric:tabular-nums; }
+  table.dt tr:nth-child(even) td{ background:var(--subtle2); }
+  table.dt tr[data-step]{ }
+  table.dt td.hl{ color:var(--teal-deep); font-weight:700; }
+  table.dt td.crit{ color:var(--red); font-weight:700; }
+  table.dt td.center{ text-align:center; }
+
+  /* ============ Flow (vertical & horizontal) ============ */
+  .flow-v{ display:flex; flex-direction:column; gap:14px; flex:1; justify-content:center; max-width:1500px; margin:0 auto; width:100%; }
+  .flow-step{ display:flex; align-items:center; gap:24px; background:var(--surface); border:1.5px solid var(--border-strong); border-radius:12px; padding:18px 28px; position:relative; }
+  .flow-num{ flex:0 0 auto; width:56px; height:56px; border-radius:50%; background:var(--teal); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-serif); font-weight:700; font-size:26px; }
+  .flow-body{ flex:1; }
+  .flow-title{ font-size:26px; font-weight:700; color:var(--ink); margin:0; }
+  .flow-desc{ font-size:20px; color:var(--ink-muted); margin:4px 0 0 0; }
+  .flow-chevron{ text-align:center; color:var(--gold); font-size:26px; margin:-3px 0; }
+
+  .flow-h{ display:flex; align-items:stretch; gap:0; flex:1; }
+  .flow-h-step{ flex:1; display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; padding:0 8px;}
+  .flow-h-badge{ width:64px; height:64px; border-radius:50%; background:var(--teal); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-serif); font-weight:700; font-size:28px; }
+  .flow-h-title{ font-size:23px; font-weight:700; color:var(--ink); }
+  .flow-h-desc{ font-size:18px; color:var(--ink-muted); line-height:1.4; }
+  .flow-h-arrow{ flex:0 0 44px; display:flex; align-items:center; justify-content:center; color:var(--gold); font-size:30px; align-self:flex-start; margin-top:22px; }
+
+  /* ============ Diagram (freeform boxes + svg arrows) ============ */
+  .diagram{ position:relative; flex:1; }
+  .dbox{
+    position:absolute; border-radius:12px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; padding:14px;
+    font-size:22px; font-weight:700; line-height:1.35; border:1.5px solid var(--border-strong);
+    background:var(--surface); color:var(--ink);
+  }
+  .dbox .sub{ font-weight:400; font-size:18px; color:var(--ink-muted); margin-top:6px; }
+  .dbox.tone-teal{ background:var(--teal-tint); border-color:var(--teal); color:var(--teal-deep); }
+  .dbox.tone-ink{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .dbox.tone-gold{ background:var(--gold-tint); border-color:var(--gold); color:var(--gold-deep); }
+  .dbox.tone-subtle{ background:var(--subtle); border-color:var(--border-strong); color:var(--ink); }
+  .dbox.label{ background:transparent; border:none; font-weight:800; font-size:24px; color:var(--ink); }
+  .diagram svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+  .diagram .arrow-lbl{ position:absolute; font-size:18px; font-weight:700; color:var(--gold-deep); background:var(--paper); padding:2px 8px; border-radius:6px; }
+
+  /* ============ Code ============ */
+  .code-wrap{ flex:1; background:#171B22; border-radius:14px; padding:32px 40px; overflow:auto; border:1px solid #2b323d; }
+  .code-wrap pre{ margin:0; font-family:var(--font-mono); font-size:22px; line-height:1.55; color:#DCEEF1; white-space:pre; }
+  .code-wrap .k{color:#7FD0DE;} .code-wrap .s{color:#E3C88C;}
+
+  /* ============ Swatches ============ */
+  .swatch-row{ display:flex; gap:26px; margin-bottom:40px; }
+  .swatch{ flex:1; }
+  .swatch-chip{ height:130px; border-radius:12px; border:1px solid rgba(0,0,0,.08); }
+  .swatch-name{ font-weight:700; font-size:22px; margin-top:12px; }
+  .swatch-hex{ font-size:18px; color:var(--ink-muted); font-family:var(--font-mono); }
+
+  /* ============ Title / Section / Closing full slides ============ */
+  .full-center{ flex:1; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; }
+  .mark{ margin-bottom:28px; }
+  .cover-eyebrow{ font-family:var(--font-sans); font-weight:700; font-size:24px; letter-spacing:.16em; color:var(--gold-deep); text-transform:uppercase; margin:0 0 22px 0; }
+  .cover-title{ font-family:var(--font-serif); font-weight:900; font-size:104px; color:var(--ink); margin:0; line-height:1.1; letter-spacing:-.01em;}
+  .cover-sub{ font-family:var(--font-sans); font-weight:600; font-size:34px; color:var(--teal-deep); margin:26px 0 0 0; }
+  .cover-desc{ font-family:var(--font-sans); font-weight:400; font-size:24px; color:var(--ink-muted); margin:16px 0 0 0; max-width:1200px; line-height:1.6; }
+  .cover-meta{ position:absolute; left:96px; bottom:64px; font-size:20px; color:var(--ink-faint); font-weight:500; }
+
+  .sec-no{ font-family:var(--font-serif); font-weight:900; font-size:260px; color:var(--teal-tint); line-height:.8; margin:0; }
+  .sec-title{ font-family:var(--font-serif); font-weight:700; font-size:72px; color:var(--ink); margin:-40px 0 0 0; text-wrap:balance; }
+  .sec-sub{ font-family:var(--font-sans); font-weight:500; font-size:28px; color:var(--ink-muted); margin:20px 0 0 0; }
+  .sec-rule{ width:120px; height:6px; background:var(--gold); border-radius:3px; margin-top:30px; }
+
+  /* ============ Agenda ============ */
+  .agenda-grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px 60px; flex:1; align-content:center; }
+  .agenda-item{ display:flex; align-items:baseline; gap:22px; padding:16px 0; border-bottom:1px solid var(--border); }
+  .agenda-no{ font-family:var(--font-serif); font-weight:700; font-size:34px; color:var(--teal); width:64px; flex:0 0 auto; }
+  .agenda-label{ font-size:29px; font-weight:600; color:var(--ink); }
+
+  /* ============ Nav chrome ============ */
+  #chrome{ position:absolute; left:0; right:0; bottom:0; height:96px; display:flex; align-items:center; padding:0 56px; gap:26px; background:linear-gradient(to top, rgba(244,242,238,.97), rgba(244,242,238,0)); z-index:20; }
+  #part-label{ font-size:20px; font-weight:700; color:var(--ink-muted); letter-spacing:.04em; }
+  #part-label b{ color:var(--teal-deep); }
+  #progress-track{ flex:1; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+  #progress-fill{ height:100%; background:var(--teal); border-radius:3px; transition:width .3s ease; }
+  #counter{ font-size:20px; color:var(--ink-muted); font-weight:700; font-variant-numeric:tabular-nums; min-width:100px; text-align:right; }
+  .navbtn{
+    width:52px; height:52px; border-radius:50%; border:1.5px solid var(--border-strong); background:var(--surface);
+    color:var(--ink); font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .navbtn:hover{ background:var(--teal); border-color:var(--teal); color:#fff; }
+  .navbtn:focus-visible{ outline:3px solid var(--teal-deep); outline-offset:2px; }
+  #hint{ position:absolute; right:56px; top:40px; font-size:18px; color:var(--ink-faint); font-weight:600; background:var(--surface); border:1px solid var(--border); padding:8px 16px; border-radius:20px; z-index:20; }
+  #hint kbd{ background:var(--subtle); border-radius:4px; padding:1px 6px; font-family:var(--font-mono); }
+
+  .scrollarea{ overflow-y:auto; }
+</style>
+
+<div id="stage-outer">
+  <div id="stage">
+    <div id="slide-root"></div>
+    <div id="hint">방향키 <kbd>→</kbd> / <kbd>←</kbd> 로 진행 · <kbd>Esc</kbd> 전체화면</div>
+    <div id="chrome">
+      <button class="navbtn" id="btn-prev" aria-label="이전" title="이전 (←)">‹</button>
+      <div id="part-label">PART <b id="part-no">0</b> · <span id="part-name">Cover</span></div>
+      <div id="progress-track"><div id="progress-fill" style="width:0%"></div></div>
+      <div id="counter">1 / 1</div>
+      <button class="navbtn" id="btn-next" aria-label="다음" title="다음 (→)">›</button>
+      <button class="navbtn" id="btn-full" aria-label="전체화면" title="전체화면">⛶</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   은빛실타래 (SilverYarn) 설계발표 슬라이드 — 데이터
+   Source: docs/01-plan/*, docs/02-design/*, CLAUDE.md, CONVENTIONS.md
+   ============================================================ */
+
+const LOGO_SVG = (size, arcA, arcB, dot) => `
+<svg width="${size}" height="${size}" viewBox="0 0 200 200" fill="none">
+  <path d="M 100,50 A 50,50 0 1 1 50,100" stroke="${arcA}" stroke-width="9" stroke-linecap="round"/>
+  <path d="M 100,134 A 34,34 0 1 1 134,100" stroke="${arcB}" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="100" cy="100" r="8" fill="${dot}"/>
+</svg>`;
+
+const PARTS = [
+  "Cover",
+  "프로젝트 개요",
+  "시스템 아키텍처",
+  "분야별 프로세스",
+  "데이터 모델 & API",
+  "UI/UX·디자인시스템",
+  "보안·컨벤션·스택",
+  "의사결정 & 검증",
+  "CTO팀 검토",
+  "로드맵 & 실행계획"
+];
+
+function T(text, level, tone){ return {text, level:level||0, tone:tone||'default'}; }
+
+const SLIDES = [];
+
+/* ---------------- 0. Cover & Agenda ---------------- */
+SLIDES.push({part:0, type:'title',
+  eyebrow:'Design Review Deck',
+  title:'은빛실타래', sub:'SilverYarn — 어르신 자서전 제작 및 AI 말벗돌봄 플랫폼',
+  desc:'온디바이스(오프라인 우선) × 온프레미스 서버 하이브리드 아키텍처 — 설계문서 종합 발표자료',
+  meta:'2026년 9월 · NUBiz AX(AI Transformation) Initiative'});
+
+SLIDES.push({part:0, kicker:'Agenda', title:'목차', type:'agenda', items:[
+  {no:'01', label:'프로젝트 개요'},
+  {no:'02', label:'시스템 아키텍처'},
+  {no:'03', label:'분야별 세부 프로세스'},
+  {no:'04', label:'데이터 모델 & API'},
+  {no:'05', label:'UI/UX · 디자인시스템'},
+  {no:'06', label:'보안 · 컨벤션 · 기술스택'},
+  {no:'07', label:'의사결정 현황 & 설계 검증'},
+  {no:'08', label:'CTO팀 검토 의견 (7개 관점)'},
+  {no:'09', label:'로드맵 & 실행 계획'},
+]});
+
+/* ---------------- Part 1. 프로젝트 개요 ---------------- */
+SLIDES.push({part:1, type:'section', no:'01', title:'프로젝트 개요', sub:'배경 · 목적 · 대상 사용자 · 서비스 컨셉'});
+
+SLIDES.push({part:1, kicker:'Part 1 · 개요', title:'Executive Summary', type:'table',
+  cols:['관점','내용'], colWidths:[18,82],
+  rows:[
+    ['Problem','고령화로 어르신 삶의 기록이 소실되고, 독거·정서적 고립으로 돌봄 공백 확대. 저사양/재활용 단말·비상시 인터넷 환경 고려 필요'],
+    ['Solution','온디바이스 STT/SLM/TTS로 평소 대화를 오프라인 완결, 등록 Wi-Fi 접속 시에만 온프레미스 서버(LLM·RAG·지식그래프)와 배치 동기화'],
+    ['Function/UX Effect','끊김 없는 대화 경험, 사진 기반 자동 회고로 자연스러운 콘텐츠 축적, 단말 사양별 키오스크/일반 자동 설치'],
+    ['Core Value','자서전 제작(입구) → 말벗돌봄·비서(체류)로 이어지는 락인 라이프사이클, 초개인화 대화로 범용 챗봇 대비 높은 몰입도'],
+  ]});
+
+SLIDES.push({part:1, kicker:'Part 1 · 개요', title:'프로젝트 배경', type:'bullets', items:[
+  T('고령화 심화로 어르신 삶의 기록이 보존되지 못한 채 소실되는 경우 증가'),
+  T('독거 및 정서적 고립으로 인한 돌봄 공백 문제 심화'),
+  T('재활용 스마트폰 등 저비용 단말을 활용한 시니어 접근성 개선 요구 증가'),
+  T('재활용·저사양 단말과 고사양 개인 단말은 하드웨어·사용맥락이 달라 설치방식 자동 분기 구조 필요'),
+  T('시니어 생활 환경상 상시 인터넷 연결을 기대하기 어려워 오프라인 완결 + 자택 Wi-Fi 동기화 구조가 요구됨'),
+]});
+
+SLIDES.push({part:1, kicker:'Part 1 · 개요', title:'프로젝트 목적 & 핵심 차별점', type:'bullets', items:[
+  T('목적: 온디바이스 음성 인터페이스(VAD·STT·SLM·TTS) + 중앙 서버 생성형 AI(LLM·RAG·지식그래프) 연계', 0, 'accent'),
+  T('오프라인 우선(Offline-First): 평상시 대화는 인터넷 연결 없이 온디바이스에서 완결', 1),
+  T('Wi-Fi 배치 동기화: 등록 Wi-Fi 접속 시에만 서버 고성능 엔진으로 최신화 후 재동기화', 1),
+  T('사진 기반 자동 회고 트리거: 신규 사진을 AI가 먼저 제시하며 자연스러운 회고 유도', 1),
+  T('디바이스 사양 기반 설치모드 자동 분기: 저사양은 키오스크, 고사양은 일반 앱 모드', 1),
+  T('작가 모드 → 말벗돌봄 모드 → 비서 모드로 이어지는 3단계 라이프사이클 통합 제공', 1),
+]});
+
+SLIDES.push({part:1, kicker:'Part 1 · 개요', title:'대상 사용자', type:'table',
+  cols:['구분','설명'], colWidths:[24,76],
+  rows:[
+    ['1차 사용자','구술의 주체가 되는 어르신 본인'],
+    ['2차 사용자','자서전을 감수·열람하는 가족, 돌봄 연계가 필요한 요양보호사·복지사'],
+    ['잠재 고객','복지관·요양기관·지자체 등 B2G/B2B 파일럿 운영 주체 — 채널 전략은 B2C/B2G 병행 추진으로 확정'],
+  ]});
+
+SLIDES.push({part:1, kicker:'Part 1 · 개요', title:'서비스 컨셉 — 3대 운영 모드', type:'table',
+  cols:['모드','목표','주요 기능'], colWidths:[20,32,48],
+  rows:[
+    ['① 자서전 작가 모드','연대기적 구술 발굴 및 문학적 초안 생성','질문 생성기 · 사진 기반 회고 질문 · 심층 인터뷰잉 · 구술체→문어체 정제·챕터 자동귀속'],
+    ['② 말벗돌봄 모드','초개인화 공감 대화 및 고독감 해소','RAG 기반 추억 회상 · 사진 기반 회고 대화 · 정서 모니터링 및 알림 연동'],
+    ['③ 비서 모드','인지 기능 보조 및 일상 건강·일정 관리','일정·복약 엔티티 추출·등록 · 지정 시각 능동형 음성 브리핑'],
+  ],
+  note:'세 모드는 상호 배타적이지 않으며, 의도 분류(Intent Classification)로 하나의 대화 흐름 안에서 자연스럽게 전환됨'});
+
+SLIDES.push({part:1, kicker:'Part 1 · 개요', title:'① 자서전 작가 모드 상세', type:'bullets', items:[
+  T('페르소나: 경청하는 인터뷰어 — 정중하고 호기심 있는 태도'),
+  T('질문 생성기: 기존 질문 이력과 대조해 미중복 회고 질문·꼬리질문 자동 생성'),
+  T('사진 기반 회고 질문: 신규 사진을 먼저 제시하며 자연스러운 구술 유도'),
+  T('구술체 → 문어체 정제 및 챕터 자동 귀속(유년기/청년기/중장년기/현재)'),
+  T('완성 결과물은 가족 웹 콘솔 감수를 거쳐 챕터로 확정 → 최종 하드커버 PDF/ePub 출판까지 연결'),
+]});
+
+SLIDES.push({part:1, kicker:'Part 1 · 개요', title:'② 말벗돌봄 모드 상세', type:'bullets', items:[
+  T('페르소나: 사용자의 일생을 아는 친근한 오랜 벗 — 표시명 "은빛이" (화면설계서 확정)'),
+  T('RAG 기반 추억 회상: "비가 오네" 같은 일상 발화 → 관련 과거 일화를 자연스럽게 인출'),
+  T('사진 기반 회고 대화: 작가 모드와 동일한 트리거를 자연스러운 회상 대화 형식으로 진행'),
+  T('발화 톤·부정어 빈도 분석 기반 정서 모니터링 → 임계치 초과 시 가족·복지사 알림 (법무 검토 대기 중)', 0, 'warn'),
+]});
+
+SLIDES.push({part:1, kicker:'Part 1 · 개요', title:'③ 비서 모드 상세', type:'bullets', items:[
+  T('페르소나: 정확한 확인형 비서 — 명료하고 신뢰감 있는 톤'),
+  T('자연어 발화 기반 일정·복약 엔티티 추출 및 로컬 DB 등록'),
+  T('지정 시각 능동형(Push) 음성 브리핑'),
+  T('무응답 시 재알림(에스컬레이션), 거부 시 사유 기록'),
+]});
+
+SLIDES.push({part:1, kicker:'Part 1 · 개요', title:'에이전트 페르소나 정의', type:'table',
+  cols:['에이전트','역할','표시명','톤'], colWidths:[18,32,25,25],
+  rows:[
+    ['AuthorAgent','경청하는 인터뷰어','미정 — 은빛이와 통일 여부 결정 필요','정중하고 호기심 있는 인터뷰어'],
+    ['CareAgent','친근한 오랜 벗','은빛이 (확정)','다정하고 편안한 오랜 친구'],
+    ['ScheduleAgent','정확한 확인형 비서','미정','명료하고 신뢰감 있는 비서'],
+  ]});
+
+/* ---------------- Part 2. 시스템 아키텍처 ---------------- */
+SLIDES.push({part:2, type:'section', no:'02', title:'시스템 아키텍처', sub:'온디바이스-온프레미스 하이브리드 구조 · 전체 업무 흐름'});
+
+SLIDES.push({part:2, kicker:'Part 2 · 아키텍처', title:'데이터·운영 4원칙', type:'bullets', items:[
+  T('원칙 1 (오프라인 우선): 평상시 대화는 인터넷 연결 없이 온디바이스에서 완결, 서버 동기화는 등록 Wi-Fi 접속 시에만', 0, 'accent'),
+  T('원칙 2 (전면 온프레미스): 원본 음성·자서전 원고·임베딩 벡터 등 PII 포함 데이터는 100% 자체 GPU 서버(vLLM·A100)·자체 DB에서만 처리', 0, 'accent'),
+  T('원칙 3 (제한적·선택적 외부 연계): 외부 클라우드 AI는 비식별화 데이터에 한해, 사용자 명시적 동의(Opt-in) 하에만 연계'),
+  T('원칙 4 (계약적 통제): 외부 연계 범위는 DPA 체결 및 내부 보안 검토를 통과한 항목으로 한정'),
+], note:'Zero External Data Egress — bkit Enterprise 기본 AWS 템플릿은 적용하지 않음'});
+
+SLIDES.push({part:2, kicker:'Part 2 · 아키텍처', title:'아키텍처 옵션 비교', type:'table',
+  cols:['기준','A. 완전 클라우드','B. 하이브리드 (선정)','C. 완전 온디바이스'], colWidths:[22,26,30,22],
+  rows:[
+    ['오프라인 대응','불가','가능 (평소 대화 전량 오프라인)','가능하나 정교화 불가'],
+    ['데이터 주권','취약(상시 전송)','강함(PII 전량 온프레미스)','강함(단, 협업·감수 불가)'],
+    ['정확도/개인화','높음(상시 최신)','높음(Wi-Fi 동기화 시 정교화)','낮음(저사양 SLM 한계)'],
+    ['가족 협업(웹콘솔)','가능','가능','불가'],
+    ['결론','시니어 오프라인 환경 부적합','★ 선정 — 오프라인+데이터주권+협업 모두 충족','협업·정교화 기능 상실'],
+  ]});
+
+SLIDES.push({part:2, kicker:'Part 2 · 아키텍처', title:'전체 컴포넌트 다이어그램', type:'diagram',
+  boxes:[
+    {x:120,y:80,w:480,h:230,g:0,tone:'teal',text:'📱 모바일앱',sub:'온디바이스(오프라인 우선)\nVAD·STT·FTS5 RAG·SLM·TTS'},
+    {x:720,y:80,w:480,h:230,g:1,tone:'subtle',text:'🖥️ 서버 (전량 온프레미스)',sub:'FastAPI · 작가/말벗돌봄/비서 엔진\nvLLM·A100 · Qdrant · Neo4j · PG · MinIO'},
+    {x:1320,y:80,w:440,h:230,g:2,tone:'subtle',text:'🖊️ 웹 콘솔',sub:'Next.js\n자서전 사용자 / 가족 / 관리자'},
+    {x:120,y:400,w:480,h:150,g:3,tone:'gold',text:'Wi-Fi 접속 시',sub:'자동 업/다운로드 (배치 동기화)'},
+    {x:720,y:400,w:480,h:150,g:3,tone:'gold',text:'인증 · API',sub:'Keycloak SSO · /api/v1 · snake_case'},
+    {x:1320,y:400,w:440,h:150,g:3,tone:'subtle',text:'선택 · Opt-in',sub:'외부 고품질 TTS (Phase 3 한정)'},
+    {x:120,y:620,w:1640,h:130,g:4,tone:'ink',text:'핵심 원칙 — 오프라인 우선 + 전면 온프레미스(Zero External Data Egress) + 제한적 선택적 외부연계'},
+  ],
+  arrows:[
+    {x1:360,y1:310,x2:360,y2:400,g:3},{x1:960,y1:310,x2:960,y2:400,g:3},{x1:1540,y1:310,x2:1540,y2:400,g:3},
+  ]});
+
+SLIDES.push({part:2, kicker:'Part 2 · 아키텍처', title:'Closed-Loop Architecture — Edge ⇄ Cloud 피드백 루프', type:'diagram',
+  boxes:[
+    {x:60,y:40,w:1780,h:70,g:0,tone:'teal',text:'📱 EDGE TIER — 온디바이스 (Low-Latency)'},
+    {x:60,y:130,w:320,h:110,g:1,tone:'subtle',text:'VAD'},
+    {x:410,y:130,w:320,h:110,g:1,tone:'subtle',text:'경량 STT'},
+    {x:760,y:130,w:320,h:110,g:1,tone:'subtle',text:'FTS5 RAG',sub:'Zero-Neural'},
+    {x:1110,y:130,w:320,h:110,g:1,tone:'subtle',text:'온디바이스 SLM'},
+    {x:1460,y:130,w:320,h:110,g:1,tone:'subtle',text:'Native TTS'},
+    {x:60,y:270,w:1720,h:60,g:2,tone:'label',text:'로컬 영속화: Opus(16kbps) 압축 음성 + 대화턴 DB(conversations)'},
+    {x:60,y:400,w:840,h:80,g:3,tone:'gold',text:'▲ 상향: Opus 음성 + 로컬 STT 텍스트'},
+    {x:940,y:400,w:840,h:80,g:3,tone:'teal',text:'▼ 하향: 정제지식 · 프롬프트 · 질문셋 · 일정룰 (Wi-Fi 접속 시)'},
+    {x:60,y:530,w:1780,h:70,g:4,tone:'ink',text:'🖥️ CLOUD TIER — 온프레미스 서버 (Deep Processing)'},
+    {x:60,y:630,w:560,h:150,g:5,tone:'subtle',text:'1. 검증·교정',sub:'Whisper Large-v3 정밀 재전사'},
+    {x:680,y:630,w:560,h:150,g:5,tone:'subtle',text:'2. 지식화',sub:'Neo4j 그래프 + Qdrant 벡터색인'},
+    {x:1300,y:630,w:540,h:150,g:5,tone:'subtle',text:'3. 생성·감수',sub:'온프레미스 vLLM 윤문 + Critic Agent Gap분석'},
+    {x:60,y:830,w:1780,h:100,g:6,tone:'gold',text:'4. Compaction Engine — 자서전 요약 FTS5 차분 + 압축 프롬프트 + 우선순위 질문 → 온디바이스 패키징'},
+  ],
+  arrows:[
+    {x1:380,y1:185,x2:410,y2:185,g:1},{x1:730,y1:185,x2:760,y2:185,g:1},{x1:1080,y1:185,x2:1110,y2:185,g:1},{x1:1430,y1:185,x2:1460,y2:185,g:1},
+    {x1:640,y1:730,x2:680,y2:730,g:5},{x1:1260,y1:730,x2:1300,y2:730,g:5},
+    {x1:950,y1:780,x2:950,y2:830,g:6},
+  ],
+  note:'외부 GPT-4o/Claude 제안은 Zero External Data Egress 원칙 위반으로 미채택 — 온프레미스 vLLM으로 대체 (decisions.md #26)'});
+
+SLIDES.push({part:2, kicker:'Part 2 · 아키텍처', title:'전체 업무 프로세스 흐름도 (마스터 · Swimlane)', type:'diagram',
+  boxes:[
+    {x:20,y:60,w:220,h:900,g:0,tone:'label',text:'당사자\n(스마트폰)'},
+    {x:260,y:60,w:220,h:900,g:0,tone:'label',text:'온프레미스\n서버'},
+    {x:500,y:60,w:220,h:900,g:0,tone:'label',text:'가족\n(웹 콘솔)'},
+    {x:760,y:80,w:1000,h:110,g:1,tone:'teal',text:'① 온보딩·설치모드 자동분기·초기설정·동의'},
+    {x:760,y:220,w:1000,h:110,g:2,tone:'subtle',text:'② 오프라인 구술 반복 (작가/말벗돌봄/비서, 온디바이스 완결)'},
+    {x:760,y:360,w:1000,h:110,g:3,tone:'subtle',text:'③ Wi-Fi 접속 감지 → 배치 동기화 (업로드: 음성+전사+사진)'},
+    {x:760,y:500,w:1000,h:110,g:4,tone:'subtle',text:'④ 서버 처리: STT 정밀보정 → 지식화 → LLM 챕터 초안 생성'},
+    {x:760,y:640,w:1000,h:110,g:5,tone:'gold',text:'⑤ 가족 웹 감수 — 승인 / 반려(재생성 루프)'},
+    {x:760,y:780,w:1000,h:110,g:6,tone:'subtle',text:'⑥ 확정 챕터 하향 동기화 → 로컬 캐시 갱신'},
+    {x:760,y:900,w:1000,h:90,g:7,tone:'ink',text:'⑦ 전체 챕터 확정 시 → 출판(PDF/ePub) 및 말벗돌봄 모드 본격 전환'},
+  ],
+  arrows:[
+    {x1:1260,y1:190,x2:1260,y2:220,g:2},{x1:1260,y1:330,x2:1260,y2:360,g:3},
+    {x1:1260,y1:470,x2:1260,y2:500,g:4},{x1:1260,y1:610,x2:1260,y2:640,g:5},
+    {x1:1260,y1:750,x2:1260,y2:780,g:6},{x1:1260,y1:890,x2:1260,y2:900,g:7},
+  ],
+  note:'③↔⑥은 Wi-Fi 접속마다 반복되는 순환 구조 — 전체 라이프사이클은 §5.2(프로세스흐름도) 참조'});
+
+SLIDES.push({part:2, kicker:'Part 2 · 아키텍처', title:'데이터 흐름 — 오프라인 구술 → 동기화 → 챕터 반영', type:'flow', direction:'vertical', steps:[
+  {title:'오프라인 구술', desc:'온디바이스 STT/SLM 즉시 응답, 원본음성+1차전사 로컬 저장(최근 5일 잠정)'},
+  {title:'Wi-Fi 접속 감지', desc:'자동 업로드(음성+전사+신규사진), WorkManager 백그라운드 트리거'},
+  {title:'서버 정밀 처리', desc:'고정밀 STT 재전사 → 기존 청크와 Diff 비교 → 신규분만 처리'},
+  {title:'지식화·생성', desc:'청킹/메타태깅 → 임베딩(Qdrant)+지식그래프(Neo4j) → LLM 챕터 초안 생성/갱신'},
+  {title:'가족 웹 감수', desc:'승인 → 챕터 확정 및 이력 기록 / 반려 → 재생성 루프'},
+  {title:'하향 동기화', desc:'최신 자서전·RAG스냅샷·사진·질문목록 자동 다운로드 → 로컬 캐시 갱신'},
+]});
+
+/* ---------------- Part 3. 분야별 세부 프로세스 ---------------- */
+SLIDES.push({part:3, type:'section', no:'03', title:'분야별 세부 프로세스', sub:'온보딩 · 작가엔진 · 사진회고 · RAG · 실시간대화 · 정서모니터링 · 비서 · 동기화 · 설치모드 · 출판 · 감수'});
+
+SLIDES.push({part:3, kicker:'분야: 온보딩', title:'온보딩 · 가족 페어링 흐름', type:'flow', direction:'vertical', steps:[
+  {title:'스마트폰 최초 수령', desc:'설치모드 자동분기(키오스크/일반) → 초기설정(이름·Wi-Fi 등록)'},
+  {title:'개인정보 수집 동의', desc:'consent_logs 기록'},
+  {title:'가족 계정 초대', desc:'invitations 생성 · 토큰 발송 (웹 콘솔)'},
+  {title:'초대 수락', desc:'가족이 링크 수락(status=accepted)'},
+  {title:'최초 Wi-Fi 동기화', desc:'초기 질문목록 다운로드'},
+  {title:'첫 구술 인터뷰 시작', desc:'온보딩 완료 → 정기 사용 전환'},
+]});
+
+SLIDES.push({part:3, kicker:'분야: 자서전 작가', title:'자서전 작가 엔진 상세 흐름', type:'flow', direction:'horizontal', steps:[
+  {title:'STT 재전사', desc:'Whisper Large-v3 정밀 보정'},
+  {title:'청킹·메타태깅', desc:'시간·인물·장소·감정·사진ID'},
+  {title:'질문 이력 대조', desc:'미응답 주제 탐지 → 신규/꼬리질문'},
+  {title:'LLM 챕터 생성', desc:'RAG 컨텍스트 기반 초안/갱신'},
+  {title:'구술체→문어체', desc:'정제 및 챕터 자동 귀속'},
+]});
+
+SLIDES.push({part:3, kicker:'분야: 사진 회고', title:'사진 기반 회고 → 챕터 인라인 편입', type:'flow', direction:'vertical', steps:[
+  {title:'사진 업로드', desc:'가족(웹) 또는 당사자(모바일) — 업로더 무관 동일 처리'},
+  {title:'미회고 사진 큐 등록', desc:'연도 태그 기반 예상 챕터 매핑'},
+  {title:'다음 대화 세션 우선 제시', desc:'작가/말벗돌봄 모드 무관 — 사진 먼저 보여주며 회고 유도'},
+  {title:'음성 답변 수집', desc:'사진ID + 회고 텍스트 연결, 미회고 큐에서 제거'},
+  {title:'서버 처리', desc:'해당 시기 챕터 본문에 자동 인라인 삽입 (placement_status=proposed)'},
+  {title:'가족 웹 감수', desc:'위치·설명 확정 시 placement_status=confirmed'},
+]});
+
+SLIDES.push({part:3, kicker:'분야: RAG', title:'RAG 검색(Retrieval) 파이프라인', type:'flow', direction:'horizontal', steps:[
+  {title:'Query 임베딩', desc:'BGE-M3'},
+  {title:'하이브리드 서치', desc:'BM25 + Dense (Qdrant)'},
+  {title:'메타 필터', desc:'시기 · 인물'},
+  {title:'Top-K 추출', desc:'Re-rank'},
+  {title:'LLM Context 구성', desc:'응답 생성'},
+]});
+
+SLIDES.push({part:3, kicker:'분야: 실시간 대화', title:'말벗돌봄 실시간 대화 파이프라인 (저사양 단말 최적화, 8단계)', type:'flow', direction:'vertical', steps:[
+  {title:'① VAD 감지', desc:'WebRTC VAD — 800ms 묵음판정으로 발화종료 확정'},
+  {title:'② 온디바이스 STT', desc:'스트리밍 디코딩, 청크 단위 누적 처리'},
+  {title:'③ 키워드 추출 & 의도분류', desc:'경량 룰/정규식'},
+  {title:'④ FTS5(BM25) 키워드 검색', desc:'Zero-Neural RAG — 임베딩 연산 없이 자서전 청크 인출'},
+  {title:'⑤ 동적 프롬프트 합성', desc:'페르소나+회상기억+발화, Context 1,024 토큰 제한'},
+  {title:'⑥ SLM 스트리밍 추론', desc:'문장 종결부호 감지 시 즉시 문장 단위 분할'},
+  {title:'⑦ 문장 단위 TTS 파이프라이닝', desc:'전체 응답 대기 없이 첫 문장 즉시 합성'},
+  {title:'⑧ 로컬 DB 영속화', desc:'발화·참조챕터ID·응답소요시간 기록'},
+], note:'핵심 최적화: 임베딩모델 미상주(RAM 절감) + 문장단위 스트리밍(체감속도 단축) — decisions.md #31, #32'});
+
+SLIDES.push({part:3, kicker:'분야: 실시간 대화', title:'메모리 예산 목표치 (RAM 4GB급 단말 기준)', type:'table',
+  cols:['모듈','목표 RAM','비고'], colWidths:[42,18,40],
+  rows:[
+    ['VAD (WebRTC VAD)','&lt; 1MB','후보'],
+    ['STT (Sherpa-ONNX 등 후보, INT8)','~95MB','후보'],
+    ['로컬 RAG (SQLite FTS5)','~0MB','OS 파일 캐시 공유'],
+    ['SLM (Qwen2.5-0.5B 등 후보, Q4)','~680MB','Context+KV캐시 포함'],
+    ['TTS (Android 네이티브)','~0MB','시스템 서비스'],
+    ['앱 런타임(UI·Room·코루틴)','~75MB',''],
+    ['합계(목표)','~850MB','4GB 단말 대비 안전마진 확보 목표'],
+  ], note:'⚠️ 제안자 설계 목표치 — 구체 라이브러리·수치는 실기기 벤치마크(decisions.md #27) 전까지 미검증'});
+
+SLIDES.push({part:3, kicker:'분야: 정서 모니터링', title:'정서 모니터링 처리 흐름', type:'flow', direction:'vertical', steps:[
+  {title:'발화 분석', desc:'톤 분석 + 부정 어휘 빈도 분석'},
+  {title:'정서 점수 산출', desc:'emotion_scores에 일별 1건 기록 (임계치와 무관하게 항상 수행)'},
+  {title:'임계치 초과 판정', desc:'No → 종료 / Yes → emotion_alerts 생성'},
+  {title:'알림 발송', desc:'notification_settings 조회 → 설정된 채널로 가족·복지사 알림'},
+  {title:'확인 응답 대기', desc:'No(N분 경과) → 재알림 에스컬레이션 / Yes → 케이스 종료'},
+], note:'⚠️ "언제 보낼지"(임계치)는 법무·윤리 검토 대기 중 — "누가·어디로 받을지"만 지금 구현 가능 (decisions.md #12, #19)'});
+
+SLIDES.push({part:3, kicker:'분야: 비서', title:'비서 모드 — 일정·복약 로컬 흐름', type:'flow', direction:'horizontal', steps:[
+  {title:'발화 파싱', desc:'날짜·시간·장소·목적 엔티티 추출'},
+  {title:'정보 충족 확인', desc:'부족 시 재질문 루프'},
+  {title:'로컬 DB 저장', desc:'알림 예약 (OS 스케줄러)'},
+  {title:'지정 시각 도달', desc:'능동형 음성 브리핑'},
+  {title:'응답 처리', desc:'복용확인/무응답 에스컬레이션/거부사유 기록'},
+]});
+
+SLIDES.push({part:3, kicker:'분야: 동기화', title:'Wi-Fi 동기화 실패 · 충돌 해결 프로세스', type:'flow', direction:'vertical', steps:[
+  {title:'업로드 시도', desc:'실패 시 지수 백오프 재시도(최대 N회, Do단계 확정)'},
+  {title:'다운로드 시도', desc:'실패 시 재시도'},
+  {title:'체크섬 검증', desc:'실패 시 손상 데이터 폐기 후 재다운로드'},
+  {title:'버전 충돌 확인', desc:'로컬-서버 충돌 시 서버 마스터 우선 적용(Server-Wins)'},
+  {title:'동기화 완료', desc:'로컬 캐시 정상 갱신'},
+]});
+
+SLIDES.push({part:3, kicker:'분야: 설치모드', title:'설치모드 자동 분기 흐름 — 키오스크 / 일반 앱', type:'table',
+  cols:['구분','키오스크 모드','일반 앱 모드'], colWidths:[24,38,38],
+  rows:[
+    ['대상 단말','저사양·재활용 단말 (RAM&lt;6GB 또는 Android≤11)','고사양 개인 단말'],
+    ['설치 방식','Device Owner Mode(COSU)로 단일실행 잠금','여러 앱 중 하나로 아이콘 설치'],
+    ['앱 기능','완전히 동일','완전히 동일'],
+    ['모드 결정','설치 시 1회 자동판별, 재설치 전까지 고정 — 서버 원격전환 없음','좌동'],
+  ], note:'판별기준: RAM&lt;6GB 또는 Android≤11 중 하나라도 미달 시 보수적으로 키오스크 판정 (decisions.md #5)'});
+
+SLIDES.push({part:3, kicker:'분야: 출판', title:'출판/인쇄 파이프라인', type:'flow', direction:'horizontal', steps:[
+  {title:'전체 챕터 확정', desc:'모든 chapters.status=confirmed'},
+  {title:'출판 요청', desc:'publications.status=requested'},
+  {title:'조판 생성', desc:'PDF(CMYK 300DPI) 또는 ePub, MinIO 저장'},
+  {title:'완료 알림', desc:'status=ready'},
+  {title:'인쇄발주/다운로드', desc:'하드커버 발주 또는 전자책 링크 제공'},
+]});
+
+SLIDES.push({part:3, kicker:'분야: 가족 협업', title:'가족 협업 · 감수 워크플로우 (웹)', type:'flow', direction:'vertical', steps:[
+  {title:'신규 챕터 초안 알림', desc:'AI 생성 완료 시 가족에게 통지'},
+  {title:'원고 대조 편집', desc:'구술 녹취록 ↔ AI 초안 비교, 사진 업로드·타임라인 배치'},
+  {title:'승인/반려 결정', desc:'반려 시 AI 재생성 요청 → 초안 루프'},
+  {title:'챕터 확정', desc:'chapter_revisions 기록, 버전 저장'},
+  {title:'전체 완료 확인', desc:'모든 챕터 완료 시 출판 단계로 전환'},
+]});
+
+SLIDES.push({part:3, kicker:'분야: 관리', title:'관리자 업무 흐름 — 기기관리/모니터링', type:'table',
+  cols:['업무','내용','근거 화면'], colWidths:[22,54,24],
+  rows:[
+    ['사용자 관리','전체 사용자·가족 계정 현황 조회','WA2'],
+    ['Wi-Fi 동기화 모니터링','sync_sessions 상태·재시도·실패 이력 추적','WA3'],
+    ['정서 알림 이력 관리','emotion_alerts 발생·확인·케이스 종료 이력','WA4'],
+    ['시스템 설정','LLM/STT 모델 버전, 외부연계 Opt-in 정책 관리','WA5'],
+    ['기기 관리 (신규)','기기ID·사양(RAM/OS)·설치모드 조회 전용 (원격제어 없음)','WA6'],
+  ]});
+
+SLIDES.push({part:3, kicker:'분야: Closed-Loop', title:'서버측 Closed-Loop 3단계 상세', type:'flow', direction:'horizontal', steps:[
+  {title:'1. 검증·교정', desc:'Whisper Large-v3 정밀 재전사 — 사투리·고유명사 보정'},
+  {title:'2. 지식화', desc:'Neo4j 그래프(인물·사건·감정 관계) + Qdrant 벡터색인(BGE-M3)'},
+  {title:'3. 생성·감수', desc:'온프레미스 vLLM 윤문 + Critic Agent Gap분석(Fact/Emotion/Relation/Reflection)'},
+]});
+
+SLIDES.push({part:3, kicker:'분야: 동기화 페이로드', title:'Wi-Fi 하향 동기화 페이로드 예시', type:'code',
+  code:`{
+  "data": {
+    "sync_version": "sync_v20260906_02",
+    "chapter_updates": [
+      {
+        "chapter_id": "b3f1...-uuid",
+        "chapter_no": 2,
+        "period": "youth",
+        "keywords": ["1978년", "인천공장", "김반장", "월급"],
+        "summary": "1978년 인천 기계공장 근무 시절 김 반장과의 갈등 및 극복기"
+      }
+    ],
+    "priority_questions": [
+      { "question_id": "q_...-uuid",
+        "text": "인천 공장 계실 때 첫 월급 타서 사모님께 어떤 선물을 하셨는지 기억나세요?",
+        "type": "follow_up" }
+    ],
+    "schedule_items": [
+      { "id": "s_...-uuid", "kind": "medication",
+        "due_at": "2026-09-07T08:30:00+09:00", "description": "혈압약" }
+    ]
+  }
+}`, note:'GET /api/v1/sync/download 응답 — 필드 케이싱은 snake_case 확정 (decisions.md #20)'});
+
+/* ---------------- Part 4. 데이터 모델 & API ---------------- */
+SLIDES.push({part:4, type:'section', no:'04', title:'데이터 모델 & API', sub:'17개 엔티티 · 표준 API 설계'});
+
+SLIDES.push({part:4, kicker:'Part 4 · 데이터/API', title:'데이터 모델 개요 — 17개 엔티티 (schema.md v1.2)', type:'bullets', items:[
+  T('핵심: users · family_members · devices · chapters · chapter_revisions'),
+  T('사진/구술: photos · photo_requests · conversation_chunks · questions'),
+  T('비서/정서: schedule_items · emotion_alerts · emotion_scores'),
+  T('운영/거버넌스: sync_sessions · consent_logs · notification_settings · invitations · publications'),
+  T('설계 원칙: DB enum은 영문 통일, API는 snake_case, 구독·결제 도메인은 Phase 1 스코프 아웃', 0, 'accent'),
+]});
+
+SLIDES.push({part:4, kicker:'Part 4 · 데이터/API', title:'핵심 엔티티 관계 (요약 ERD)', type:'diagram',
+  boxes:[
+    {x:60,y:60,w:420,h:110,g:0,tone:'teal',text:'users'},
+    {x:520,y:60,w:420,h:110,g:0,tone:'subtle',text:'family_members'},
+    {x:980,y:60,w:420,h:110,g:0,tone:'subtle',text:'devices → sync_sessions'},
+    {x:1440,y:60,w:420,h:110,g:0,tone:'subtle',text:'invitations /\nnotification_settings'},
+    {x:60,y:220,w:420,h:110,g:1,tone:'gold',text:'chapters → chapter_revisions'},
+    {x:520,y:220,w:420,h:110,g:1,tone:'subtle',text:'photos ↔ conversation_chunks',sub:'+ graph_node_ref → Neo4j'},
+    {x:980,y:220,w:420,h:110,g:1,tone:'subtle',text:'photo_requests'},
+    {x:1440,y:220,w:420,h:110,g:1,tone:'subtle',text:'questions'},
+    {x:60,y:380,w:420,h:110,g:2,tone:'silver',text:'schedule_items'},
+    {x:520,y:380,w:420,h:110,g:2,tone:'silver',text:'emotion_alerts'},
+    {x:980,y:380,w:420,h:110,g:2,tone:'silver',text:'emotion_scores'},
+    {x:1440,y:380,w:420,h:110,g:2,tone:'silver',text:'consent_logs /\npublications'},
+    {x:60,y:540,w:1800,h:100,g:3,tone:'ink',text:'모든 엔티티는 users를 루트로 하는 1:N 소유 구조 — 상세 DDL은 schema.md §5 참조'},
+  ]});
+
+SLIDES.push({part:4, kicker:'Part 4 · 데이터/API', title:'API 설계 개요', type:'table',
+  cols:['항목','내용'], colWidths:[24,76],
+  rows:[
+    ['프레임워크','Python 3.11+ / FastAPI (온프레미스 자체 호스팅, 확정)'],
+    ['버전 관리','/api/v1 프리픽스, 리소스는 소유자(users) 하위로 중첩'],
+    ['표준 응답 포맷','성공: {data}, 목록: {data, pagination}, 에러: {error:{code,message,details}}'],
+    ['표준 에러 코드','VALIDATION_ERROR(400) · UNAUTHORIZED(401) · FORBIDDEN(403) · NOT_FOUND(404) · CONFLICT(409) · INTERNAL_ERROR(500)'],
+    ['필드 케이싱','서버 wire format은 snake_case 통일, 클라이언트는 각 스택 컨벤션으로 변환'],
+    ['인증','Keycloak SSO (원본 프로세스흐름도와 정합)'],
+  ]});
+
+SLIDES.push({part:4, kicker:'Part 4 · 데이터/API', title:'온디바이스 로컬 스키마 (mobile-schema.md)', type:'table',
+  cols:['테이블','역할'], colWidths:[26,74],
+  rows:[
+    ['conversations','구술/대화 턴 로컬 버퍼 — 업로드 성공 시 오디오만 삭제, 텍스트는 5일 유지'],
+    ['autobiography_fts','자서전 로컬 검색 인덱스 (FTS5 가상테이블, Zero-Neural RAG 핵심)'],
+    ['questions_cache','회고 질문 큐 로컬 캐시'],
+    ['unrecalled_photos','미회고 사진 큐 로컬 캐시 — 대화 세션 시작 시 최우선 제시'],
+    ['schedule_cache','일정·복약 로컬 캐시 (오프라인 등록분 포함)'],
+    ['device_state','설치모드·Wi-Fi 등록정보(로컬 전용)·SLM/프롬프트팩 버전'],
+  ]});
+
+/* ---------------- Part 5. UI/UX & 디자인시스템 ---------------- */
+SLIDES.push({part:5, type:'section', no:'05', title:'UI/UX · 디자인시스템', sub:'23개 화면 · BI 가이드 기반 토큰화'});
+
+SLIDES.push({part:5, kicker:'Part 5 · UI/UX', title:'화면 인벤토리 (23개)', type:'table',
+  cols:['영역','화면'], colWidths:[22,78],
+  rows:[
+    ['모바일앱(당사자)','온보딩·동의 / 홈·음성대화 / 작가모드 인터뷰 / 말벗돌봄 대화 / 비서모드 일정·복약 / 설정·동기화 / 사진 추가하기'],
+    ['웹·자서전 사용자','로그인·대시보드 / 자서전 뷰어 / 사진·타임라인 갤러리 / 계정 설정 (구독·결제는 스코프 아웃)'],
+    ['웹·가족','가족 대시보드 / 원고 감수·대조편집 / 사진 업로드·타임라인 배치 / 정서 모니터링 상세 / 알림·구성원 설정'],
+    ['웹·관리자','관리자 대시보드 / 사용자 관리 / Wi-Fi 동기화 모니터링 / 정서 알림 이력 / 시스템 설정 / 기기 관리'],
+  ]});
+
+SLIDES.push({part:5, kicker:'Part 5 · UI/UX', title:'디자인 시스템 — 컬러 & 타이포그래피', type:'swatches',
+  swatches:[
+    {name:'Thread Teal', hex:'#1E7A8C', label:'Primary · 실의 색'},
+    {name:'Silver Mist', hex:'#8E97A6', label:'Secondary · 은빛'},
+    {name:'Heritage Gold', hex:'#B8935A', label:'Accent · 기억의 매듭'},
+    {name:'Ink', hex:'#20242B', label:'Text · 기록의 잉크'},
+    {name:'Paper Stone', hex:'#F4F2EE', label:'Base · 바탕지'},
+  ],
+  typeScale:[['DISPLAY','34px / 700','Noto Serif KR'],['H1','26px / 700','Noto Serif KR'],['H2','20px / 600','Noto Serif KR'],['BODY','16px / 400','Pretendard'],['CAPTION','14px / 500','Pretendard (WCAG AA 상향 조정)']]});
+
+/* ---------------- Part 6. 보안 · 컨벤션 · 기술스택 ---------------- */
+SLIDES.push({part:6, type:'section', no:'06', title:'보안 · 컨벤션 · 기술스택', sub:'3중 스택 · RBAC · 온프레미스 원칙'});
+
+SLIDES.push({part:6, kicker:'Part 6 · 보안', title:'보안 설계 원칙', type:'bullets', items:[
+  T('DB 암호화(AES-256) 및 전송구간 암호화(TLS 1.3) — 온디바이스 로컬 캐시도 동일 수준'),
+  T('웹 콘솔 2FA, 역할별 차등 열람 권한(RBAC)'),
+  T('외부 연계 시 PII 마스킹 전처리 + 동의 로그 필수, 미동의 시 전량 온프레미스 경로'),
+  T('Wi-Fi 동기화는 등록된 신뢰 네트워크에서만 — SSID 등은 온디바이스 로컬 전용 저장'),
+  T('Device Owner Mode(COSU) 채택 — 단말 탈취·우회 방지 상세는 Do 단계에서 검토'),
+  T('설치모드 판별 임계값(확정): RAM&lt;6GB 또는 Android≤11 → 키오스크', 0, 'accent'),
+]});
+
+SLIDES.push({part:6, kicker:'Part 6 · 보안', title:'RBAC 권한 매트릭스', type:'table',
+  cols:['리소스','family','caregiver','social_worker','admin'], colWidths:[34,16,16,17,17],
+  rows:[
+    ['챕터 조회','✅','✅','✅(동의시)','✅'],
+    ['챕터 감수(승인/반려)','✅','❌','❌','✅'],
+    ['사진 업로드','✅','✅','❌','✅'],
+    ['정서 알림 조회/확인','✅','✅','✅','✅'],
+    ['알림 수신 설정 변경','본인만','본인만','본인만','✅'],
+    ['기기 관리(조회)','❌','❌','❌','✅'],
+    ['사용자/동기화 관리','❌','❌','❌','✅'],
+  ]});
+
+SLIDES.push({part:6, kicker:'Part 6 · 기술스택', title:'기술 스택 요약', type:'table',
+  cols:['영역','스택','상태'], colWidths:[20,52,28],
+  rows:[
+    ['모바일','Android 네이티브(Kotlin), Device Owner Mode','✅ 확정'],
+    ['서버 백엔드','Python 3.11+ / FastAPI','✅ 확정'],
+    ['웹 콘솔','Next.js(App Router) + TypeScript + Tailwind','✅ 확정'],
+    ['LLM 추론','자체 호스팅 vLLM · A100 GPU (챕터윤문·Gap분석 포함)','✅ 확정 — 외부 GPT-4o/Claude 미채택'],
+    ['Vector DB','Qdrant self-hosted','✅ 확정 (Milvus 검토 후 미채택)'],
+    ['지식 그래프','Neo4j self-hosted (신규)','✅ 확정'],
+    ['RDB / Storage','PostgreSQL+Alembic / 자체 MinIO','✅ 확정'],
+    ['인증','Keycloak SSO','✅ 확정'],
+    ['인프라 호스팅','온프레미스 K8s/베어메탈 GPU 클러스터','✅ 원칙 확정 (구성 설계 필요)'],
+    ['온디바이스 SLM','Kanana-2, Qwen2.5-0.5B 벤치마크 후보 2종','🔄 최종선정 대기'],
+    ['온디바이스 로컬 RAG','SQLite FTS5(BM25) 단독 — Phase 1 기본값','✅ 확정'],
+  ]});
+
+SLIDES.push({part:6, kicker:'Part 6 · 컨벤션', title:'컨벤션 & 폴더 구조', type:'bullets', items:[
+  T('서버(Python): snake_case, Clean Architecture(api/application/domain/infrastructure), ruff+mypy+pytest'),
+  T('모바일(Kotlin): PascalCase 클래스, ktlint, Jetpack Compose'),
+  T('웹(TypeScript): PascalCase 컴포넌트, kebab-case 폴더, ESLint/Prettier'),
+  T('모노레포: apps/(mobile,web,admin) · services/(gateway,author-engine,care-engine,schedule-engine,sync-gateway,rag-core) · packages/py-common · infra/ · docs/ · Plan/'),
+  T('환경변수 접두사: NEXT_PUBLIC_ / DB_ / STORAGE_(MinIO) / VECTORDB_(Qdrant) / GRAPH_(Neo4j) / LLM_ / AUTH_ / SYNC_'),
+]});
+
+/* ---------------- Part 7. 의사결정 & 검증 ---------------- */
+SLIDES.push({part:7, type:'section', no:'07', title:'의사결정 현황 & 설계 검증', sub:'확정 사항 · 미결 사항 · design-validator 검증결과'});
+
+SLIDES.push({part:7, kicker:'Part 7 · 의사결정', title:'확정된 주요 의사결정', type:'bullets', items:[
+  T('설치모드 임계값: RAM&lt;6GB 또는 Android≤11 → 키오스크 / 구현: Device Owner Mode(COSU)'),
+  T('모바일: Android 네이티브(Kotlin) · 서버: FastAPI · 웹: Next.js · 인증: Keycloak SSO'),
+  T('채널: B2C/B2G 병행 추진 / 외부 TTS: Phase 1~2 온프레미스만, 외부연계 Phase 3 유예'),
+  T('Wi-Fi 동기화: 등록 Wi-Fi 한정, 접속 즉시 자동 트리거 / 사진 업로드: 촬영+갤러리 모두 지원'),
+  T('구독·결제 도메인: Phase 1 스코프 아웃 (경영 결정 대기) / Phase 1 파일럿은 전액 무료로 확정'),
+  T('챕터 윤문·Gap분석 LLM: 온프레미스 vLLM 확정 (외부 GPT-4o/Claude 미채택) · 지식그래프 Neo4j 신규 채택', 0, 'accent'),
+  T('온디바이스 로컬 RAG: SQLite FTS5 단독을 Phase 1 기본값으로 확정', 0, 'accent'),
+  T("'기억의 서재' 프로젝트와는 완전 별개로 최종 확정"),
+]});
+
+SLIDES.push({part:7, kicker:'Part 7 · 의사결정', title:'미결 의사결정 — 승인 대기 중', type:'table',
+  cols:['항목','필요 조치','담당'], colWidths:[40,40,20],
+  rows:[
+    ['정서 모니터링 알림의 법적/윤리적 기준','임계치·수신대상 정책 최종 확정','⚖️ 법무·윤리 검토'],
+    ['Phase 1~3 착수 일정·예산·인력','리소스 확정 승인','⚖️ 경영진'],
+    ['구독·결제 PG사·요금제','과금 방식 결정 후 도메인 설계 착수','⚖️ 경영진·법무'],
+    ['온디바이스 SLM 모델 자체 선정','Kanana-2/Qwen2.5-0.5B 벤치마크 후 확정','기술팀'],
+    ['로컬 "최근 5일" 캐시 기준','실기기 저장용량 벤치마크 후 재확정','기술팀'],
+  ]});
+
+SLIDES.push({part:7, kicker:'Part 7 · 검증', title:'설계 검증 결과 — design-validator', type:'table',
+  cols:['항목','1차 검증','수정 후'], colWidths:[26,40,34],
+  rows:[
+    ['종합 완성도 점수','74/100','권고 조치 33건 전체 반영 완료'],
+    ['High 심각도','5건 (백엔드 미확정, 챕터 제목 누락 등)','5/5 해결'],
+    ['Medium 심각도','18건 (필드 누락, 문서간 불일치 등)','18/18 해결'],
+    ['Low + 원본 오류','10건 + 화면ID/절번호 오기 7건','전체 해결 (원본 Plan/ 파일도 정정)'],
+    ['엔티티 수 변화','11개 (v1.0)','17개 (v1.2) — Neo4j 연동 필드 포함'],
+  ]});
+
+SLIDES.push({part:7, kicker:'Part 7 · 리스크', title:'주요 리스크 및 대응 방안', type:'table',
+  cols:['리스크','영향','대응'], colWidths:[32,14,54],
+  rows:[
+    ['민감정보 처리 리스크 (가족사·건강)','High','하이브리드 온프레미스 원칙 준수, 정기 보안 감사'],
+    ['온디바이스 SLM 성능 한계 (저사양 단말)','Medium','온디바이스/서버 역할 분담, 경량화 튜닝, 실기기 벤치마크'],
+    ['오프라인 캐시 정합성 리스크','Medium','캐시 용량 관리, 동기화 실패 재시도 로직'],
+    ['정서 모니터링 오탐 리스크','Medium','임계치·검증 프로세스 별도 설계, 법적/윤리적 기준 수립 필요'],
+  ]});
+
+/* ---------------- Part 8. CTO팀 검토 ---------------- */
+SLIDES.push({part:8, type:'section', no:'08', title:'CTO팀 검토 의견', sub:'아키텍처 · 인프라 · 보안 · 프론트엔드 · 백엔드/API · QA · PM — 7개 관점'});
+
+SLIDES.push({part:8, kicker:'Part 8 · CTO팀 검토', title:'검토 방법 및 참여 전문가', type:'bullets', items:[
+  T('참여 관점 7종: Enterprise Architect · Infrastructure Architect · Security Architect · Frontend Architect · Backend/API · QA Strategist · Product Manager'),
+  T('방법: 원본 기획 산출물 + PDCA 문서 전체를 각 관점에서 독립 교차검토, 후행 관점은 선행 리뷰와 중복 배제'),
+  T('판정 기준: 강점 3개 이내 / Blocker(착수 전 반드시 해결) / Concern(병행 가능)'),
+  T('7개 관점 전원 공통 판정: Go with Conditions — No-go 시사 관점 없음', 0, 'accent'),
+]});
+
+SLIDES.push({part:8, kicker:'Part 8 · 아키텍처', title:'Enterprise Architect — 강점 & Blocker', type:'twocol',
+  left:{label:'강점', items:[
+    T('미결정책을 "누가·언제"로 쪼개는 규율'),
+    T('하이브리드 구조가 제약조건상 유일해'),
+    T('23개 화면↔17개 엔티티 역추적 완료'),
+  ]},
+  right:{label:'Blocker', items:[
+    T('동기화 계약 부재 → 데이터 영구소실 경로 존재', 0,'crit'),
+    T('온디바이스 SLM 모델 미선정 → 모바일 착수 대기', 0,'crit'),
+    T('6개 마이크로서비스 근거 부재 → 모듈러 모놀리스 권고', 0,'crit'),
+    T('이중 두뇌(온디바이스 vs 서버) 설계 미정', 0,'crit'),
+  ]}});
+
+SLIDES.push({part:8, kicker:'Part 8 · 인프라', title:'Infrastructure Architect — 강점 & Blocker', type:'twocol',
+  left:{label:'강점', items:[
+    T('오프라인 우선 설계가 가용성 목표를 현실화'),
+    T('서버 워크로드=배치 큐(대화형 아님)로 GPU 최소화 가능'),
+    T('전 스택 자체호스팅 가능 OSS'),
+  ]},
+  right:{label:'Blocker', items:[
+    T('로컬 개발환경(docker-compose+스텁) 부재', 0,'crit'),
+    T('Zero External Data Egress 사정거리 미정의', 0,'crit'),
+    T('원본 음성 보유·파기 기간 미정', 0,'crit'),
+    T('예산·상면·전력 승인 미착수 (GPU 리드타임 8~16주)', 0,'crit'),
+  ]}, note:'참고 산정(가정): 파일럿 200명 기준 A100 2장 · Qdrant 100만벡터 · MinIO 2.8TB/년'});
+
+SLIDES.push({part:8, kicker:'Part 8 · 보안', title:'Security Architect — 강점 & Blocker (가장 중대)', type:'twocol',
+  left:{label:'강점', items:[
+    T('데이터 등급에 맞는 아키텍처 기본값'),
+    T('법적 미결사항을 코드에 밀어넣지 않는 절제'),
+    T('리뷰 가능한 설계 상세'),
+  ]},
+  right:{label:'Blocker (법적+기술)', items:[
+    T('정서 데이터 "기록" 자체가 민감정보 소지 가능', 0,'crit'),
+    T('대리동의(가족)의 법적 근거 공백', 0,'crit'),
+    T('보유기간·파기정책 전무', 0,'crit'),
+    T('PII 암호화 방식 미결 = 스키마 결정', 0,'crit'),
+    T('인증/인가/테넌시/감사모델 공백', 0,'crit'),
+    T('Zero External Data Egress 내부 충돌 (SMS/이메일/Push)', 0,'crit'),
+  ]}});
+
+SLIDES.push({part:8, kicker:'Part 8 · 보안', title:'법무 검토 요청 항목 (원문)', type:'table',
+  cols:['#','질의'], colWidths:[8,92],
+  rows:[
+    ['1','정서 점수가 개인정보보호법 제23조 민감정보에 해당하는가? 알림 없이 기록만 해도 별도동의가 필요한가?'],
+    ['2','성년후견 미개시 어르신에 대한 가족의 대리동의가 유효한가? 본인 동의 필수 범위는?'],
+    ['3','가족·복지사의 웹콘솔 열람은 제17조 제3자 제공인가, 제26조 위탁 범위 내 이용인가?'],
+    ['4','정서점수 산출·통보 기능이 의료기기법상 규제 대상이 될 위험이 있는가?'],
+    ['5','원본음성/전사/벡터/사진/백업 각각의 보유기간·파기방법은? crypto-shredding이 적법한 파기로 인정되는가?'],
+    ['6','FCM/SMS/이메일 알림, Google Fonts CDN 로딩이 국외이전 고지·동의 대상인가?'],
+  ]});
+
+SLIDES.push({part:8, kicker:'Part 8 · 프론트엔드', title:'Frontend Architect — 강점 & Blocker', type:'twocol',
+  left:{label:'강점', items:[
+    T('BI 가이드→토큰 매핑 값 단위 100% 일치'),
+    T('23개 화면 인벤토리 완결'),
+    T('요소 테이블이 이벤트 수준까지 상세'),
+  ]},
+  right:{label:'Blocker', items:[
+    T('브랜드 컬러가 WCAG AA 미달 (본문/캡션/경계선)', 0,'crit'),
+    T('디자인 토큰의 3플랫폼 배포 메커니즘 부재', 0,'crit'),
+    T('Next.js App Router 폴더구조 오류 (동작 안 함)', 0,'crit'),
+    T('접근성 최소기준 수치 0건', 0,'crit'),
+  ]}});
+
+SLIDES.push({part:8, kicker:'Part 8 · 프론트엔드', title:'컬러 토큰 실측 대비비 — WCAG 위반 사례', type:'table',
+  cols:['조합','실측 대비비','AA 본문(4.5)','판정'], colWidths:[38,18,18,26],
+  rows:[
+    ['teal #1E7A8C / paper','4.45 : 1','미달','❌ 본문·링크색 사용 불가'],
+    ['ink-faint #9096A0 / paper','2.66 : 1','미달','❌ 사용 불가'],
+    ['gold #B8935A / paper','2.55 : 1','미달','❌ 텍스트·아이콘 전면 금지'],
+    ['border #DEDACF / paper','1.25 : 1','미달','❌ 카드 경계 사실상 비가시'],
+    ['teal-deep #155C6B / white','7.57 : 1','AAA 통과','✅ 권장 텍스트색으로 대체'],
+  ], note:'본 발표자료 자체도 위 교훈을 반영해 teal-deep·강화된 border 색상을 텍스트/경계에 사용했습니다'});
+
+SLIDES.push({part:8, kicker:'Part 8 · 백엔드/API', title:'Backend/API (bkend-expert) — 강점 & Blocker', type:'twocol',
+  left:{label:'강점 & 검증', items:[
+    T('자체 FastAPI 선택 타당성 재확인 (BaaS는 GPU추론·Zero Egress와 구조적 충돌)'),
+    T('서버 내부 wire format이 DB와 동일 snake_case'),
+    T('표준 응답/에러 포맷 선확정'),
+  ]},
+  right:{label:'Blocker', items:[
+    T('장시간 작업(STT재전사·LLM생성)의 비동기 API 계약 부재', 0,'crit'),
+    T('음성/사진 업로드 전송방식 미정 (프록시 vs Presigned URL)', 0,'crit'),
+    T('17개 엔티티↔서비스 소유권 매핑 표 부재', 0,'crit'),
+    T('증분 동기화(sync/download) 계약 없음', 0,'crit'),
+  ]}});
+
+SLIDES.push({part:8, kicker:'Part 8 · QA전략', title:'QA Strategist — 강점 & Blocker', type:'twocol',
+  left:{label:'강점', items:[
+    T('Test Scope 표가 6개 시나리오축 선제 식별'),
+    T('동기화 실패·Diff 멱등성 최소 기준선 존재'),
+    T('설치모드 경계기기 5종 실명 명시'),
+  ]},
+  right:{label:'Blocker', items:[
+    T('테스트 정량 Pass/Fail 기준 전무', 0,'crit'),
+    T('고령 화자 음성인식 정확도 검증 계획 누락', 0,'crit'),
+    T('네트워크 장애주입·실기기 QA랩 조달 미정', 0,'crit'),
+  ]}, note:'3건 모두 코드 착수를 막을 필요 없는 1~2주 문서/조달 작업'});
+
+SLIDES.push({part:8, kicker:'Part 8 · PM/스코프', title:"PM — 강점 & Blocker (진짜 착수를 막는 것은?)", type:'twocol',
+  left:{label:'강점', items:[
+    T('의사결정 밀도 이례적으로 높음(23건 중 17건 확정)'),
+    T('상류 산출물이 코드 직전까지 완비'),
+    T('리스크가 정직하게 문서화됨'),
+  ]},
+  right:{label:'Blocker', items:[
+    T('Phase 1 예산·인력 미승인 (진짜 착수 차단)', 0,'crit'),
+    T('온디바이스 SLM 미선정 (모바일 세션만 부분차단)', 0,'warn'),
+    T('Phase 1/2/3 스코프 경계 미문서화 (즉시 해소 가능)', 0,'warn'),
+  ]}, note:'미결 7건 중 실제 Phase 1 착수를 막는 것은 예산 1건뿐'});
+
+SLIDES.push({part:8, kicker:'Part 8 · 종합', title:'Blocker 총괄 매트릭스 (7개 관점, 우선순위순)', type:'table', revealRows:true,
+  cols:['관점','Blocker','소요'], colWidths:[16,64,20],
+  rows:[
+    ['PM','Phase 1 예산·인력 승인','경영진 결정 즉시 / 실현 3~6개월'],
+    ['보안','동의·보유기간·인가모델·암호화 5대 공백 (법적 리스크)','설계 1~2주 + 법무 회신 2~3주'],
+    ['아키텍처','온디바이스 SLM 모델 미선정','실기기 벤치마크 2주'],
+    ['QA','고령 화자 음성인식 정확도 데이터셋·계획 부재','SLM 벤치마크와 동시 진행'],
+    ['아키텍처','동기화 계약 부재 → 데이터 소실 위험','설계 3~4일 + 리뷰 1일'],
+    ['백엔드','비동기 job/파일업로드/증분동기화 API 계약 부재','1주'],
+    ['아키텍처','6개 마이크로서비스 근거 부재','결정회의 반나절 + ADR 1일'],
+    ['백엔드','17개 엔티티↔서비스 소유권 매핑 표 부재','반나절'],
+    ['인프라','로컬 개발환경(docker-compose+스텁) 부재','1~1.5주'],
+    ['QA','네트워크 장애주입·실기기 랩 조달 미정','인프라 트랙과 통합 1.5주'],
+    ['프론트엔드','컬러 토큰 WCAG AA 미달','2~3일'],
+    ['프론트엔드','Next.js App Router 폴더 구조 오류','1일'],
+    ['QA','테스트 정량 Pass/Fail 기준 전무','1주'],
+    ['PM','Phase 1/2/3 스코프 경계 미문서화','즉시 (킥오프 당일)'],
+  ]});
+
+SLIDES.push({part:8, kicker:'Part 8 · CTO 종합 의견', title:'Go with Conditions — 조건부 착수', type:'bullets', items:[
+  T('7개 관점 전원 일치: 제품 정의·데이터 모델은 착수 가능 수준이나, "어떻게 분산·동기화·보호·검증할지" 실행축이 비어 있음', 0,'accent'),
+  T('오늘 처리 가능(비용 0): Phase 1/2/3 스코프 경계 승인, 정서 파이프라인 Phase 1 한정 OFF 결정'),
+  T('1~2주 내 필요: SLM 벤치마크+음성데이터셋, 동기화·API 비동기 계약, PII 암호화 방식, docker-compose+장애주입 환경, 컬러 토큰 재조정, 테스트 정량기준'),
+  T('2~3주 내 필요: 법무 검토 착수(동의·보유기간·정서데이터), Phase 1 한정 예산 승인'),
+  T('착수를 실제로 막는 것은 예산 승인 1건 — 나머지 20건은 병행 착수 가능한 조건부 항목', 0,'warn'),
+  T('단, 보안 관점의 법적 Blocker는 온보딩·정서모니터링 모듈 착수 전 반드시 해소 필요', 0,'crit'),
+]});
+
+/* ---------------- Part 9. 로드맵 & 실행 ---------------- */
+SLIDES.push({part:9, type:'section', no:'09', title:'로드맵 & 실행 계획', sub:'Phase 1~3 · Do 단계 세션 가이드 · Action Items'});
+
+SLIDES.push({part:9, kicker:'Part 9 · 로드맵', title:'단계별 개발 로드맵', type:'table',
+  cols:['단계','범위','핵심 목표'], colWidths:[16,32,52],
+  rows:[
+    ['Phase 1 (MVP)','자서전 작가 모드 + 오프라인 코어','온디바이스 STT/SLM/TTS 오프라인 대화, 로컬캐시·Wi-Fi 배치동기화 기본 흐름 검증'],
+    ['Phase 2','말벗돌봄 모드 확장','로컬 경량 RAG 스냅샷 기반 오프라인 회상 대화, 정서 모니터링·알림 고도화'],
+    ['Phase 3','비서 모드 + 외부 연계 옵션','오프라인 일정·복약 비서 통합, 선택적 외부 TTS 파일럿, B2G 확장 검토'],
+  ]});
+
+SLIDES.push({part:9, kicker:'Part 9 · 로드맵', title:'Do 단계 실행 계획 (세션 가이드)', type:'table',
+  cols:['세션','Phase','범위'], colWidths:[20,26,54],
+  rows:[
+    ['Session 1','Plan + Design','전체 (완료)'],
+    ['Session 2','Phase 1+2','스키마·컨벤션 확정 (완료)'],
+    ['Session 3','Do','module-author-engine'],
+    ['Session 4','Do','module-mobile-offline-core'],
+    ['Session 5','Check + Report','전체 Gap 분석 및 완료 보고'],
+  ]});
+
+SLIDES.push({part:9, kicker:'Part 9 · 로드맵', title:'팀 구성 제안', type:'bullets', items:[
+  T('아키텍트 — 전체 구조·마이크로서비스 경계 관리'),
+  T('백엔드 개발자 — FastAPI 서비스(author/care/schedule-engine, sync-gateway, rag-core)'),
+  T('모바일 개발자 — Kotlin 온디바이스 앱, 설치모드 자동분기 구현'),
+  T('프론트엔드 개발자 — Next.js 웹 콘솔(사용자/가족/관리자)'),
+  T('인프라/DevOps — 온프레미스 K8s/GPU 클러스터, CI/CD'),
+  T('QA — 오프라인·동기화·설치모드 분기 등 특수 시나리오 검증'),
+  T('보안 담당 — PII 암호화, RBAC, Device Owner Mode 보안 검토'),
+]});
+
+SLIDES.push({part:9, kicker:'Part 9 · Next Steps', title:'Action Items', type:'table', revealRows:true,
+  cols:['#','액션','담당/기한'], colWidths:[6,60,34],
+  rows:[
+    ['1','Phase 1 한정 예산·인력 승인 (GPU 조달 리드타임 감안)','경영진 / 킥오프 후 1주 내'],
+    ['2','Phase 1/2/3 스코프 경계 공식 승인','PM / 킥오프 당일'],
+    ['3','온디바이스 SLM 벤치마크 + 고령화자 음성데이터셋 확보','모바일·ML·QA 리드 / 즉시 착수'],
+    ['4','동의·보유기간·정서데이터 법적 리스크 법무 검토 요청','법무팀 / 즉시 착수, 회신 2~3주'],
+    ['5','동기화 계약 + 비동기 API 계약 + PII 암호화 방식 설계','서버·모바일 리드 / 1~2주'],
+    ['6','로컬 개발환경 + QA 장애주입 인프라 구축','인프라·백엔드·QA / 1~1.5주'],
+    ['7','컬러 토큰 WCAG AA 재조정 + Next.js 폴더구조 정정','프론트엔드 리드 / 2~3일'],
+    ['8','테스트 정량 Pass/Fail 기준 수립','QA 리드 / 1주'],
+    ['9','정서 파이프라인 OFF 반영 후 Do 단계 착수','개발팀 / 위 1~8 병행 완료 후'],
+  ]});
+
+SLIDES.push({part:9, type:'closing', title:'감사합니다', sub:'Q & A',
+  meta:'은빛실타래 (SilverYarn) · NUBiz AX Initiative · 2026년 9월'});
+
+/* ============================================================
+   RENDER ENGINE
+   ============================================================ */
+function header(s){
+  return `<div class="hd"><p class="kicker">${s.kicker||''}</p><h1 class="title">${s.title}</h1>${s.subtitle?`<p class="subtitle">${s.subtitle}</p>`:''}</div>`;
+}
+function noteHtml(s){ return s.note ? `<div class="note">${s.note}</div>` : ''; }
+
+function renderTitle(s){
+  return `<div class="full-center">
+    <div class="mark">${LOGO_SVG(96,'var(--silver)','var(--teal)','var(--gold)')}</div>
+    <p class="cover-eyebrow">${s.eyebrow}</p>
+    <h1 class="cover-title">${s.title}</h1>
+    <p class="cover-sub">${s.sub}</p>
+    <p class="cover-desc">${s.desc}</p>
+  </div>
+  <div class="cover-meta">${s.meta}</div>`;
+}
+function renderClosing(s){
+  return `<div class="full-center">
+    <div class="mark">${LOGO_SVG(96,'var(--silver)','var(--teal)','var(--gold)')}</div>
+    <h1 class="cover-title" style="font-size:88px;">${s.title}</h1>
+    <p class="cover-sub">${s.sub}</p>
+  </div>
+  <div class="cover-meta">${s.meta}</div>`;
+}
+function renderSection(s){
+  return `<div class="full-center">
+    <p class="sec-no">${s.no}</p>
+    <h1 class="sec-title">${s.title}</h1>
+    <p class="sec-sub">${s.sub}</p>
+    <div class="sec-rule"></div>
+  </div>`;
+}
+function renderAgenda(s){
+  const items = s.items.map((it,i)=>`<div class="agenda-item" data-step="${i}"><span class="agenda-no">${it.no}</span><span class="agenda-label">${it.label}</span></div>`).join('');
+  return `${header(s)}<div class="agenda-grid">${items}</div>`;
+}
+function renderBullets(s){
+  const items = s.items.map((it,i)=>`<li class="b-item lvl${it.level} tone-${it.tone}" data-step="${i}">${it.text}</li>`).join('');
+  return `${header(s)}<div class="content"><ul class="b-list scrollarea">${items}</ul>${noteHtml(s)}</div>`;
+}
+function renderTwocol(s){
+  let step = 0;
+  const mk = (items) => items.map(it=>{const h=`<li class="b-item lvl${it.level} tone-${it.tone}" data-step="${step}">${it.text}</li>`; step++; return h;}).join('');
+  return `${header(s)}<div class="content"><div class="twocol">
+    <div class="col left"><p class="col-label">${s.left.label}</p><ul class="b-list scrollarea">${mk(s.left.items)}</ul></div>
+    <div class="col right"><p class="col-label">${s.right.label}</p><ul class="b-list scrollarea">${mk(s.right.items)}</ul></div>
+  </div>${noteHtml(s)}</div>`;
+}
+function renderTable(s){
+  const ths = s.cols.map((c,i)=>`<th style="width:${s.colWidths?s.colWidths[i]:''}%">${c}</th>`).join('');
+  const rows = s.rows.map((r,ri)=>{
+    const step = s.revealRows ? ri : null;
+    const tds = r.map(c=>`<td>${c}</td>`).join('');
+    return `<tr${step!==null?` data-step="${step}"`:''}>${tds}</tr>`;
+  }).join('');
+  const tableAttr = s.revealRows ? '' : ' data-step="0"';
+  return `${header(s)}<div class="content"><div class="tbl-wrap"><table class="dt"${tableAttr}><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table></div>${noteHtml(s)}</div>`;
+}
+function renderFlowV(s){
+  const steps = s.steps.map((st,i)=>{
+    const chevron = i < s.steps.length-1 ? `<div class="flow-chevron" data-step="${i}">▾</div>` : '';
+    return `<div class="flow-step" data-step="${i}"><div class="flow-num">${i+1}</div><div class="flow-body"><p class="flow-title">${st.title}</p><p class="flow-desc">${st.desc}</p></div></div>${chevron}`;
+  }).join('');
+  return `${header(s)}<div class="content"><div class="flow-v">${steps}</div>${noteHtml(s)}</div>`;
+}
+function renderFlowH(s){
+  const steps = s.steps.map((st,i)=>{
+    const arrow = i < s.steps.length-1 ? `<div class="flow-h-arrow" data-step="${i}">→</div>` : '';
+    return `<div class="flow-h-step" data-step="${i}"><div class="flow-h-badge">${i+1}</div><div class="flow-h-title">${st.title}</div><div class="flow-h-desc">${st.desc}</div></div>${arrow}`;
+  }).join('');
+  return `${header(s)}<div class="content" style="justify-content:center;"><div class="flow-h">${steps}</div>${noteHtml(s)}</div>`;
+}
+function renderDiagram(s){
+  const SCALE_X = 1728/1920, SCALE_Y = 700/1080; // content viewport approx within stage below header
+  const boxes = s.boxes.map((b,i)=>{
+    const cls = 'dbox tone-'+(b.tone||'subtle');
+    const sub = b.sub ? `<div class="sub">${b.sub.replace(/\n/g,'<br>')}</div>` : '';
+    const main = b.text.replace(/\n/g,'<br>');
+    return `<div class="${cls}" data-step="${b.g!=null?b.g:i}" style="left:${b.x*0.9}px; top:${b.y*0.65}px; width:${b.w*0.9}px; height:${b.h*0.65}px;">${main}${sub}</div>`;
+  }).join('');
+  let svgLines = '';
+  if(s.arrows){
+    svgLines = s.arrows.map(a=>{
+      const step = a.g!=null?a.g:0;
+      return `<line data-step="${step}" x1="${a.x1*0.9}" y1="${a.y1*0.65}" x2="${a.x2*0.9}" y2="${a.y2*0.65}" stroke="var(--gold)" stroke-width="4" marker-end="url(#arrowhead)"/>`;
+    }).join('');
+  }
+  const svg = `<svg viewBox="0 0 1728 702"><defs><marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--gold)"/></marker></defs>${svgLines}</svg>`;
+  return `${header(s)}<div class="content"><div class="diagram">${svg}${boxes}</div>${noteHtml(s)}</div>`;
+}
+function renderCode(s){
+  return `${header(s)}<div class="content"><div class="code-wrap" data-step="0"><pre>${s.code}</pre></div>${noteHtml(s)}</div>`;
+}
+function renderSwatches(s){
+  const chips = s.swatches.map(sw=>`<div class="swatch"><div class="swatch-chip" style="background:${sw.hex}"></div><div class="swatch-name">${sw.name}</div><div class="swatch-hex">${sw.hex} · ${sw.label}</div></div>`).join('');
+  const rows = s.typeScale.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+  return `${header(s)}<div class="content" data-step="0"><div class="swatch-row">${chips}</div>
+    <div class="tbl-wrap" style="flex:0 0 auto;"><table class="dt"><thead><tr><th>레벨</th><th>크기/굵기</th><th>서체</th></tr></thead><tbody>${rows}</tbody></table></div>
+  </div>`;
+}
+
+function renderSlide(s){
+  switch(s.type){
+    case 'title': return renderTitle(s);
+    case 'closing': return renderClosing(s);
+    case 'section': return renderSection(s);
+    case 'agenda': return renderAgenda(s);
+    case 'bullets': return renderBullets(s);
+    case 'twocol': return renderTwocol(s);
+    case 'table': return renderTable(s);
+    case 'flow': return s.direction==='horizontal' ? renderFlowH(s) : renderFlowV(s);
+    case 'diagram': return renderDiagram(s);
+    case 'code': return renderCode(s);
+    case 'swatches': return renderSwatches(s);
+    default: return '<div>Unknown slide type</div>';
+  }
+}
+
+/* ============================================================
+   NAVIGATION ENGINE
+   ============================================================ */
+let current = 0;
+let step = -1;
+const root = document.getElementById('slide-root');
+const stage = document.getElementById('stage');
+
+function totalStepsOf(el){
+  const nums = Array.from(el.querySelectorAll('[data-step]')).map(e=>parseInt(e.dataset.step,10));
+  return nums.length ? Math.max(...nums)+1 : 0;
+}
+
+function paint(el){
+  el.querySelectorAll('[data-step]').forEach(e=>{
+    const n = parseInt(e.dataset.step,10);
+    e.classList.toggle('shown', n <= step);
+  });
+}
+
+function renderCurrent(instant){
+  const s = SLIDES[current];
+  const div = document.createElement('div');
+  div.className = 'slide';
+  div.innerHTML = renderSlide(s);
+  root.innerHTML = '';
+  root.appendChild(div);
+  paint(div);
+  requestAnimationFrame(()=>{ div.classList.add('active'); });
+  document.getElementById('part-no').textContent = String(s.part).padStart(2,'0');
+  document.getElementById('part-name').textContent = PARTS[s.part];
+  document.getElementById('counter').textContent = (current+1) + ' / ' + SLIDES.length;
+  document.getElementById('progress-fill').style.width = (((current+1)/SLIDES.length)*100) + '%';
+}
+
+function goNext(){
+  const el = root.querySelector('.slide');
+  const total = totalStepsOf(el);
+  if(step < total-1){ step++; paint(el); }
+  else if(current < SLIDES.length-1){ current++; step=-1; renderCurrent(); }
+}
+function goPrev(){
+  if(step >= 0){ step--; const el=root.querySelector('.slide'); paint(el); }
+  else if(current > 0){ current--; renderCurrent(); const el=root.querySelector('.slide'); step = totalStepsOf(el)-1; paint(el); }
+}
+
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown'){ e.preventDefault(); goNext(); }
+  else if(e.key==='ArrowLeft' || e.key==='PageUp'){ e.preventDefault(); goPrev(); }
+  else if(e.key==='Home'){ current=0; step=-1; renderCurrent(); }
+  else if(e.key==='End'){ current=SLIDES.length-1; step=-1; renderCurrent(); }
+  else if(e.key==='Escape'){ toggleFullscreen(); }
+});
+document.getElementById('btn-next').addEventListener('click', goNext);
+document.getElementById('btn-prev').addEventListener('click', goPrev);
+
+function toggleFullscreen(){
+  try{
+    if(!document.fullscreenElement){ document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
+    else{ document.exitFullscreen && document.exitFullscreen(); }
+  }catch(err){}
+}
+document.getElementById('btn-full').addEventListener('click', toggleFullscreen);
+
+function fitStage(){
+  const scale = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+  stage.style.transform = 'scale('+scale+')';
+}
+window.addEventListener('resize', fitStage);
+fitStage();
+renderCurrent();
+</script>

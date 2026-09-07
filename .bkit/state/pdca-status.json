@@ -1,0 +1,256 @@
+{
+  "version": "3.0",
+  "lastUpdated": "2026-09-06T09:26:57.485Z",
+  "activeFeatures": [
+    "silveryarn-platform",
+    "presentations",
+    "02-design"
+  ],
+  "primaryFeature": "silveryarn-platform",
+  "features": {
+    "silveryarn-platform": {
+      "phase": "design",
+      "phaseNumber": 2,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {
+        "plan": "docs/01-plan/features/silveryarn-platform.plan.md",
+        "design": "docs/02-design/features/silveryarn-platform.design.md"
+      },
+      "timestamps": {
+        "started": "2026-09-05T08:19:04.662Z",
+        "lastUpdated": "2026-09-05T08:19:04.662Z"
+      },
+      "stateMachine": {
+        "currentState": "design",
+        "previousState": "plan",
+        "stateHistory": [],
+        "retryCount": 0,
+        "maxRetries": 5,
+        "circuitBreakerOpen": false
+      },
+      "metrics": {
+        "qualityScore": null,
+        "conventionCompliance": null,
+        "apiCompliance": null,
+        "cycleTimeMs": null,
+        "iterationEfficiency": null
+      },
+      "phaseTimestamps": {},
+      "automationLevel": 2
+    },
+    "presentations": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-09-05T09:58:38.845Z",
+        "lastUpdated": "2026-09-06T08:26:41.786Z"
+      },
+      "lastFile": "C:\\PROJECT\\SilverYarn\\docs\\presentations\\_verify.js"
+    },
+    "02-design": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-09-06T09:18:29.649Z",
+        "lastUpdated": "2026-09-06T09:26:57.482Z"
+      },
+      "lastFile": "C:\\PROJECT\\SilverYarn\\docs\\02-design\\_check_mermaid.js"
+    }
+  },
+  "pipeline": {
+    "currentPhase": 3,
+    "level": "Enterprise",
+    "phaseHistory": [
+      {
+        "phase": 1,
+        "name": "Schema/Terminology Definition",
+        "completedAt": "2026-09-05T08:19:04.662Z",
+        "documents": [
+          "docs/01-plan/glossary.md",
+          "docs/01-plan/schema.md"
+        ]
+      },
+      {
+        "phase": 2,
+        "name": "Coding Convention",
+        "completedAt": "2026-09-05T08:19:04.662Z",
+        "documents": [
+          "CONVENTIONS.md",
+          "docs/01-plan/naming.md",
+          "docs/01-plan/structure.md"
+        ]
+      }
+    ]
+  },
+  "session": {
+    "startedAt": "2026-09-05T08:17:53.299Z",
+    "onboardingCompleted": true,
+    "lastActivity": "2026-09-06T09:26:57.485Z"
+  },
+  "history": [
+    {
+      "timestamp": "2026-09-05T08:19:04.662Z",
+      "feature": "silveryarn-platform",
+      "phase": "plan",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T08:19:04.662Z",
+      "feature": "silveryarn-platform",
+      "phase": "design",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T09:58:38.847Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T13:23:56.393Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T13:24:12.537Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T05:52:47.680Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T05:53:07.647Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T05:53:24.037Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T05:53:36.996Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T05:53:52.328Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T07:58:12.614Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T07:58:48.146Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T07:58:57.031Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T07:59:23.978Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T07:59:39.087Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T07:59:47.579Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T07:59:58.090Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T08:00:51.139Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T08:01:24.833Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T08:01:37.361Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T08:26:41.788Z",
+      "feature": "presentations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T09:18:29.655Z",
+      "feature": "02-design",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-06T09:26:57.485Z",
+      "feature": "02-design",
+      "phase": "do",
+      "action": "updated"
+    }
+  ],
+  "stateMachine": {
+    "defaultWorkflow": "default",
+    "activeWorkflows": {},
+    "totalTransitions": 0
+  },
+  "automation": {
+    "globalLevel": 2,
+    "trustScore": 40,
+    "pendingApprovals": 0,
+    "lastGateResult": null
+  },
+  "team": {
+    "enabled": true,
+    "stateFile": ".bkit/runtime/agent-state.json",
+    "eventsFile": ".bkit/runtime/agent-events.jsonl"
+  }
+}

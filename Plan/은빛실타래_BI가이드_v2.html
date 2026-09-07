@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>은빛실타래 Brand Identity Guidelines — v2.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F2EE; --surface:#FFFFFF; --subtle:#ECE8E1; --subtle2:#F7F5F1;
+  --border:#DEDACF; --border-soft:#E9E5DC;
+  --ink:#20242B; --ink-muted:#5B6472; --ink-faint:#9096A0;
+  --silver:#8E97A6; --silver-deep:#4B5563;
+  --teal:#1E7A8C; --teal-deep:#155C6B; --teal-tint:#E4F0F2;
+  --gold:#B8935A; --gold-deep:#96723F; --gold-tint:#F3E9D8;
+  --serif:'Noto Serif KR', serif;
+  --sans:'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --shadow-sm: 0 1px 3px rgba(32,36,43,.06), 0 1px 2px rgba(32,36,43,.04);
+  --shadow-md: 0 8px 24px rgba(32,36,43,.07);
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.7;}
+
+.wrap{max-width:1240px;margin:0 auto;padding:0 28px;}
+
+/* ---------- top nav ---------- */
+.topnav{
+  position:sticky;top:0;z-index:50;background:rgba(244,242,238,.92);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--border-soft);
+}
+.topnav-inner{
+  max-width:1240px;margin:0 auto;padding:0 28px;height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.topnav-brand{display:flex;align-items:center;gap:10px;}
+.topnav-brand svg{width:26px;height:26px;}
+.topnav-brand span{font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.01em;}
+.topnav-links{display:flex;gap:28px;}
+.topnav-links a{
+  font-size:12.5px;font-weight:600;color:var(--ink-muted);text-decoration:none;
+  letter-spacing:.02em;
+}
+.topnav-links a:hover{color:var(--teal);}
+
+/* ---------- hero ---------- */
+.hero{padding:96px 0 76px;border-bottom:1px solid var(--border-soft);}
+.hero-mark{width:64px;height:64px;margin-bottom:36px;}
+.hero-eyebrow{
+  font-size:13px;font-weight:700;letter-spacing:.14em;color:var(--teal);
+  margin-bottom:18px;
+}
+h1.hero-title{
+  font-family:var(--serif);font-weight:700;font-size:52px;line-height:1.28;
+  margin:0 0 6px;color:var(--ink);letter-spacing:-.01em;
+}
+.hero-title .en{
+  display:block;font-family:var(--sans);font-weight:600;font-size:15px;
+  letter-spacing:.24em;color:var(--silver-deep);margin-top:14px;
+}
+.hero-desc{font-size:16.5px;color:var(--ink-muted);max-width:680px;margin:26px 0 0;line-height:1.85;}
+.hero-meta{display:flex;gap:32px;margin-top:44px;flex-wrap:wrap;}
+.hero-meta div{font-size:12px;color:var(--ink-faint);}
+.hero-meta strong{display:block;font-size:13.5px;color:var(--ink);font-weight:600;margin-bottom:3px;}
+
+/* ---------- section shell ---------- */
+section.doc{padding:88px 0;border-bottom:1px solid var(--border-soft);}
+section.doc.tinted{background:var(--subtle2);}
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:48px;gap:24px;flex-wrap:wrap;}
+.sec-num{font-family:var(--serif);font-size:14px;font-weight:600;color:var(--teal);margin-bottom:10px;}
+.sec-title{font-family:var(--serif);font-size:30px;font-weight:700;margin:0;color:var(--ink);}
+.sec-sub{font-size:13.5px;color:var(--ink-faint);text-align:right;max-width:280px;}
+
+/* ---------- philosophy ---------- */
+.philo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:56px;}
+.philo-card{background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;padding:32px 28px;}
+.philo-tag{font-size:11.5px;font-weight:700;color:var(--gold-deep);letter-spacing:.08em;margin-bottom:12px;}
+.philo-card h3{font-family:var(--serif);font-size:19px;margin:0 0 12px;color:var(--ink);}
+.philo-card p{font-size:13.5px;color:var(--ink-muted);line-height:1.75;margin:0;}
+
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.info-box{background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;padding:30px 32px;}
+.info-box h4{font-size:14.5px;font-weight:700;margin:0 0 16px;color:var(--ink);}
+.info-box ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;}
+.info-box li{font-size:13px;color:var(--ink-muted);line-height:1.65;padding-left:16px;position:relative;}
+.info-box li::before{content:"";position:absolute;left:0;top:8px;width:5px;height:5px;border-radius:50%;background:var(--teal);}
+.info-box li strong{color:var(--ink);font-weight:600;}
+.slogan{font-family:var(--serif);font-size:14.5px;color:var(--ink);}
+
+/* ---------- logo system ---------- */
+.logo-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;margin-bottom:56px;}
+.logo-card{
+  background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;
+  padding:26px 16px 20px;display:flex;flex-direction:column;align-items:center;
+  box-shadow:var(--shadow-sm);
+}
+.logo-card.dark{background:var(--ink);border-color:var(--ink);}
+.logo-card svg{width:100%;height:78px;margin-bottom:18px;}
+.logo-num{font-size:10.5px;font-weight:700;color:var(--teal);letter-spacing:.04em;margin-bottom:4px;}
+.logo-card.dark .logo-num{color:var(--gold);}
+.logo-name{font-size:13px;font-weight:700;color:var(--ink);text-align:center;}
+.logo-card.dark .logo-name{color:#fff;}
+.logo-desc{font-size:11px;color:var(--ink-faint);text-align:center;margin-top:3px;}
+.logo-card.dark .logo-desc{color:var(--silver);}
+
+/* construction diagram */
+.construct-wrap{
+  display:grid;grid-template-columns:1.1fr 1fr;gap:40px;align-items:center;
+  background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;
+  padding:44px;margin-bottom:24px;
+}
+.construct-visual{display:flex;justify-content:center;}
+.construct-visual svg{width:100%;max-width:340px;height:auto;}
+.construct-text h4{font-size:15px;font-weight:700;margin:0 0 14px;color:var(--ink);}
+.construct-text p{font-size:13px;color:var(--ink-muted);line-height:1.75;margin:0 0 14px;}
+.construct-specs{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+.construct-specs div{
+  display:flex;justify-content:space-between;font-size:12.3px;
+  border-bottom:1px dashed var(--border);padding-bottom:7px;color:var(--ink-muted);
+}
+.construct-specs span:last-child{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;}
+
+/* clear space + min size */
+.specs-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.spec-panel{background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;padding:36px;}
+.spec-panel h4{font-size:14.5px;font-weight:700;margin:0 0 20px;color:var(--ink);}
+.clearspace-box{
+  border:1px dashed var(--teal);border-radius:4px;padding:30px;
+  display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:18px;
+  background:var(--subtle2);
+}
+.clearspace-box svg{width:180px;height:auto;}
+.cs-tag{position:absolute;font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.05em;}
+.cs-tag.t{top:8px;left:50%;transform:translateX(-50%);}
+.cs-tag.b{bottom:8px;left:50%;transform:translateX(-50%);}
+.cs-tag.l{left:8px;top:50%;transform:translateY(-50%) rotate(-90deg);}
+.cs-tag.r{right:8px;top:50%;transform:translateY(-50%) rotate(90deg);}
+.spec-panel p{font-size:12.5px;color:var(--ink-muted);line-height:1.7;margin:0;}
+
+.minsize-row{display:flex;align-items:flex-end;gap:28px;margin-bottom:18px;}
+.minsize-item{text-align:center;}
+.minsize-item .box{
+  display:flex;align-items:center;justify-content:center;
+  background:var(--subtle2);border:1px solid var(--border-soft);border-radius:4px;margin-bottom:8px;
+}
+.minsize-item .lab{font-size:10.5px;color:var(--ink-faint);}
+
+/* do / dont */
+.dd-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.dd-cell{
+  border-radius:6px;padding:22px 18px 18px;text-align:center;position:relative;
+  border:1px solid var(--border-soft);background:var(--surface);
+}
+.dd-cell.ok{border-color:var(--teal);background:var(--teal-tint);}
+.dd-cell svg{width:100%;height:64px;margin-bottom:14px;}
+.dd-mark{
+  position:absolute;top:12px;right:12px;width:20px;height:20px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;
+}
+.dd-cell.ok .dd-mark{background:var(--teal);}
+.dd-cell.bad .dd-mark{background:#B8493F;}
+.dd-label{font-size:11.5px;font-weight:700;color:var(--ink);}
+.dd-cell.ok .dd-label{color:var(--teal-deep);}
+.dd-sub{font-size:10.5px;color:var(--ink-faint);margin-top:3px;}
+
+/* ---------- color ---------- */
+.color-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:24px;}
+.color-card{background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.color-swatch{height:100px;}
+.color-body{padding:18px 20px 20px;}
+.color-role{font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--ink-faint);text-transform:uppercase;margin-bottom:4px;}
+.color-name{font-family:var(--serif);font-size:16.5px;font-weight:700;color:var(--ink);margin-bottom:12px;}
+.color-vals{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--ink-muted);font-variant-numeric:tabular-nums;}
+.color-vals b{color:var(--ink);font-weight:600;}
+.color-ratio{
+  display:flex;background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;overflow:hidden;
+  margin-bottom:0;
+}
+.ratio-seg{padding:18px 20px;color:#fff;}
+.ratio-seg .pct{font-family:var(--serif);font-size:22px;font-weight:700;}
+.ratio-seg .lab{font-size:11px;opacity:.9;margin-top:2px;}
+
+/* ---------- typography ---------- */
+.typo-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:40px;}
+.typo-card{background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;padding:36px;}
+.typo-role{font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--teal);text-transform:uppercase;margin-bottom:10px;}
+.typo-name{font-size:24px;font-weight:700;margin-bottom:6px;color:var(--ink);}
+.typo-card.serif .typo-name{font-family:var(--serif);}
+.typo-usage{font-size:12.5px;color:var(--ink-faint);margin-bottom:22px;}
+.typo-sample{
+  font-size:16.5px;line-height:1.9;color:var(--ink);border-left:2px solid var(--gold);
+  padding-left:18px;margin-bottom:20px;
+}
+.typo-card.serif .typo-sample{font-family:var(--serif);}
+.typo-card.sans .typo-sample{font-family:var(--sans);border-left-color:var(--teal);}
+.scale-row{display:flex;align-items:baseline;gap:14px;border-top:1px solid var(--border-soft);padding-top:16px;}
+.scale-row + .scale-row{padding-top:10px;}
+.scale-label{font-size:10px;color:var(--ink-faint);width:56px;flex-shrink:0;}
+.scale-sample{font-family:var(--serif);color:var(--ink);}
+
+/* ---------- applications ---------- */
+.app-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+.app-card{background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;padding:26px;box-shadow:var(--shadow-sm);}
+.app-label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.04em;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border-soft);}
+.app-label .dot{width:7px;height:7px;border-radius:50%;background:var(--silver);}
+.bubble{
+  background:var(--teal-tint);border:1px solid #CFE6E9;border-radius:14px 14px 14px 3px;
+  padding:16px 18px;margin-bottom:16px;
+}
+.bubble strong{display:block;font-size:11.5px;color:var(--teal-deep);margin-bottom:5px;}
+.bubble span{font-size:13px;color:var(--ink);line-height:1.6;}
+.book-mock{
+  background:linear-gradient(135deg,#2B3038,#171A20);border-radius:6px;padding:34px 20px;
+  text-align:center;margin-bottom:16px;min-height:150px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px;
+}
+.book-mock .t{font-family:var(--serif);font-size:17px;color:#fff;font-weight:700;}
+.book-mock .s{font-size:10px;letter-spacing:.12em;color:var(--gold);text-transform:uppercase;}
+.book-mock svg{width:30px;height:30px;margin-bottom:6px;opacity:.9;}
+.dash-mock{background:var(--subtle2);border:1px solid var(--border-soft);border-radius:8px;padding:16px 18px;margin-bottom:16px;}
+.dash-mock .h{font-size:11.5px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+.dash-mock .r{font-size:12px;color:var(--teal-deep);}
+.app-note{font-size:12px;color:var(--ink-muted);line-height:1.65;margin:0;}
+
+/* ---------- footer ---------- */
+footer.doc-footer{padding:48px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.footer-brand{font-family:var(--serif);font-weight:700;font-size:14px;color:var(--ink);}
+.footer-meta{font-size:11.5px;color:var(--ink-faint);}
+
+@media (max-width:1000px){
+  .philo-grid,.twocol,.logo-grid,.color-grid,.typo-grid,.app-grid,.dd-grid,.specs-row,.construct-wrap{grid-template-columns:1fr 1fr;}
+  .logo-grid{grid-template-columns:repeat(3,1fr);}
+}
+@media (max-width:640px){
+  .hero-title{font-size:34px;}
+  .philo-grid,.twocol,.logo-grid,.color-grid,.typo-grid,.app-grid,.dd-grid,.specs-row,.construct-wrap,.color-ratio{grid-template-columns:1fr;}
+  .topnav-links{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ shared SVG defs (reused across the doc) ============ -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <path id="toparc" d="M 30,120 A 90,90 0 0 1 210,120" fill="none"/>
+  </defs>
+</svg>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <div class="topnav-brand">
+      <svg viewBox="0 0 200 200"><path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#8E97A6" stroke-width="10" stroke-linecap="round"/><path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#1E7A8C" stroke-width="8" stroke-linecap="round"/><circle cx="100" cy="100" r="9" fill="#B8935A"/></svg>
+      <span>은빛실타래</span>
+    </div>
+    <div class="topnav-links">
+      <a href="#philosophy">철학</a>
+      <a href="#logo">로고</a>
+      <a href="#color">컬러</a>
+      <a href="#type">타이포그래피</a>
+      <a href="#apps">적용</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="wrap">
+    <svg class="hero-mark" viewBox="0 0 200 200">
+      <path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#8E97A6" stroke-width="7" stroke-linecap="round"/>
+      <path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#1E7A8C" stroke-width="5" stroke-linecap="round"/>
+      <path d="M 50,100 Q 22,128 16,154" fill="none" stroke="#1E7A8C" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="16" cy="154" r="4" fill="#1E7A8C"/>
+      <circle cx="100" cy="100" r="6" fill="#B8935A"/>
+    </svg>
+    <div class="hero-eyebrow">Brand Identity Guidelines · v2.0</div>
+    <h1 class="hero-title">은빛실타래<span class="en">SILVER YARN — LIFE MEMORY ARCHIVE &amp; COMPANION</span></h1>
+    <p class="hero-desc">
+      어르신의 백발에 깃든 삶의 지혜와, 헝클어진 기억의 실마리를 다시 이어주는 실타래의 은유.
+      구술로 자서전을 직조하고, 그 기록을 근거로 다정한 말벗이 되어 가족과 어르신을 잇는
+      음성 AI 라이프스토리 플랫폼의 공식 브랜드 자산 규정집입니다.
+    </p>
+    <div class="hero-meta">
+      <div><strong>버전</strong>v2.0 — 로고 시스템 전면 개정</div>
+      <div><strong>발행</strong>2026년 9월</div>
+      <div><strong>담당</strong>NUBiz AX Initiative · Brand Design</div>
+      <div><strong>적용 범위</strong>제품 UI · 인쇄물 · 웹 · 사이니지</div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ 01 PHILOSOPHY ============ -->
+<section class="doc" id="philosophy">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="sec-num">01 — Brand Core</div>
+        <h2 class="sec-title">브랜드 철학 &amp; 메시지 구조</h2>
+      </div>
+      <div class="sec-sub">기억을 잇는 세 가지 약속과<br>브랜드가 말하고 듣는 방식</div>
+    </div>
+
+    <div class="philo-grid">
+      <div class="philo-card">
+        <div class="philo-tag">REMINISCENCE CARE</div>
+        <h3>기억의 실 잇기</h3>
+        <p>단편적인 단어와 희미해진 유년의 기억에서 출발하여 인지 저하를 늦추는 전문 회상요법(Reminiscence Therapy)을 대화 속에서 자연스럽게 실천합니다.</p>
+      </div>
+      <div class="philo-card">
+        <div class="philo-tag">LITERARY ARCHIVING</div>
+        <h3>서사의 직조</h3>
+        <p>거칠고 헝클어진 구술이라도 AI가 맥락을 살려 우아한 활자로 매만져, 후손에게 전할 품격 있는 자서전으로 완성합니다.</p>
+      </div>
+      <div class="philo-card">
+        <div class="philo-tag">FAMILY BOND</div>
+        <h3>가족의 유대</h3>
+        <p>기억이 흐려질까 두려운 순간에도, 가족이 함께 웹에서 사진과 이야기를 채우며 존경과 화해로 이어지는 다리가 됩니다.</p>
+      </div>
+    </div>
+
+    <div class="twocol">
+      <div class="info-box">
+        <h4>핵심 커뮤니케이션 슬로건</h4>
+        <ul>
+          <li class="slogan">"헝클어진 기억의 실을 풀어, 가장 눈부신 삶을 직조합니다."</li>
+          <li class="slogan">"끊어지지 않도록, 어르신의 고운 기억을 하나하나 이어갑니다."</li>
+          <li class="slogan">"은빛 세월이 자아낸, 가장 따스한 이야기 한 벌."</li>
+          <li><strong>보조 슬로건 —</strong> "기억의 문이 닫히기 전, 사랑하는 나의 삶을 가족의 품에."</li>
+        </ul>
+      </div>
+      <div class="info-box">
+        <h4>보이스 앤 톤 (Voice &amp; Tone)</h4>
+        <ul>
+          <li><strong>경청과 인내</strong> — 같은 말을 반복하거나 말문이 막혀도 재촉하지 않는 너그러움</li>
+          <li><strong>온화한 품격</strong> — 어르신의 일생을 시대의 역사로 대우하는 정중한 문어체</li>
+          <li><strong>안도감</strong> — "기억나지 않아도 괜찮습니다"라며 자책을 덜어주는 화법</li>
+          <li><strong>절제된 다정함</strong> — 과장 없이, 꼭 필요한 말만 진심을 담아 전하는 태도</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 LOGO SYSTEM ============ -->
+<section class="doc tinted" id="logo">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="sec-num">02 — Visual Identity</div>
+        <h2 class="sec-title">로고마크 시스템</h2>
+      </div>
+      <div class="sec-sub">'이음매듭(Linking Knot)' —<br>열린 두 개의 실 고리로 다시 설계한 심볼</div>
+    </div>
+
+    <div class="logo-grid">
+      <!-- 01 심볼 -->
+      <div class="logo-card">
+        <svg viewBox="0 0 200 200">
+          <path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#8E97A6" stroke-width="7" stroke-linecap="round"/>
+          <path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#1E7A8C" stroke-width="5" stroke-linecap="round"/>
+          <path d="M 50,100 Q 22,128 16,154" fill="none" stroke="#1E7A8C" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="16" cy="154" r="4" fill="#1E7A8C"/>
+          <circle cx="100" cy="100" r="6" fill="#B8935A"/>
+        </svg>
+        <div class="logo-num">01</div>
+        <div class="logo-name">시그니처 심볼</div>
+        <div class="logo-desc">이음매듭 풀 버전</div>
+      </div>
+
+      <!-- 02 워드마크 -->
+      <div class="logo-card">
+        <svg viewBox="0 0 240 90">
+          <g transform="translate(6,7) scale(0.32)">
+            <path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#8E97A6" stroke-width="9" stroke-linecap="round"/>
+            <path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#1E7A8C" stroke-width="7" stroke-linecap="round"/>
+            <circle cx="100" cy="100" r="8" fill="#B8935A"/>
+          </g>
+          <text x="42" y="42" font-family="Noto Serif KR, serif" font-size="20" font-weight="700" fill="#20242B" letter-spacing="0.5">은빛실타래</text>
+          <text x="43" y="58" font-family="Pretendard, sans-serif" font-size="7.5" font-weight="600" fill="#1E7A8C" letter-spacing="2.4">SILVER YARN</text>
+          <line x1="43" y1="65" x2="150" y2="65" stroke="#B8935A" stroke-width="0.75"/>
+        </svg>
+        <div class="logo-num">02</div>
+        <div class="logo-name">워드마크</div>
+        <div class="logo-desc">심볼 + 로고타입 조합</div>
+      </div>
+
+      <!-- 03 앱 아이콘 -->
+      <div class="logo-card dark">
+        <svg viewBox="0 0 200 200">
+          <rect width="200" height="200" rx="46" fill="#152531"/>
+          <path d="M 100,52 A 48,48 0 1 1 52,100" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round"/>
+          <circle cx="100" cy="100" r="9" fill="#C9A667"/>
+        </svg>
+        <div class="logo-num">03</div>
+        <div class="logo-name">앱 런처 아이콘</div>
+        <div class="logo-desc">1색 축소형 · 다크 배경</div>
+      </div>
+
+      <!-- 04 모노그램 -->
+      <div class="logo-card">
+        <svg viewBox="0 0 200 200">
+          <path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#20242B" stroke-width="8" stroke-linecap="round"/>
+          <path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#1E7A8C" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="100" cy="100" r="7" fill="#B8935A"/>
+        </svg>
+        <div class="logo-num">04</div>
+        <div class="logo-name">모노그램</div>
+        <div class="logo-desc">파비콘 · SNS 프로필</div>
+      </div>
+
+      <!-- 05 엠블럼 -->
+      <div class="logo-card">
+        <svg viewBox="0 0 240 240">
+          <circle cx="120" cy="120" r="104" fill="none" stroke="#C9C3B6" stroke-width="1"/>
+          <circle cx="120" cy="120" r="90" fill="none" stroke="#20242B" stroke-width="1.25"/>
+          <text font-family="Pretendard, sans-serif" font-size="11" letter-spacing="3" fill="#20242B" text-anchor="middle">
+            <textPath href="#toparc" startOffset="50%">SILVER YARN · 은빛실타래</textPath>
+          </text>
+          <text x="120" y="178" font-family="Pretendard, sans-serif" font-size="10" letter-spacing="2.5" fill="#B8935A" text-anchor="middle">EST. 2026</text>
+          <g transform="translate(120,102) scale(0.62) translate(-100,-100)">
+            <path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#8E97A6" stroke-width="7" stroke-linecap="round"/>
+            <path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#1E7A8C" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="100" cy="100" r="6" fill="#B8935A"/>
+          </g>
+        </svg>
+        <div class="logo-num">05</div>
+        <div class="logo-name">헤리티지 엠블럼</div>
+        <div class="logo-desc">양장본 각인 · 인증서</div>
+      </div>
+    </div>
+
+    <!-- Construction -->
+    <div class="construct-wrap">
+      <div class="construct-visual">
+        <svg viewBox="0 0 220 220">
+          <g stroke="#DEDACF" stroke-width="1">
+            <line x1="10" y1="110" x2="210" y2="110"/>
+            <line x1="110" y1="10" x2="110" y2="210"/>
+          </g>
+          <circle cx="110" cy="110" r="60" fill="none" stroke="#D8D2C4" stroke-width="1" stroke-dasharray="2 3"/>
+          <circle cx="110" cy="110" r="44" fill="none" stroke="#D8D2C4" stroke-width="1" stroke-dasharray="2 3"/>
+          <path d="M 110,60 A 50,50 0 1 1 60,110" fill="none" stroke="#8E97A6" stroke-width="6" stroke-linecap="round"/>
+          <path d="M 110,144 A 34,34 0 1 1 144,110" fill="none" stroke="#1E7A8C" stroke-width="4.5" stroke-linecap="round"/>
+          <circle cx="110" cy="110" r="5.5" fill="#B8935A"/>
+          <path d="M 165,110 A 55,55 0 0 1 145,150" fill="none" stroke="#C9A667" stroke-width="0.75"/>
+          <text x="168" y="114" font-family="Pretendard" font-size="9" fill="#96723F">r=50</text>
+          <path d="M 144,110 A 34,34 0 0 1 128,138" fill="none" stroke="#1E7A8C" stroke-width="0.5"/>
+          <text x="118" y="150" font-family="Pretendard" font-size="9" fill="#155C6B">r=34</text>
+        </svg>
+      </div>
+      <div class="construct-text">
+        <h4>설계 원리 — 두 개의 열린 고리</h4>
+        <p>
+          바깥 고리(반지름 50)와 안쪽 고리(반지름 34)는 각각 270°만 그려 완전히 닫히지 않은 원으로 남깁니다.
+          두 여백은 서로 반대 방향에 위치해 실이 풀렸다가 다시 감기는 순환의 리듬을 만들며,
+          중심의 골드 점은 이야기가 채집되는 '기억의 매듭'을 상징합니다.
+        </p>
+        <div class="construct-specs">
+          <div><span>바깥 고리 반지름</span><span>50 unit · stroke 7</span></div>
+          <div><span>안쪽 고리 반지름</span><span>34 unit · stroke 5</span></div>
+          <div><span>고리 간 여백 각도</span><span>90°, 서로 대각 배치</span></div>
+          <div><span>중심 매듭 지름</span><span>12 unit</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clear space + min size -->
+    <div class="specs-row">
+      <div class="spec-panel">
+        <h4>클리어 스페이스 (여백 규정)</h4>
+        <div class="clearspace-box">
+          <span class="cs-tag t">x</span><span class="cs-tag b">x</span>
+          <span class="cs-tag l">x</span><span class="cs-tag r">x</span>
+          <svg viewBox="0 0 220 130">
+            <g transform="translate(15,15) scale(0.5)">
+              <path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#8E97A6" stroke-width="7" stroke-linecap="round"/>
+              <path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#1E7A8C" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="100" cy="100" r="6" fill="#B8935A"/>
+            </g>
+            <text x="110" y="72" font-family="Noto Serif KR, serif" font-size="18" font-weight="700" fill="#20242B">은빛실타래</text>
+          </svg>
+        </div>
+        <p>여백 단위 x = 바깥 고리 지름의 1/4. 심볼 사면에 x 이상의 절대 여백을 확보하여 타 그래픽·텍스트의 침범을 방지합니다.</p>
+      </div>
+      <div class="spec-panel">
+        <h4>최소 사용 규격</h4>
+        <div class="minsize-row">
+          <div class="minsize-item">
+            <div class="box" style="width:64px;height:64px;">
+              <svg viewBox="0 0 200 200" width="40" height="40"><path d="M 100,52 A 48,48 0 1 1 52,100" fill="none" stroke="#152531" stroke-width="12" stroke-linecap="round"/><circle cx="100" cy="100" r="10" fill="#B8935A"/></svg>
+            </div>
+            <div class="lab">디지털 48px</div>
+          </div>
+          <div class="minsize-item">
+            <div class="box" style="width:44px;height:44px;">
+              <svg viewBox="0 0 200 200" width="26" height="26"><path d="M 100,52 A 48,48 0 1 1 52,100" fill="none" stroke="#152531" stroke-width="14" stroke-linecap="round"/><circle cx="100" cy="100" r="11" fill="#B8935A"/></svg>
+            </div>
+            <div class="lab">파비콘 24px</div>
+          </div>
+          <div class="minsize-item">
+            <div class="box" style="width:150px;height:64px;">
+              <svg viewBox="0 0 260 110" width="150" height="64"><g transform="translate(10,10) scale(0.4)"><path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#8E97A6" stroke-width="9" stroke-linecap="round"/><path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#1E7A8C" stroke-width="7" stroke-linecap="round"/><circle cx="100" cy="100" r="8" fill="#B8935A"/></g><text x="90" y="58" font-family="Noto Serif KR, serif" font-size="26" font-weight="700" fill="#20242B">은빛실타래</text></svg>
+            </div>
+            <div class="lab">워드마크 최소 120px</div>
+          </div>
+        </div>
+        <p>인쇄물은 가로 기준 25mm 이상으로 출력하여 이중 고리 선의 뭉침을 방지합니다. 이보다 작아질 경우 04번 모노그램 또는 03번 앱 아이콘을 사용합니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LOGO MISUSE ============ -->
+<section class="doc">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="sec-num">02.1 — Usage Rules</div>
+        <h2 class="sec-title">올바른 사용과 오용 사례</h2>
+      </div>
+      <div class="sec-sub">심볼의 비례와 색은<br>임의로 변형하지 않습니다</div>
+    </div>
+    <div class="dd-grid">
+      <div class="dd-cell ok">
+        <div class="dd-mark">✓</div>
+        <svg viewBox="0 0 200 200"><path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#8E97A6" stroke-width="7" stroke-linecap="round"/><path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#1E7A8C" stroke-width="5" stroke-linecap="round"/><circle cx="100" cy="100" r="6" fill="#B8935A"/></svg>
+        <div class="dd-label">기본 비례 · 지정 색상</div>
+        <div class="dd-sub">표준 사용</div>
+      </div>
+      <div class="dd-cell bad">
+        <div class="dd-mark">✕</div>
+        <svg viewBox="0 0 200 200" style="transform:scaleX(1.6)"><path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#8E97A6" stroke-width="7" stroke-linecap="round"/><path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#1E7A8C" stroke-width="5" stroke-linecap="round"/><circle cx="100" cy="100" r="6" fill="#B8935A"/></svg>
+        <div class="dd-label">가로·세로 비율 왜곡</div>
+        <div class="dd-sub">임의 확대·축소 금지</div>
+      </div>
+      <div class="dd-cell bad">
+        <div class="dd-mark">✕</div>
+        <svg viewBox="0 0 200 200" style="transform:rotate(35deg)"><path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#8E97A6" stroke-width="7" stroke-linecap="round"/><path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#1E7A8C" stroke-width="5" stroke-linecap="round"/><circle cx="100" cy="100" r="6" fill="#B8935A"/></svg>
+        <div class="dd-label">임의 회전</div>
+        <div class="dd-sub">매듭의 방향성 훼손</div>
+      </div>
+      <div class="dd-cell bad">
+        <div class="dd-mark">✕</div>
+        <svg viewBox="0 0 200 200"><path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#D14B3F" stroke-width="7" stroke-linecap="round"/><path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#4CAF50" stroke-width="5" stroke-linecap="round"/><circle cx="100" cy="100" r="6" fill="#333"/></svg>
+        <div class="dd-label">지정 외 임의 배색</div>
+        <div class="dd-sub">브랜드 컬러만 사용</div>
+      </div>
+      <div class="dd-cell bad">
+        <div class="dd-mark">✕</div>
+        <svg viewBox="0 0 200 200"><defs><filter id="sh"><feDropShadow dx="4" dy="6" stdDeviation="4" flood-color="#000" flood-opacity="0.5"/></filter></defs><g filter="url(#sh)"><path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#8E97A6" stroke-width="7" stroke-linecap="round"/><path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#1E7A8C" stroke-width="5" stroke-linecap="round"/><circle cx="100" cy="100" r="6" fill="#B8935A"/></g></svg>
+        <div class="dd-label">그림자·입체 효과</div>
+        <div class="dd-sub">평면 선화 유지</div>
+      </div>
+      <div class="dd-cell bad">
+        <div class="dd-mark">✕</div>
+        <svg viewBox="0 0 200 200" style="background:#1E7A8C;border-radius:8px"><path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#155C6B" stroke-width="7" stroke-linecap="round"/><path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#155C6B" stroke-width="5" stroke-linecap="round"/><circle cx="100" cy="100" r="6" fill="#155C6B"/></svg>
+        <div class="dd-label">저대비 배경 사용</div>
+        <div class="dd-sub">시인성 기준 미달</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 COLOR ============ -->
+<section class="doc tinted" id="color">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="sec-num">03 — Color System</div>
+        <h2 class="sec-title">컬러 팔레트</h2>
+      </div>
+      <div class="sec-sub">은빛의 지혜, 실의 색,<br>그리고 오래된 금박의 온기</div>
+    </div>
+
+    <div class="color-grid">
+      <div class="color-card">
+        <div class="color-swatch" style="background:#1E7A8C;"></div>
+        <div class="color-body">
+          <div class="color-role">Primary · 실의 색</div>
+          <div class="color-name">Thread Teal</div>
+          <div class="color-vals">
+            <span>HEX <b>#1E7A8C</b></span>
+            <span>RGB <b>30, 122, 140</b></span>
+            <span>CMYK <b>79, 13, 0, 45</b></span>
+          </div>
+        </div>
+      </div>
+      <div class="color-card">
+        <div class="color-swatch" style="background:#8E97A6;"></div>
+        <div class="color-body">
+          <div class="color-role">Secondary · 은빛</div>
+          <div class="color-name">Silver Mist</div>
+          <div class="color-vals">
+            <span>HEX <b>#8E97A6</b></span>
+            <span>RGB <b>142, 151, 166</b></span>
+            <span>CMYK <b>14, 9, 0, 35</b></span>
+          </div>
+        </div>
+      </div>
+      <div class="color-card">
+        <div class="color-swatch" style="background:#B8935A;"></div>
+        <div class="color-body">
+          <div class="color-role">Accent · 기억의 매듭</div>
+          <div class="color-name">Heritage Gold</div>
+          <div class="color-vals">
+            <span>HEX <b>#B8935A</b></span>
+            <span>RGB <b>184, 147, 90</b></span>
+            <span>CMYK <b>0, 20, 51, 28</b></span>
+          </div>
+        </div>
+      </div>
+      <div class="color-card">
+        <div class="color-swatch" style="background:#20242B;"></div>
+        <div class="color-body">
+          <div class="color-role">Text · 기록의 잉크</div>
+          <div class="color-name">Ink</div>
+          <div class="color-vals">
+            <span>HEX <b>#20242B</b></span>
+            <span>RGB <b>32, 36, 43</b></span>
+            <span>CMYK <b>26, 16, 0, 83</b></span>
+          </div>
+        </div>
+      </div>
+      <div class="color-card">
+        <div class="color-swatch" style="background:#4B5563;"></div>
+        <div class="color-body">
+          <div class="color-role">Deep · 보조 다크</div>
+          <div class="color-name">Silver Deep</div>
+          <div class="color-vals">
+            <span>HEX <b>#4B5563</b></span>
+            <span>RGB <b>75, 85, 99</b></span>
+            <span>CMYK <b>24, 14, 0, 61</b></span>
+          </div>
+        </div>
+      </div>
+      <div class="color-card">
+        <div class="color-swatch" style="background:#F4F2EE;border-bottom:1px solid #DEDACF;"></div>
+        <div class="color-body">
+          <div class="color-role">Base · 바탕지</div>
+          <div class="color-name">Paper Stone</div>
+          <div class="color-vals">
+            <span>HEX <b>#F4F2EE</b></span>
+            <span>RGB <b>244, 242, 238</b></span>
+            <span>CMYK <b>0, 1, 2, 4</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="color-ratio">
+      <div class="ratio-seg" style="background:#20242B;flex:0 0 55%;"><div class="pct">55%</div><div class="lab">Ink &amp; Paper Stone — 배경·본문</div></div>
+      <div class="ratio-seg" style="background:#1E7A8C;flex:0 0 25%;"><div class="pct">25%</div><div class="lab">Thread Teal — 인터랙션·강조</div></div>
+      <div class="ratio-seg" style="background:#8E97A6;flex:0 0 12%;"><div class="pct">12%</div><div class="lab">Silver Mist — 보조 그래픽</div></div>
+      <div class="ratio-seg" style="background:#B8935A;flex:0 0 8%;"><div class="pct">8%</div><div class="lab">Heritage Gold — 포인트</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 TYPOGRAPHY ============ -->
+<section class="doc" id="type">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="sec-num">04 — Typeface System</div>
+        <h2 class="sec-title">전용 서체 규정</h2>
+      </div>
+      <div class="sec-sub">두 개의 목소리 —<br>기록하는 문체와 말을 건네는 문체</div>
+    </div>
+
+    <div class="typo-grid">
+      <div class="typo-card serif">
+        <div class="typo-role">Editorial &amp; Title</div>
+        <div class="typo-name">본명조 Noto Serif KR</div>
+        <div class="typo-usage">하드커버 표지 · 챕터 타이틀 · 구술 원문 인용</div>
+        <div class="typo-sample">"스물다섯에 건너온 그 고개에는 바람이 참 매서웠제. 그래도 자식들 웃는 얼굴 보며 버텨낸 세월이 내게는 가장 귀한 비단이었소."</div>
+      </div>
+      <div class="typo-card sans">
+        <div class="typo-role">UI &amp; Conversation</div>
+        <div class="typo-name">프리텐다드 Pretendard</div>
+        <div class="typo-usage">대화형 UI · 알림 팝업 · 버튼 · 메타데이터</div>
+        <div class="typo-sample">"어르신, 영암 고향 집 처마 밑에서 비구경하시던 날 기억나세요? 그때 사모님 손을 처음 잡으셨다고 하셨잖아요."</div>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <h4>타입 스케일</h4>
+      <div class="scale-row"><span class="scale-label">DISPLAY</span><span class="scale-sample" style="font-size:34px;font-weight:700;">은빛실타래</span></div>
+      <div class="scale-row"><span class="scale-label">H1</span><span class="scale-sample" style="font-size:26px;font-weight:700;">기억을 잇는 이야기</span></div>
+      <div class="scale-row"><span class="scale-label">H2</span><span class="scale-sample" style="font-size:20px;font-weight:600;">오늘의 회고 질문</span></div>
+      <div class="scale-row"><span class="scale-label">BODY</span><span class="scale-sample" style="font-size:16px;font-weight:400;font-family:var(--sans);">어르신, 오늘 아침 복약 시간이에요.</span></div>
+      <div class="scale-row"><span class="scale-label">CAPTION</span><span class="scale-sample" style="font-size:12.5px;font-weight:500;font-family:var(--sans);color:var(--ink-faint);">2026년 9월 · 은빛실타래 편찬</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 05 APPLICATIONS ============ -->
+<section class="doc tinted" id="apps">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="sec-num">05 — Applications</div>
+        <h2 class="sec-title">적용 시스템 &amp; 프로덕트</h2>
+      </div>
+      <div class="sec-sub">모바일 대화부터 양장본까지,<br>하나의 실로 이어지는 경험</div>
+    </div>
+
+    <div class="app-grid">
+      <div class="app-card">
+        <div class="app-label"><span class="dot"></span>MOBILE CONVERSATION UI</div>
+        <div class="bubble">
+          <strong>AI 말벗 은빛이</strong>
+          <span>어르신, 오늘 아침 복약 시간이에요. 잊지 않고 챙겨 드셨을까요? 창밖 날씨가 참 좋습니다.</span>
+        </div>
+        <p class="app-note">온디바이스 SLM과 연동되어 편안한 명도 대비와 넉넉한 글자 크기로 시니어의 눈을 보호합니다.</p>
+      </div>
+      <div class="app-card">
+        <div class="app-label"><span class="dot"></span>AUTOBIOGRAPHY PRINT COVER</div>
+        <div class="book-mock">
+          <svg viewBox="0 0 200 200"><path d="M 100,50 A 50,50 0 1 1 50,100" fill="none" stroke="#8E97A6" stroke-width="9" stroke-linecap="round"/><path d="M 100,134 A 34,34 0 1 1 134,100" fill="none" stroke="#4FB8CC" stroke-width="7" stroke-linecap="round"/><circle cx="100" cy="100" r="8" fill="#D8B87A"/></svg>
+          <div class="t">바람을 품은 실타래</div>
+          <div class="s">홍길동 회고록 · 은빛실타래 편찬</div>
+        </div>
+        <p class="app-note">전통 한지 질감의 종이에 은박(Silver Foil) 박압 가공을 적용하는 프리미엄 제본 규격입니다.</p>
+      </div>
+      <div class="app-card">
+        <div class="app-label"><span class="dot"></span>FAMILY WEB DASHBOARD</div>
+        <div class="dash-mock">
+          <div class="h">어머니의 오늘 기억 리포트</div>
+          <div class="r">● 1972년 봄 소풍 이야기 회상 (인지 활력 양호)</div>
+        </div>
+        <p class="app-note">멀리 있는 자녀가 매일 부모님의 구술과 감정 상태를 살피며 따뜻한 교감을 나눕니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="doc-footer">
+  <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;width:100%;flex-wrap:wrap;gap:12px;">
+    <div class="footer-brand">은빛실타래 · Silver Yarn</div>
+    <div class="footer-meta">Life Memory Archiving &amp; Cognitive Care AI Platform — Brand Guidelines v2.0 · All Rights Reserved</div>
+  </div>
+</footer>
+
+</body>
+</html>
