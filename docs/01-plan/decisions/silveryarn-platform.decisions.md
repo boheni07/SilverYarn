@@ -105,6 +105,14 @@
 
 ---
 
+## 2.6 추가 기술 결정 (Do 단계 착수 — 모듈러 모놀리스 스캐폴딩, 2026-09-07)
+
+| # | 항목 | 결정(근거 포함) | 상태 |
+|---|------|------|:---:|
+| 44 | 서버 첫 커밋 배포 단위 | **`services/backend/`(Python 패키지명 `core_service`) 단일 배포 단위로 확정** — structure.md가 이미 명시한 "Design §11.1 기준, 아직 스캐폴딩 전" 제안(services/author-engine, care-engine, schedule-engine, sync-gateway, rag-core 개별 마이크로서비스)은 **논리적 모듈 경계**로만 유지하고, 물리적 배포는 CTO Enterprise B3 권고에 따라 `api`(FastAPI) + `worker`(비동기 잡 처리, sync-contract.md §2) 2프로세스 모듈러 모놀리스로 시작한다. 각 도메인 모듈(`modules/{users,devices,author,care,schedule,sync}/`)은 내부적으로 api/application/domain/infrastructure 4계층을 유지해 향후 특정 모듈만 별도 서비스로 분리(예: GPU 부하가 큰 rag-core)할 때 리팩터링 비용을 최소화한다 | ✅ 확정 |
+
+---
+
 ## 3. 별도 검토가 필요한 항목 (AI가 임의 결정하지 않음)
 
 | # | 항목 | 사유 | 상태 |
@@ -159,3 +167,4 @@
 | 0.5 | 2026-09-06 | 사용자 제안 "저사양 실시간 대화 프로세스" 보고서 반영 — #31(VAD/스트리밍 최적화 기법, 수치는 검증대기), #32(FTS5 단독 RAG Phase 1 기본값 확정), #33(mobile-schema.md 문서화) 추가 | NUBiz AX Initiative (사용자 제안 반영) |
 | 0.6 | 2026-09-07 | 2차 design-validator 검증 반영 — #34(conversation_chunks 서버 영구보존 확정), #35(devices SLM/프롬프트팩 버전 추적) 추가. **번호 중복 버그 수정**: §3에 있던 #24~#33을 §2.2/§2.3/§2.4로 재배치(카테고리 정정), §4의 원본 문서 오류 로그를 #24~#30에서 #36~#42로 재번호(§2.2와의 충돌 해소) | NUBiz AX Initiative |
 | 0.7 | 2026-09-07 | 3차 design-validator 검증 반영 — §2.5 신설, #43(본문 텍스트 20px 상향, CTO FE-B4) 추가. M-1: §2.2/§2.3 표 헤더가 5열인데 실제 셀은 4열이던 렌더링 버그 정정(4열 헤더로 통일, 내용 변경 없음) | NUBiz AX Initiative |
+| 0.8 | 2026-09-07 | Do 단계 착수 — §2.6 신설, #44(서버 첫 커밋을 `services/backend/` 모듈러 모놀리스 단일 배포 단위로 확정, CTO Enterprise B3) 추가 | NUBiz AX Initiative |

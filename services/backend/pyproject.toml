@@ -1,0 +1,57 @@
+[project]
+name = "core-service"
+version = "0.1.0"
+description = "은빛실타래 (SilverYarn) 서버 — 모듈러 모놀리스 (api + worker), decisions.md #44"
+requires-python = ">=3.11"
+readme = "README.md"
+
+dependencies = [
+    "fastapi>=0.115,<0.116",
+    "uvicorn[standard]>=0.32,<0.33",
+    "pydantic>=2.9,<3",
+    "pydantic-settings>=2.6,<3",
+    "sqlalchemy[asyncio]>=2.0,<2.1",
+    "asyncpg>=0.30,<0.31",
+    "alembic>=1.13,<2",
+    "arq>=0.26,<0.27",
+    "qdrant-client>=1.12,<2",
+    "neo4j>=5.25,<6",
+    "minio>=7.2,<8",
+    "httpx>=0.27,<0.28",
+    "python-jose[cryptography]>=3.3,<4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.7,<0.8",
+    "mypy>=1.13,<2",
+    "pytest>=8.3,<9",
+    "pytest-asyncio>=0.24,<0.25",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# CONVENTIONS.md §1.3 — 포맷터/린터는 ruff, 타입힌트 필수(mypy 권장)
+# line-length 110: 한글 docstring/주석이 많아 100자 기준은 실제 스캐폴딩 중 잦은 위반을 유발함
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B008: FastAPI의 Depends(...)를 인자 기본값으로 쓰는 것은 공식 권장 패턴이므로 예외 처리
+ignore = ["B008"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
