@@ -59,6 +59,7 @@ Claude automatically applies PDCA methodology. Commands are shortcuts for power 
 | 온디바이스 SLM | Kanana-2, Qwen2.5-0.5B 등 경량(0.5~3B, 4bit 양자화) 후보 | **미정** (벤치마크 후보 2종 확보, 최종선정은 실기기 벤치마크 후 — decisions.md #27) |
 | 온디바이스 음성 파이프라인 | WebRTC VAD(800ms 묵음판정) + 경량 STT(Sherpa-ONNX 등 후보) + **SQLite FTS5 단독 RAG(Phase 1 확정, decisions #32)** + 문장단위 스트리밍 TTS + 네이티브 TTS, 원본음성 Opus(16kbps) 압축·업로드성공시 즉시삭제(#30) | 🔄 구조·기법 확정, 라이브러리·수치는 Do 단계 벤치마크 |
 | 온디바이스 로컬 스키마 | Room/SQLite 6개 테이블 (`conversations`, `autobiography_fts` 등) | ✅ 초안 확정 — [mobile-schema.md](./docs/01-plan/mobile-schema.md) |
+| 데이터 모델링 & ERD | 서버 17개 엔티티 + 온디바이스 6개 테이블 관계도 (흑백 Mermaid, 도메인별 3분할) | ✅ [erd.md](./docs/01-plan/erd.md) |
 | 서버 백엔드 | 자체 호스팅 Python 3.11+ / **FastAPI** | ✅ 확정 (decisions.md #15) |
 | LLM 추론 | 자체 호스팅 vLLM · A100 GPU 서버 | ✅ 확정 |
 | Vector DB | Qdrant self-hosted (하이브리드 서치 BM25+Dense) | ✅ 확정 (Milvus 제안 검토했으나 미채택, decisions.md #28) |

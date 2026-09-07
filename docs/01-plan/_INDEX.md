@@ -14,6 +14,7 @@
 | [glossary.md](./glossary.md) | ✅ Approved | 2026-09-05 | NUBiz AX Initiative | Phase 1 용어집 |
 | [schema.md](./schema.md) | ✅ Approved | 2026-09-06 | NUBiz AX Initiative | Phase 1 데이터 스키마 (v1.2, 17개 엔티티 + Neo4j 연동 필드, PostgreSQL DDL) |
 | [mobile-schema.md](./mobile-schema.md) | 🔄 In Progress | 2026-09-06 | NUBiz AX Initiative | 온디바이스 SQLite 로컬 스키마 (FTS5 등 6개 테이블) |
+| [erd.md](./erd.md) | ✅ Approved | 2026-09-07 | NUBiz AX Initiative | 데이터 모델링 & ERD — 도메인별 3분할 + 온디바이스 매핑 + Qdrant/Neo4j 연계 (흑백 Mermaid) |
 | [naming.md](./naming.md) | ✅ Approved | 2026-09-05 | NUBiz AX Initiative | Phase 2 네이밍 규칙 (서버/모바일/웹/DB) |
 | [structure.md](./structure.md) | ✅ Approved | 2026-09-05 | NUBiz AX Initiative | Phase 2 모노레포 폴더 구조 |
 | [../../CONVENTIONS.md](../../CONVENTIONS.md) | ✅ Approved | 2026-09-05 | NUBiz AX Initiative | Phase 2 컨벤션 마스터 문서 (루트) |

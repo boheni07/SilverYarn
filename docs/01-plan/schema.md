@@ -357,6 +357,8 @@
 
 ## 4. Entity Relationship Diagram
 
+> **정식 시각화 ERD**는 [`erd.md`](./erd.md)에서 관리한다 — 전체 관계 개요 + 도메인별(사용자/자서전/운영) Mermaid erDiagram, 속성·카디널리티·참조무결성 정책까지 포함한 완전판. 아래는 요약용 ASCII 스케치다.
+
 ```
 [users] 1───N [family_members] ──1───N [notification_settings]
    │                  │
@@ -638,7 +640,8 @@ CREATE INDEX idx_devices_display_id ON devices(display_id);
 - [x] 엔티티 관계가 명확함 → §4 ERD
 - [x] UI/UX 화면설계서 필드 단위 대조 완료 (design-validator 리포트 B-1~B-13 전건 반영)
 - [ ] 인덱스·제약조건 최종 보강 — Do 단계 실사용 쿼리 패턴 확정 후
-- [ ] 온디바이스 SQLite 스키마 매핑 문서화 — Do 단계
+- [x] 온디바이스 SQLite 스키마 매핑 문서화 → [mobile-schema.md](./mobile-schema.md)
+- [x] 시각화 ERD 작성 → [erd.md](./erd.md)
 
 ---
 
