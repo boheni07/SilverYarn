@@ -3,8 +3,8 @@
 > **Phase 2 Deliverable**: 코딩 규칙 정의
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Date**: 2026-09-05
-> **Version**: 1.0
+> **Date**: 2026-09-07
+> **Version**: 1.5 (3차 design-validator 검증 반영)
 > **Level**: Enterprise (다중 스택 — 서버/모바일/웹 콘솔)
 
 > 본 프로젝트는 단일 스택이 아니라 **온프레미스 서버(Python)** + **온디바이스 모바일(Kotlin)** + **웹 콘솔(TypeScript)**의 3중 스택이므로, 영역별로 컨벤션을 분리 정의한다. 상세 네이밍은 [`docs/01-plan/naming.md`](./docs/01-plan/naming.md), 폴더 구조는 [`docs/01-plan/structure.md`](./docs/01-plan/structure.md) 참조.
@@ -45,7 +45,7 @@ services/{engine}/
 ├── api/            # Presentation — FastAPI 라우터, 요청/응답 DTO
 ├── application/    # Application — 유스케이스, 서비스 클래스
 ├── domain/         # Domain — 순수 엔티티·비즈니스 규칙 (schema.md 기반)
-└── infrastructure/ # Infrastructure — SQLAlchemy, Qdrant client, MinIO client, vLLM client
+└── infrastructure/ # Infrastructure — SQLAlchemy, Qdrant client, Neo4j client, MinIO client, vLLM client
 ```
 
 의존 방향: `api → application → domain ← infrastructure` (domain은 외부 의존성 없음).
@@ -85,12 +85,13 @@ services/{engine}/
 apps/mobile/
 ├── presentation/     # UI (Jetpack Compose), 대화 화면, 사진 업로드 UI
 ├── ondevice/         # VAD·STT·SLM·TTS, 온디바이스 라우터
-├── local/            # Room(SQLite, FTS5 가상테이블), 경량 VectorDB, 동기화 클라이언트
+├── local/            # Room(SQLite, FTS5 가상테이블 — Phase 1 기본 RAG), 동기화 클라이언트
+│                     #   경량 VectorDB(임베딩)는 고사양 단말 한정 Phase 2+ 검토(decisions.md #32)
 ├── installmode/      # 설치모드 자동분기 로직 (Device Owner Mode 프로비저닝)
 └── sync/             # Wi-Fi 배치 동기화 워커 (WorkManager)
 ```
 
-### 2.2.1 온디바이스 음성 파이프라인 구현 후보 (Design 문서 §2.11 반영, v1.1 신규)
+### 2.2.1 온디바이스 음성 파이프라인 구현 후보 (Design 문서 §2.12 반영, v1.2 신규)
 
 | 구성요소 | 후보 라이브러리/포맷 | 상태 |
 |---|---|---|
@@ -127,15 +128,21 @@ bkit 표준 컨벤션을 그대로 따른다 (`CLAUDE.md` 및 아래 요약 참�
 | 상수 | UPPER_SNAKE_CASE | `MAX_UPLOAD_SIZE_MB` |
 | 타입/인터페이스 | PascalCase | `ChapterDto`, `EmotionAlert` |
 
-### 3.2 폴더 구조 (Enterprise)
+### 3.2 폴더 구조 (Enterprise) — v1.4 정정
+
+> ⚠️ **정정 사유(2차 검증 M-7, CTO FE-B3)**: 기존 `presentation/app/` 구조는 **Next.js가 인식하지 못하는 경로**다 — App Router는 `app/` 또는 `src/app/`만 자동 인식하므로, `src/presentation/app/`에 라우트를 두면 라우팅이 동작하지 않는다. 계층 규율은 폴더 중첩이 아니라 **ESLint `import/no-restricted-paths`**로 강제한다.
 
 ```
 apps/web/src/
-├── presentation/     # components/, hooks/, app/
-├── application/      # services/, use-cases/
-├── domain/           # types/ (schema.md 엔티티와 1:1 매핑)
-└── infrastructure/   # lib/api/ (서버 API 클라이언트)
+├── app/               # Next.js App Router 규약 위치 (라우트 그룹: (user)/, (family)/, (admin)/)
+├── components/        # UI 컴포넌트 (프리미티브 + 도메인 컴포넌트)
+├── features/          # 화면 단위 콜로케이션 (예: chapter-review/, photo-gallery/)
+├── services/          # Application — 유스케이스, API 서비스 래퍼
+├── lib/api/           # Infrastructure — 서버 API 클라이언트 (OpenAPI codegen 산출물 포함)
+└── types/             # Domain — schema.md 엔티티와 1:1 매핑 (수기 작성 최소화, codegen 우선)
 ```
+
+계층 의존 규칙(`app/`은 `lib/api/` 직접 import 금지 등)은 `.eslintrc`의 `import/no-restricted-paths`로 CI에서 강제한다.
 
 ### 3.3 임포트 순서
 
@@ -147,7 +154,7 @@ import { Button } from '@/components/ui'
 // 3. Relative imports
 import { useChapterReview } from './hooks'
 // 4. Type imports
-import type { Chapter } from '@/domain/types'
+import type { Chapter } from '@/types'  // v1.5: §3.2 폴더구조(types/)와 불일치하던 예시 정정, 3차 검증 M-3
 // 5. Styles
 import './styles.css'
 ```
@@ -164,9 +171,11 @@ import './styles.css'
 | `DB_` | PostgreSQL 접속 | Server only | `DB_HOST`, `DB_PASSWORD` |
 | `STORAGE_` | MinIO Object Storage | Server only | `STORAGE_ENDPOINT`, `STORAGE_SECRET_KEY` |
 | `VECTORDB_` | Qdrant 접속 | Server only | `VECTORDB_HOST`, `VECTORDB_API_KEY` |
+| `STT_` | 온프레미스 Whisper Large-v3 서비스 접속 | Server only | `STT_ENDPOINT` |
+| `EMBEDDING_` | BGE-M3 임베딩 서비스 접속 | Server only | `EMBEDDING_ENDPOINT` |
 | `GRAPH_` | Neo4j 지식그래프 접속 (신규) | Server only | `GRAPH_URI`, `GRAPH_PASSWORD` |
 | `LLM_` | vLLM 추론 서버 | Server only | `LLM_ENDPOINT`, `LLM_MODEL_NAME` |
-| `AUTH_` | 인증(SSO 등) | Server only | `AUTH_SECRET` *(SSO 공급자는 미정 — Keycloak 후보)* |
+| `AUTH_` | 인증 | Server only | `AUTH_SECRET` *(Keycloak SSO 확정 — decisions.md #17)* |
 | `SYNC_` | 배치 동기화 파라미터 | Server only | `SYNC_MAX_RETRY`, `SYNC_CHECKSUM_ALGO` |
 
 ```
@@ -206,6 +215,8 @@ API 응답 포맷·표준 에러 코드·버전 프리픽스(`/api/v1`)는 [desi
 
 BI 가이드의 컬러·타이포는 [design-tokens.md](./docs/02-design/design-tokens.md)에서 Tailwind 토큰으로 매핑했다. 웹/모바일 모두 색상 리터럴 하드코딩 금지 — 토큰(클래스/상수)만 사용.
 
+> **v1.5 신규 — 배포 메커니즘 (3차 검증 M-7, CTO FE-B2)**: `design-tokens.md`는 지금까지 웹(Tailwind config)만 제시했으나, 모바일(Kotlin)이 이 규칙을 지킬 산출물이 없었다. `packages/design-tokens/`(신규, structure.md §1)에서 색상·타입스케일을 **단일 소스(JSON)**로 관리하고, 빌드 시 웹용 `tailwind.tokens.js`와 모바일용 Kotlin `object AppColors { val teal = Color(0xFF1E7A8C); ... }` 두 산출물을 함께 생성한다. 생성기 구현은 Do 단계.
+
 ---
 
 ## 5. Phase Connection
@@ -227,7 +238,7 @@ BI 가이드의 컬러·타이포는 [design-tokens.md](./docs/02-design/design-
 - [ ] Lint 설정 파일 실제 작성 (`.ruff.toml`, `.editorconfig`, `ktlint` 설정, `.eslintrc`) — Do 단계
 
 ### 환경변수
-- [x] 접두사 규칙 정의 (NEXT_PUBLIC_/DB_/STORAGE_/VECTORDB_/LLM_/AUTH_/SYNC_)
+- [x] 접두사 규칙 정의 (NEXT_PUBLIC_/DB_/STORAGE_/VECTORDB_/GRAPH_/STT_/EMBEDDING_/LLM_/AUTH_/SYNC_)
 - [ ] `.env.example` 실제 작성 — Do 단계 (서비스 확정 후)
 - [ ] 시크릿 관리 도구 확정 — 인프라 설계(infra-architect) 단계
 
@@ -261,3 +272,5 @@ Phase 3: Mockup — 이미 `Plan/은빛실타래_UIUX_화면설계서.html`(v1.2
 | 1.1 | 2026-09-05 | design-validator 검증 반영 — 모바일 시크릿 관리(§4.1), API 표준·디자인 토큰 참조(§4.3~4.4) 추가 | NUBiz AX Initiative |
 | 1.2 | 2026-09-06 | Closed-Loop 프로세스 제안 반영 — 온디바이스 음성 파이프라인 후보(§2.2.1), Neo4j `GRAPH_` 환경변수 접두사 추가 | NUBiz AX Initiative |
 | 1.3 | 2026-09-06 | 실시간 대화 파이프라인 최적화 제안 반영 — FTS5 단독 RAG를 Phase 1 기본값으로 확정(§2.2.1), VAD/TTS 스트리밍 기법 추가, mobile-schema.md 신규 참조 | NUBiz AX Initiative |
+| 1.4 | 2026-09-07 | 2차 design-validator 검증 반영 — Keycloak 확정 표기 회귀 수정(§4 AUTH_), Neo4j client 추가(§1.2), Next.js App Router 경로 정정(§3.2, FE-B3), STT_/EMBEDDING_ 접두사 추가(Infra-B1), "경량 VectorDB" 표현 정정(§2.2, M-8), §2.2.1 절번호·버전 표기 정정 | NUBiz AX Initiative |
+| 1.5 | 2026-09-07 | 3차 design-validator 검증 반영 — M-3: §3.3 임포트 예시 `@/domain/types`→`@/types`로 §3.2 폴더구조와 일치시킴. M-7(FE-B2): §4.4에 디자인 토큰 3플랫폼 배포 메커니즘(`packages/design-tokens/`) 추가 | NUBiz AX Initiative |

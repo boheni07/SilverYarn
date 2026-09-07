@@ -1,7 +1,7 @@
 # 02-design Index
 
 > **PDCA Phase**: Design
-> **Last Updated**: 2026-09-05
+> **Last Updated**: 2026-09-07
 
 ---
 
@@ -9,9 +9,10 @@
 
 | Document | Status | Last Modified | Owner | Description |
 |----------|--------|---------------|-------|-------------|
-| [features/silveryarn-platform.design.md](./features/silveryarn-platform.design.md) | 🔄 In Progress | 2026-09-06 | NUBiz AX Initiative | 온디바이스-온프레미스 하이브리드 아키텍처, 데이터 모델, API/UI 인벤토리 (v0.3, Closed-Loop 프로세스 상세화 반영) |
-| [design-tokens.md](./design-tokens.md) | ✅ Approved | 2026-09-05 | NUBiz AX Initiative | BI 가이드 컬러/타이포 → Tailwind 토큰 매핑 |
-| [workflow-diagrams.md](./workflow-diagrams.md) | 🔄 In Progress | 2026-09-06 | NUBiz AX Initiative | 비즈니스/업무/프로세스 흐름도 Mermaid 20종 (Closed-Loop·실시간파이프라인 반영 현재판) |
+| [features/silveryarn-platform.design.md](./features/silveryarn-platform.design.md) | 🔄 In Progress | 2026-09-07 (v0.6) | NUBiz AX Initiative | 온디바이스-온프레미스 하이브리드 아키텍처, 데이터 모델, API/UI 인벤토리 |
+| [sync-contract.md](./sync-contract.md) | 🔄 In Progress | 2026-09-07 (v0.1, 신규) | NUBiz AX Initiative | 온디바이스↔서버 동기화 계약 — 비동기 처리, 엔티티별 충돌정책, Presigned URL, 증분 다운로드 |
+| [design-tokens.md](./design-tokens.md) | ✅ Approved | 2026-09-07 (v1.2) | NUBiz AX Initiative | BI 가이드 컬러/타이포 → Tailwind 토큰 매핑, WCAG AA 대비 규칙, 접근성 최소기준 |
+| [workflow-diagrams.md](./workflow-diagrams.md) | 🔄 In Progress | 2026-09-07 (v0.4) | NUBiz AX Initiative | 비즈니스/업무/프로세스 흐름도 Mermaid 20종 (흑백 고대비판) |
 | [cto-review-2026-09-05.md](./cto-review-2026-09-05.md) | ✅ Approved | 2026-09-06 | CTO팀(7개 관점) | 개발팀 착수회의 대비 아키텍처/인프라/보안/FE/백엔드·API/QA/PM 심사 — Blocker 28건, 전원 Go with Conditions |
 
 ---
@@ -46,6 +47,10 @@ Current Phase: [Design] ← You are here
 ```
 02-design/
 ├── _INDEX.md          ← Current file
+├── design-tokens.md
+├── workflow-diagrams.md
+├── sync-contract.md
+├── cto-review-2026-09-05.md
 └── features/
     └── silveryarn-platform.design.md
 ```
@@ -74,3 +79,4 @@ Current Phase: [Design] ← You are here
 | Date | Changes |
 |------|---------|
 | 2026-09-05 | Index 생성, silveryarn-platform.design.md 등록 |
+| 2026-09-07 | 3차 design-validator 검증 M-4 반영 — design-tokens/workflow-diagrams 버전 표기 추가, sync-contract.md 신규 등록, Folder Structure 블록 실제 파일 목록 반영 | NUBiz AX Initiative |

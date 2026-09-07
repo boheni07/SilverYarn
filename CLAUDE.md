@@ -31,21 +31,23 @@ Claude automatically applies PDCA methodology. Commands are shortcuts for power 
 | Item | Value |
 |------|-------|
 | Level | **Enterprise** (온디바이스 AI + 온프레미스 GPU 서버 + 다중 마이크로서비스 + 엄격한 데이터 주권 요구) |
-| PDCA Phase | Design (v0.2, design-validator 검증 1회 완료) — Do 단계 착수 전 |
-| 9-Phase Pipeline | Phase 1(Schema) ✅ · Phase 2(Convention) ✅ · Phase 3(Mockup, BI가이드+UI/UX설계서+design-tokens.md) ✅ 완료 → Phase 4(API 설계, 초안 확정) 진행 중 |
+| PDCA Phase | Design (v0.6, design-validator 검증 3회 완료 — 74→82→87/100) — Do 단계 착수 전 |
+| 9-Phase Pipeline | Phase 1(Schema) ✅ · Phase 2(Convention) ✅ · Phase 3(Mockup, BI가이드+UI/UX설계서+design-tokens.md) ✅ · Phase 4(API 설계, sync-contract.md 포함) ✅ 완료 |
 | Primary Feature | `silveryarn-platform` |
 | 원본 기획 자료 | `Plan/` 폴더 (기획서 v0.5, 프로세스흐름도, BI가이드 v2.0, UI/UX설계서 v1.2) |
-| PDCA 문서 | `docs/01-plan/features/silveryarn-platform.plan.md`, `docs/02-design/features/silveryarn-platform.design.md`(v0.2) |
-| 의사결정 로그 | `docs/01-plan/decisions/silveryarn-platform.decisions.md` (기획서 9장 + design-validator 반영 항목) |
-| 디자인 토큰 | `docs/02-design/design-tokens.md` (BI 가이드 컬러/타이포 → Tailwind 토큰) |
+| PDCA 문서 | `docs/01-plan/features/silveryarn-platform.plan.md`(v0.4), `docs/02-design/features/silveryarn-platform.design.md`(v0.6) |
+| 동기화 계약 | `docs/02-design/sync-contract.md` — 비동기 업로드(202+job_id), 엔티티별 충돌정책, Presigned URL, 증분 다운로드 |
+| 의사결정 로그 | `docs/01-plan/decisions/silveryarn-platform.decisions.md`(v0.7) (기획서 9장 + design-validator 반영 항목) |
+| 디자인 토큰 | `docs/02-design/design-tokens.md`(v1.2) (BI 가이드 컬러/타이포 → Tailwind 토큰, WCAG AA 대비 규칙, 접근성 최소기준) |
 | 발표자료 | `docs/presentations/은빛실타래_개발착수회의_kickoff.pptx` (66슬라이드), `docs/presentations/은빛실타래_설계발표_슬라이드.html` (72슬라이드 HTML, 방향키 네비게이션) — [게시 링크](https://claude.ai/code/artifact/8c0fdb75-5c19-4916-b406-eb38275f2146) |
-| 워크플로우 다이어그램 | `docs/02-design/workflow-diagrams.md` — Mermaid 20종 (마스터 Closed-Loop, 분야별 프로세스, 스윔레인, 상태전이 등) |
+| 워크플로우 다이어그램 | `docs/02-design/workflow-diagrams.md`(v0.4) — Mermaid 20종 (마스터 Closed-Loop, 분야별 프로세스, 스윔레인, 상태전이 등) |
 | CTO팀 검토 | `docs/02-design/cto-review-2026-09-05.md` — 7개 관점(아키텍처/인프라/보안/FE/백엔드·API/QA/PM) 착수 심사, 판정: **전원 Go with Conditions** |
 
 > **⚠️ Do 단계 착수 전 필수 확인**: CTO팀 검토에서 Blocker 28건 발견. 특히 보안 관점에서 **동의·보유기간·PII암호화·인가모델 5대 법적 리스크**가 발견되었으므로, `docs/02-design/cto-review-2026-09-05.md`를 반드시 먼저 읽을 것. 착수 전 요약:
 > - 정서 모니터링 파이프라인은 Phase 1에서 **피처플래그로 OFF** ([decisions.md #25](./docs/01-plan/decisions/silveryarn-platform.decisions.md))
-> - 온디바이스 SLM 모델 벤치마크(2주)와 동기화 계약(`sync-contract.md`) 설계는 예산 승인과 무관하게 즉시 착수 가능
+> - 온디바이스 SLM 모델 벤치마크(2주)는 예산 승인과 무관하게 즉시 착수 가능. 동기화 계약([sync-contract.md](./docs/02-design/sync-contract.md))은 3차 검증에서 작성 완료
 > - 6개 마이크로서비스로 첫 커밋을 찍지 말 것 — 모듈러 모놀리스(api/worker 2프로세스) 권고
+> - PII 암호화 대상(`assistant_response` 포함)·접근성 최소기준(BODY 20px 등)은 문서화 완료, **구체 구현 방식은 Do 단계 확정**
 
 > **⚠️ 중요**: bkit Enterprise 스킬의 기본 인프라 템플릿(AWS EKS/RDS/Terraform, Turborepo Next.js/FastAPI 표준 스택)은 **참고용일 뿐 그대로 적용하지 않는다.** 본 프로젝트는 Zero External Data Egress 원칙(기획서 3.1절)에 따라 **온프레미스 자체 GPU 서버(vLLM·A100)** 기반이며, 모바일은 온디바이스 STT/SLM/TTS가 필수인 네이티브(또는 이에 준하는) 앱이다. 실제 스택 확정 전까지 아래 Tech Stack 표를 우선한다.
 

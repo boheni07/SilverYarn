@@ -3,8 +3,8 @@
 > **Phase 1 산출물**: 프로젝트 전반에서 사용하는 용어를 통일하기 위한 문서
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Date**: 2026-09-05
-> **Version**: 1.0
+> **Date**: 2026-09-07
+> **Version**: 1.1
 > **Source**: `Plan/어르신_자서전_말벗돌봄_기획서.md`, `Plan/자서전_말벗돌봄_프로세스_흐름도.md`, [decisions.md](./decisions/silveryarn-platform.decisions.md)
 
 ---
@@ -51,10 +51,10 @@
 |------|------|-----------|
 | VAD | Voice Activity Detection — 음성 구간 검출 | - |
 | STT | Speech-to-Text — 음성→텍스트 변환 | - |
-| SLM | Small Language Model — 온디바이스 구동 가능한 경량 언어모델(1~3B급) | - |
+| SLM | Small Language Model — 온디바이스 구동 가능한 경량 언어모델(0.5~3B급, 4bit 양자화 후보 포함 — Qwen2.5-0.5B/Kanana-2, decisions.md #27) | - |
 | TTS | Text-to-Speech — 텍스트→음성 변환 | - |
 | RAG | Retrieval-Augmented Generation — 검색 증강 생성 | - |
-| BM25 / Dense Retrieval | 키워드 기반 / 임베딩 기반 검색, 본 프로젝트는 하이브리드(BM25+Dense) 채택 | - |
+| BM25 / Dense Retrieval | 키워드 기반 / 임베딩 기반 검색. **서버(Qdrant)** 는 하이브리드(BM25+Dense) 채택, **온디바이스**는 Phase 1 한정 FTS5(BM25) 단독(#32, Zero-Neural RAG) — 3차 검증 L-9 명확화 | - |
 | PII | Personally Identifiable Information — 개인식별정보 | - |
 | DPA | Data Processing Agreement — 데이터처리계약 | - |
 | COSU | Corporate-Owned Single-Use — 단일 목적 잠금 단말 운영 모드 (Android Device Owner Mode 기반) | Android Enterprise |
@@ -114,3 +114,4 @@
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 1.0 | 2026-09-05 | Phase 1 — 원본 기획서·프로세스흐름도 기반 용어집 초안 작성 | NUBiz AX Initiative |
+| 1.1 | 2026-09-06 → 2026-09-07 문서화 | Closed-Loop/실시간파이프라인 반영 신규 용어 추가(지식 그래프, 갭 분석 에이전트/Critic Agent, 경량화 패키징 엔진/Compaction Engine, 무신경망 검색/Zero-Neural RAG) — 이력 갱신 누락분 정정(L-15). SLM 정의 "1~3B급"→"0.5~3B급"로 정정(Qwen2.5-0.5B 후보 포함) | NUBiz AX Initiative |

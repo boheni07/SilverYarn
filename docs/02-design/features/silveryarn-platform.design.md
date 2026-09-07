@@ -8,9 +8,9 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.4 (실시간 대화 파이프라인 상세화 반영)
+> **Version**: 0.6 (3차 design-validator 검증 반영)
 > **Author**: NUBiz AX(AI Transformation) Initiative
-> **Date**: 2026-09-06
+> **Date**: 2026-09-07
 > **Status**: Draft
 > **Planning Doc**: [silveryarn-platform.plan.md](../../01-plan/features/silveryarn-platform.plan.md)
 
@@ -18,10 +18,10 @@ version: 1.3
 
 | Phase | Document | Status |
 |-------|----------|--------|
-| Phase 1 | [Schema Definition](../../01-plan/schema.md) | ✅ 완료 (17개 엔티티, v1.1) |
+| Phase 1 | [Schema Definition](../../01-plan/schema.md) | ✅ 완료 (17개 엔티티, v1.4) — 시각 ERD: [erd.md](../../01-plan/erd.md) |
 | Phase 2 | [Coding Conventions](../../../CONVENTIONS.md) | ✅ 완료 |
-| Phase 3 | Mockup — [BI 가이드](../../../Plan/은빛실타래_BI가이드_v2.html), [UI/UX 화면설계서](../../../Plan/은빛실타래_UIUX_화면설계서.html), [design-tokens.md](../design-tokens.md) | ✅ (원본 산출물 + 토큰 문서화 완료) |
-| Phase 4 | API Spec | 🔄 초안 확정 (§4 참조, 상세 스펙은 Do 단계) |
+| Phase 3 | Mockup — [BI 가이드](../../../Plan/은빛실타래_BI가이드_v2.html), [UI/UX 화면설계서](../../../Plan/은빛실타래_UIUX_화면설계서.html), [design-tokens.md](../design-tokens.md) | ✅ (원본 산출물 + 토큰 문서화 + 접근성 최소기준 완료) |
+| Phase 4 | API Spec — [sync-contract.md](../sync-contract.md) | ✅ 완료 (§4 + 동기화 계약 확정, 상세 OpenAPI 스펙은 Do 단계) |
 
 > 본 문서는 `Plan/어르신_자서전_말벗돌봄_기획서.md`(3~9장) 및 `Plan/자서전_말벗돌봄_프로세스_흐름도.md`의 내용을 bkit PDCA Design 형식으로 정리한 것이며, 세부 다이어그램·검토자료는 원본 문서를 참조한다. **v0.2는 `design-validator` 검증 리포트(2026-09-05)의 발견사항을 반영한 개정판이다.**
 
@@ -113,7 +113,7 @@ version: 1.3
   → 서버: 고정밀 STT 재전사 → 기존 청크와 Diff 비교(§2.8) → 신규분만 처리
   → 청킹/메타태깅 → 임베딩 → Vector DB Upsert
   → LLM 챕터 초안 생성/갱신 → 가족 웹 감수 대기열 등록
-  → (승인) 챕터 확정 및 chapter_revisions 기록 / (반려) §2.9 재생성 루프
+  → (승인) 챕터 확정 및 chapter_revisions 기록 / (반려) [workflow-diagrams.md §7](../workflow-diagrams.md) 재생성 루프
   → 자동 다운로드(최신 자서전·RAG스냅샷·사진·질문목록)
   → 로컬 캐시 갱신
 ```
@@ -229,7 +229,7 @@ Idle → Listening(웨이크워드 또는 마이크 버튼 탭 — M2 화면과 
 - STT 정밀 보정: 온프레미스 Whisper Large-v3로 재전사(사투리·고유명사 보정) — 기존 "고정밀 STT 재전사"(§2.2)의 구체 모델명
 - 지식 추출: 온프레미스 vLLM으로 인물(Person)·연도(Time)·사건(Event)·감정(Emotion) 엔티티를 구조화 추출(JSON)
 - 관계·타임라인은 **Neo4j 지식그래프**에 노드/엣지로 적재, 원문 청크는 **Qdrant**에 BGE-M3 임베딩으로 색인 (하이브리드 서치는 §2.4 그대로)
-- 챕터 초안 윤문: 온프레미스 vLLM이 구술체를 문어체로 정제해 해당 챕터에 병합 → 가족 웹 감수(§2.4 Diff, chapter_revisions)
+- 챕터 초안 윤문: 온프레미스 vLLM이 구술체를 문어체로 정제해 해당 챕터에 `draft`/`in_review` 상태로 저장 → 가족 웹 감수([workflow-diagrams.md §7](../workflow-diagrams.md), `chapter_revisions` 생성은 감수 시점에만) *(v0.6: §2.8은 동기화 Diff/멱등성 절이라 오참조였던 것을 정정, L-5)*
 - **Critic Agent 갭 분석**: 서버 측 평가 에이전트가 서사 완성도를 Fact/Emotion/Relation/Reflection 4대 축으로 채점, 부족 영역(예: "특정 시기의 감정 결손")을 식별해 `questions`에 맞춤형 심층 질문(Top-3)을 생성 — 기존 §2.1 "질문 이력 대조·신규 회고 질문 생성"의 구체화
 
 **4단계 — 온디바이스 맞춤형 경량화 패키징 (Compaction Engine)**
@@ -237,7 +237,7 @@ Idle → Listening(웨이크워드 또는 마이크 버튼 탭 — M2 화면과 
 - 다음 대화용 "단기 압축 기억(Short-term Compressed Persona)" JSON 룰셋 생성 — §2.10 페르소나 정의와 연동
 
 **5단계 — 하향 동기화 및 반영, 6단계 — 진화된 재대화**
-- `GET /api/v1/sync/download` 응답 예시는 §4.2 참조. 로컬 SQLite에 Upsert(FTS5 인덱스, 우선순위 질문, 일정)되며, 다음 대화에서 온디바이스 SLM이 최신 맥락으로 더 깊은 꼬리질문을 구성한다.
+- `GET /api/v1/sync/download` 응답 예시는 §4.3 참조. 로컬 SQLite에 Upsert(FTS5 인덱스, 우선순위 질문, 일정)되며, 다음 대화에서 온디바이스 SLM이 최신 맥락으로 더 깊은 꼬리질문을 구성한다.
 
 > **아키텍처 자체는 신규가 아니다** — 위 6단계는 §2.2(Data Flow)·§2.4(RAG)·§2.1(작가엔진)의 고수준 흐름을 구현 기술 수준(Opus/WorkManager/Whisper Large-v3/Neo4j/Critic Agent/Compaction Engine)까지 구체화한 것이며, 기존 결정과 모순되지 않는다.
 
@@ -279,7 +279,7 @@ Idle → Listening(웨이크워드 또는 마이크 버튼 탭 — M2 화면과 
 
 ## 3. Data Model
 
-> **정식 스키마는 [`docs/01-plan/schema.md`](../../01-plan/schema.md)(v1.1, 17개 엔티티)가 SoR이다.** 아래 TypeScript는 서버·웹 개발자를 위한 요약 참고용이며, 신규 컬럼 추가 시 schema.md를 먼저 갱신한 뒤 이 절을 동기화한다. (design-validator D-1~D-3 반영: `meta_people`을 배열로, enum을 영문으로 통일)
+> **정식 스키마는 [`docs/01-plan/schema.md`](../../01-plan/schema.md)(v1.3, 17개 엔티티)가 SoR이다.** 아래 TypeScript는 서버·웹 개발자를 위한 요약 참고용이며, 신규 컬럼 추가 시 schema.md를 먼저 갱신한 뒤 이 절을 동기화한다. (design-validator D-1~D-3 반영: `meta_people`을 배열로, enum을 영문으로 통일)
 
 ### 3.1 Entity Definition (요약 — 상세는 schema.md)
 
@@ -308,6 +308,8 @@ interface Device {
   ramGb: number;
   androidVersion: string;
   installMode: "kiosk" | "normal";
+  slmModelVersion?: string;    // v1.3 신규 — 2차 검증 M-3
+  promptPackVersion?: string;  // v1.3 신규
   installedAt: string;
 }
 
@@ -320,12 +322,15 @@ interface Chapter {
   bodyText: string;
   status: "draft" | "in_review" | "rejected" | "confirmed";  // v1.1: rejected 추가
   version: number;
+  createdAt: string;            // v0.6 신규 — 3차 검증 L-11
+  updatedAt: string;            // v0.6 신규 — 3차 검증 L-11
 }
 
 interface ChapterRevision {    // v1.1 신규
   id: string;
   chapterId: string;
   version: number;
+  bodyTextSnapshot: string;    // 2차 검증 L-12 반영 — 누락돼 있던 필드
   reviewerId?: string;
   reviewComment?: string;
   action: "approved" | "rejected";
@@ -343,7 +348,9 @@ interface Photo {
   inlinePosition?: string;     // v1.1 신규
   linkedChunkId?: string;
   linkedChapterId?: string;
+  qualityFlag: "ok" | "blurry" | "inappropriate" | "unreviewed";  // 2차 검증 L-12 반영
   width?: number; height?: number; fileSizeKb?: number; mimeType?: string;  // v1.1 신규
+  uploadedAt: string;           // v0.6 신규 — 3차 검증 L-11
 }
 
 interface PhotoRequest {       // v1.1 신규
@@ -364,6 +371,10 @@ interface ConversationChunk {
   linkedPhotoId?: string;
   embeddingId?: string;
   graphNodeRef?: string;        // v1.2 신규 — Neo4j 지식그래프 노드 참조
+  sessionId?: string;           // v1.3 신규 — 온디바이스 대화 세션 식별자
+  turnId?: number;              // v1.3 신규
+  mode?: "author" | "care" | "assist";  // v1.3 신규
+  assistantResponse?: string;   // v1.3 신규 — 2차 검증 H-2, PII·암호화대상
 }
 
 interface Question {
@@ -386,6 +397,8 @@ interface ScheduleItem {
   status: "pending" | "confirmed" | "missed" | "declined";
   remindCount: number;         // v1.1 신규
   declineReason?: string;      // v1.1 신규
+  nextRemindAt?: string;       // v0.6 신규 — 3차 검증 L-11
+  respondedAt?: string;        // v0.6 신규 — 3차 검증 L-11
 }
 
 interface EmotionAlert {
@@ -411,6 +424,7 @@ interface SyncSession {
   direction: "upload" | "download";
   status: "success" | "failed" | "retrying";
   checksum: string;
+  retryCount: number;          // 2차 검증 L-12 반영
 }
 
 interface ConsentLog {
@@ -438,6 +452,7 @@ interface Invitation {          // v1.1 신규
   role: FamilyMember["role"];
   token: string;
   status: "pending" | "accepted" | "expired";
+  expiresAt: string;            // 2차 검증 L-12 반영
 }
 
 interface Publication {         // v1.1 신규
@@ -451,7 +466,7 @@ interface Publication {         // v1.1 신규
 
 ### 3.2 Entity Relationships
 
-전체 ERD는 [schema.md §4](../../01-plan/schema.md)를 참조. 핵심 관계 요약:
+전체 시각 ERD는 [erd.md](../../01-plan/erd.md)를 참조(도메인별 3분할 + 속성·카디널리티 포함). 핵심 관계 요약:
 
 ```
 [User] 1─N [Device]─N [SyncSession]     [User] 1─N [Chapter]─N [ChapterRevision]
@@ -487,29 +502,37 @@ interface Publication {         // v1.1 신규
 { "error": { "code": "VALIDATION_ERROR", "message": "...", "details": {} } }
 ```
 
-**표준 에러 코드**: `VALIDATION_ERROR`(400) · `UNAUTHORIZED`(401) · `FORBIDDEN`(403) · `NOT_FOUND`(404) · `CONFLICT`(409) · `SYNC_CHECKSUM_MISMATCH`(422, §6.2) · `INTERNAL_ERROR`(500)
+**표준 에러 코드**: `VALIDATION_ERROR`(400) · `UNAUTHORIZED`(401) · `FORBIDDEN`(403) · `NOT_FOUND`(404) · `CONFLICT`(409) · `RATE_LIMITED`(429) · `PAYLOAD_TOO_LARGE`(413) · `SYNC_CHECKSUM_MISMATCH`(422, §6.2) · `INTERNAL_ERROR`(500) *(v0.6: 429/413 추가, [sync-contract.md §6](../sync-contract.md#6-표준-에러-코드-추가분))*
 
 **필드 케이싱**: 서버 wire format은 **snake_case**로 통일([decisions.md #20](../../01-plan/decisions/silveryarn-platform.decisions.md)) — 웹(TS)·모바일(Kotlin)에서 각 스택 컨벤션으로 변환.
 
 ### 4.2 Endpoint List (초안)
 
+> **리소스 중첩 규칙(F-3)**: 리소스는 원칙적으로 소유자(`users`) 하위로 중첩한다. 단, ① 업로드 트리거·액션성 엔드포인트(`/sync/upload`, `/photos/upload-url`, `/chapters/{id}/review`)와 ② 사전에 소유자를 특정할 수 없는 전역 생성 엔드포인트(`/invitations`, `/photo-requests`)는 예외로 중첩하지 않는다 — 3차 검증 M-8.
+
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
-| POST | /api/v1/sync/upload | 원본 음성+1차 전사+신규 사진 업로드 | Device Token |
-| GET | /api/v1/sync/download | 최신 자서전·RAG 스냅샷·사진·질문목록 다운로드 | Device Token |
+| POST | /api/v1/sync/upload | 원본 음성+1차 전사+신규 사진 업로드 — **202 Accepted, 비동기 처리** ([sync-contract.md §2](../sync-contract.md#2-비동기-처리-계약-be-b1)) | Device Token |
+| GET | /api/v1/sync/sessions/{sessionId} | 업로드 작업 상태 조회 (신규, [sync-contract.md §2.2](../sync-contract.md#22-작업-상태-조회-신규-엔드포인트)) | Device Token |
+| GET | /api/v1/sync/download?since={syncVersion} | 최신 자서전·RAG 스냅샷·사진·질문목록 다운로드 — `since` 지정 시 증분만 반환 ([sync-contract.md §5](../sync-contract.md#5-증분-다운로드-be-b4)) | Device Token |
 | GET | /api/v1/users/{userId}/chapters | 챕터 목록/본문 조회 | 2FA + Role |
 | POST | /api/v1/chapters/{id}/review | 감수 승인/반려 (`chapter_revisions` 생성) | 2FA + Role(family) |
 | GET | /api/v1/users/{userId}/photos | 사진 목록 조회 | 2FA + Role |
-| POST | /api/v1/photos | 사진 업로드 (웹 콘솔 경유) | 2FA + Role(family) |
+| POST | /api/v1/photos/upload-url | 사진 업로드용 Presigned URL 발급 (신규, [sync-contract.md §4](../sync-contract.md#4-사진-업로드--presigned-url-흐름-be-b2)) | 2FA + Role(family) 또는 Device Token |
+| POST | /api/v1/photos/{id}/complete | 사진 업로드 완료 확인 (신규) | 2FA + Role(family) 또는 Device Token |
 | POST | /api/v1/photo-requests | 가족→당사자 사진 추가 요청 | 2FA + Role(family) |
 | GET | /api/v1/users/{userId}/emotion-scores | 일별 정서 점수 추이 조회 | 2FA + Role |
 | GET | /api/v1/users/{userId}/emotion-alerts | 정서 알림 이력 | 2FA + Role |
 | PUT | /api/v1/family-members/{id}/notification-settings | 알림 수신 채널·항목 설정 | 2FA + Role(family) |
 | POST | /api/v1/invitations | 가족 구성원 초대 | 2FA + Role(family) |
 | POST | /api/v1/users/{userId}/publications | 인쇄/출판 요청 | 2FA + Role |
-| GET | /api/v1/devices/{userId} | 기기 사양·설치모드 조회 (관리자, 조회 전용) | Admin |
+| GET | /api/v1/users/{userId}/devices | 기기 사양·설치모드 조회 (관리자, 조회 전용) — *(v0.6: `/devices/{userId}` → 소유자 중첩 규칙에 맞게 정정, M-8)* | Admin |
+| GET | /api/v1/users/{userId}/questions | 회고 질문 큐 조회 (신규, L-12) | 2FA + Role |
+| GET | /api/v1/users/{userId}/schedule-items | 일정/복약 목록 조회 (신규, L-12) | 2FA + Role |
+| GET | /api/v1/users/{userId}/consent-logs | 동의 이력 조회 (신규, L-12) | 2FA + Role |
 
 > 구독/결제 엔드포인트는 스코프 아웃([decisions.md #18](../../01-plan/decisions/silveryarn-platform.decisions.md)) — 포함하지 않음.
+> 동기화·업로드 관련 상세 계약(비동기 처리, 충돌정책, Presigned URL, 증분 다운로드)의 SoR은 [sync-contract.md](../sync-contract.md)이며, 이 표는 요약만 담는다.
 
 ### 4.3 Detailed Specification
 
@@ -570,7 +593,7 @@ interface Publication {         // v1.1 신규
 | 업로드 실패 | 지수 백오프 재시도(최대 N회 — 횟수는 Do 단계에서 확정) |
 | 다운로드 실패 | 재시도 |
 | 체크섬 검증 실패 | 손상 데이터 폐기 후 재다운로드 요청 |
-| 로컬-서버 버전 충돌 | 서버 마스터 데이터 우선 적용(Server-Wins) |
+| 로컬-서버 버전 충돌 | **엔티티별로 상이** — 무차별 Server-Wins 아님. 상세 정책은 [sync-contract.md §3](../sync-contract.md#3-엔티티별-충돌정책-server-wins-전면적용-폐기) 참조 *(v0.6: CTO Enterprise B1/3차 검증 H-3 반영, 단일 Server-Wins 규칙 폐기)* |
 
 ### 6.2 표준 에러 코드
 
@@ -638,7 +661,7 @@ interface Publication {         // v1.1 신규
 | **서버 Presentation** | API Gateway, 웹 콘솔(`apps/web`, `apps/admin`) | `services/gateway/`, `apps/web/`, `apps/admin/` |
 | **서버 Application** | author-engine, care-engine, schedule-engine 유스케이스 | `services/{engine}/application/` |
 | **서버 Domain** | 서비스별 Entity·비즈니스 규칙(챕터 귀속, 사진 인라인 규칙) | `services/{engine}/domain/` — *v0.2: `services/shared/domain/`(단일 공유)에서 structure.md와 일치하도록 서비스별 분산으로 정정(design-validator F-2). `services/shared/`는 순수 공통 유틸·마이그레이션만 담당* |
-| **서버 Infrastructure** | Qdrant/PostgreSQL/MinIO 연동, vLLM 클라이언트 | `services/{engine}/infrastructure/` |
+| **서버 Infrastructure** | Qdrant/Neo4j/PostgreSQL/MinIO 연동, vLLM 클라이언트 | `services/{engine}/infrastructure/` |
 
 ### 9.2 Dependency Rules
 
@@ -662,6 +685,8 @@ Application은 Domain에 항상 의존하며, Infrastructure는 Domain이 정의
 ---
 
 ## 11. Implementation Guide
+
+> ⚠️ **CTO팀 아키텍처 리뷰 권고(Enterprise B3)**: 아래 6개 서비스 구조를 첫 스캐폴딩 커밋에서 그대로 6개 독립 배포 단위로 찍지 말 것. Phase 1은 **모듈러 모놀리스 2프로세스(api / worker)**로 시작하고, 폴더 경계만 아래 구조로 유지하며 import-linter로 엔진 간 직접 참조를 CI에서 차단하는 방식을 권장한다. 실제 서비스 분리는 GPU 스케일 독립이 필요해지는 시점(rag-core 등)에 재검토([cto-review](../cto-review-2026-09-05.md#1-enterprise-architect--아키텍처-전략-심사) B3 참조).
 
 ### 11.1 File Structure (제안)
 
@@ -688,7 +713,7 @@ silveryarn/
 
 ### 11.2 Implementation Order
 
-1. [x] Phase 1 스키마 확정 (`/phase-1-schema`) — v1.1, 17개 엔티티
+1. [x] Phase 1 스키마 확정 (`/phase-1-schema`) — v1.3, 17개 엔티티
 2. [x] Phase 2 컨벤션 확정 (`/phase-2-convention`)
 3. [ ] 온디바이스 오프라인 코어(STT/SLM/TTS) + 로컬 캐시
 4. [ ] Wi-Fi 배치 동기화 기본 흐름 (업/다운로드, 재시도, 체크섬, Diff 멱등성)
@@ -716,3 +741,5 @@ silveryarn/
 | 0.2 | 2026-09-05 | design-validator 검증 반영 — RAG/정서모니터링/출판/온보딩/상태전이/Diff처리/페르소나 절 신설(§2.4~2.10), API 표준화(§4), RBAC·백업정책 추가(§7), 데이터모델 v1.1 동기화(§3), Domain 레이어 위치 정정(§9) | NUBiz AX Initiative |
 | 0.3 | 2026-09-06 | 사용자 제안 "Closed-Loop Architecture" 보고서 검토 반영 — §2.11 신설(Opus/WorkManager/Whisper Large-v3/Neo4j/Critic Agent/Compaction Engine 구체화), 컴포넌트 다이어그램·의존성표에 Neo4j 추가, §4.3에 sync/download 응답 예시 추가. 외부 GPT-4o/Claude 제안은 미채택(온프레미스 vLLM 유지, decisions #26) | NUBiz AX Initiative (사용자 제안 반영) |
 | 0.4 | 2026-09-06 | 사용자 제안 "저사양 실시간 대화 프로세스" 보고서 반영 — §2.12 신설(8단계 파이프라인, 메모리 예산 목표치), 로컬 RAG를 FTS5 단독(Phase 1 기본, decisions #32)으로 확정해 §2.3/§9.1의 "경량 VectorDB" 표현 정정, mobile-schema.md 신규 연계 | NUBiz AX Initiative (사용자 제안 반영) |
+| 0.5 | 2026-09-07 | 2차 design-validator 검증 반영 — ConversationChunk/Device 등 TS 인터페이스에 schema.md v1.3 신규 컬럼 동기화(session_id/turn_id/mode/assistantResponse, slmModelVersion/promptPackVersion), 누락 필드 보강(bodyTextSnapshot/qualityFlag/retryCount/expiresAt), Neo4j를 §9.1 Infrastructure 레이어에 추가, 교차참조 오류 정정(§2.9→workflow-diagrams §7, §2.4→§2.8, §4.2→§4.3), 6개 마이크로서비스 첫 커밋 금지 경고를 §11에 직접 명시, erd.md 링크 추가 | NUBiz AX Initiative |
+| 0.6 | 2026-09-07 | 3차 design-validator 검증 반영 — H-3: [sync-contract.md](../sync-contract.md) 신규 작성 및 §4.2/§6.1에서 링크(비동기 업로드 202+job_id, 엔티티별 충돌정책으로 Server-Wins 전면적용 폐기, Presigned URL 사진업로드, 증분 다운로드), 429/413 에러코드 추가. M-8: `GET /devices/{userId}`를 소유자 중첩 규칙에 맞게 `/users/{userId}/devices`로 정정 + 예외 규칙 명시. L-12: questions/schedule-items/consent-logs 엔드포인트 추가. L-5: §2.11의 §2.8 오참조를 workflow-diagrams §7로 정정. L-11: Chapter.createdAt/updatedAt, Photo.uploadedAt, ScheduleItem.nextRemindAt/respondedAt 필드 보강 | NUBiz AX Initiative |

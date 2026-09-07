@@ -1,9 +1,10 @@
 # 데이터 모델링 및 ERD (Entity-Relationship Diagram)
 
-> **Summary**: [`schema.md`](./schema.md)(v1.2, PostgreSQL DDL)와 [`mobile-schema.md`](./mobile-schema.md)(온디바이스 SQLite)를 시각적 ER 다이어그램으로 정리한 데이터 모델링 문서
+> **Summary**: [`schema.md`](./schema.md)(v1.4, PostgreSQL DDL)와 [`mobile-schema.md`](./mobile-schema.md)(온디바이스 SQLite)를 시각적 ER 다이어그램으로 정리한 데이터 모델링 문서
 >
 > **Project**: 은빛실타래 (SilverYarn)
 > **Date**: 2026-09-07
+> **Version**: 1.2 (3차 design-validator 검증 H-1 반영 — PII 암호화 대상에 assistant_response 추가, §11 스테일 버전 문구 정정)
 > **Status**: Draft
 > **DDL 원본(SoR)**: [`schema.md`](./schema.md) — 본 문서와 실제 컬럼 타입·길이가 다르면 schema.md가 우선한다.
 
@@ -18,11 +19,11 @@
 | **소유 루트(Ownership Root)** | 모든 엔티티는 직접 또는 간접으로 `users`(어르신 본인)에 귀속된다 — 멀티테넌트가 아닌 "1 시니어 = 1 데이터 트리" 구조 |
 | **PK 전략** | 전 테이블 `UUID`(`gen_random_uuid()`) — 분산 생성(온디바이스↔서버 동시 생성) 및 동기화 시 충돌 방지를 위해 자동증가 정수 대신 채택 |
 | **Enum 정책** | DB enum 값은 항상 **영문**(`childhood` 등), 한글 표시명은 [schema.md §7](./schema.md#7-enum-표시명-매핑-한글-ui--영문-db-값) 매핑 테이블로만 노출 (decisions.md #21) |
-| **참조 무결성** | `user_id` 등 소유 관계 FK는 전부 `ON DELETE CASCADE` — 시니어 계정 삭제 시 종속 데이터 일괄 정리. **단, 이는 "삭제·파기 정책"이 아직 미확정인 상태의 잠정 규칙**이다(§9 참조) |
+| **참조 무결성** | `user_id` 등 소유 관계 FK는 전부 `ON DELETE CASCADE` — 시니어 계정 삭제 시 종속 데이터 일괄 정리. **단, 이는 "삭제·파기 정책"이 아직 미확정인 상태의 잠정 규칙**이다(§8 각주 참조) |
 | **의도적 비정규화 1** | `conversation_chunks.meta_people`을 `TEXT[]` 배열로 저장(정규화된 조인 테이블 대신) — RAG 인물 필터링 조회가 압도적으로 많고 다인물 태깅이 자연스러워 배열이 더 적합 |
 | **의도적 비정규화 2** | `photos.linked_chunk_id`와 `conversation_chunks.linked_photo_id`가 **같은 관계를 양방향 FK로 중복 저장** — 사진→회고청크, 청크→사진 양쪽에서 인덱스 조회가 빈번해 조인 비용보다 중복 저장을 선택. 애플리케이션 레벨에서 양쪽 동시 갱신 책임 필요 |
 | **비관계형 저장소 연계** | `conversation_chunks.embedding_id`(Qdrant), `graph_node_ref`(Neo4j)는 **진짜 FK가 아니라 외부 시스템 포인터 문자열**이다 — PostgreSQL이 참조 무결성을 보장하지 않으므로 애플리케이션이 정합성을 책임진다(§7 참조) |
-| **PII 암호화** | `name`/`contact`/`body_text`/`body_text_snapshot`/`transcript_*`/`birth_date` 컬럼은 암호화 대상으로 지정만 되어 있고 **구체 방식(pgcrypto vs 앱레벨)은 Do 단계 미확정** (schema.md §8) |
+| **PII 암호화** | `name`/`contact`/`body_text`/`body_text_snapshot`/`transcript_*`/`birth_date`/**`assistant_response`** 컬럼은 암호화 대상으로 지정만 되어 있고 **구체 방식(pgcrypto vs 앱레벨)은 Do 단계 미확정** (schema.md §8, §5) *(v1.2: `assistant_response` 누락분을 3차 검증 H-1로 정정)* |
 
 ---
 
@@ -104,6 +105,8 @@ erDiagram
         string android_version "판별기준"
         enum install_mode "kiosk/normal, 설치시 1회 고정"
         numeric ai_tops "NPU 성능, nullable"
+        string slm_model_version "nullable"
+        string prompt_pack_version "nullable"
         timestamp installed_at
         timestamp last_sync_at "nullable"
     }
@@ -163,7 +166,7 @@ erDiagram
     chapters {
         uuid id PK
         uuid user_id FK
-        smallint chapter_no "자서전 내 순번"
+        smallint chapter_no UK "자서전 내 순번, UNIQUE(user_id+chapter_no)"
         string title "예: 스물다섯의 고개"
         enum period "childhood/youth/adulthood/present"
         text body_text "PII·암호화대상, 사진인라인마커포함"
@@ -216,13 +219,17 @@ erDiagram
         text transcript_on_device "PII"
         text transcript_server "PII, nullable"
         string meta_period "nullable"
-        string_array meta_people "nullable, 배열"
+        string_array meta_people "nullable, 배열(DDL: text[])"
         string meta_place "nullable"
         string meta_emotion "nullable"
         jsonb meta_prosody "nullable, 스키마 미확정"
         uuid linked_photo_id FK "photos, nullable"
         string embedding_id "Qdrant 포인터, FK아님"
         string graph_node_ref "Neo4j 포인터, FK아님"
+        string session_id "nullable, mobile conversations.session_id"
+        int turn_id "nullable"
+        enum mode "author/care/assist, nullable"
+        text assistant_response "PII·암호화대상, nullable"
         timestamp created_at
     }
     questions {
@@ -310,7 +317,7 @@ erDiagram
 
 ## 6. 온디바이스 로컬 ERD (SQLite) ↔ 서버 매핑
 
-[`mobile-schema.md`](./mobile-schema.md)의 6개 로컬 테이블은 서버 스키마의 **서브셋/캐시**이며 별도 DB(SQLite)라 PostgreSQL과 FK로 직접 연결되지 않는다 — 동기화 API(§4, 아래)를 통해서만 데이터가 오간다.
+[`mobile-schema.md`](./mobile-schema.md)의 6개 로컬 테이블은 서버 스키마의 **서브셋/캐시**이며 별도 DB(SQLite)라 PostgreSQL과 FK로 직접 연결되지 않는다 — [design.md §4](../02-design/features/silveryarn-platform.design.md) 동기화 API를 통해서만 데이터가 오간다.
 
 ```mermaid
 %%{init: {'theme':'base', 'themeVariables': {'primaryColor':'#ffffff','primaryTextColor':'#111111','primaryBorderColor':'#111111','lineColor':'#111111','background':'#ffffff','mainBkg':'#ffffff','textColor':'#111111','clusterBkg':'#ffffff','clusterBorder':'#111111'}}}%%
@@ -330,9 +337,10 @@ erDiagram
     }
     autobiography_fts {
         text chapter_id UNINDEXED
-        text period_era UNINDEXED
-        text content "FTS5"
-        text keywords "FTS5"
+        text chapter_no UNINDEXED
+        text period UNINDEXED
+        text summary "FTS5 전문색인 대상"
+        text keywords "FTS5 전문색인 대상"
     }
     questions_cache {
         text id PK "서버 questions.id"
@@ -370,7 +378,7 @@ erDiagram
 | 로컬 테이블 | 서버 대응 엔티티 | 동기화 방향 |
 |---|---|---|
 | `conversations` | `conversation_chunks` | 업로드(→서버), ID를 멱등키로 재사용 |
-| `autobiography_fts` | `chapters` (요약본) | 다운로드(←서버), `chapter_updates` 페이로드 |
+| `autobiography_fts` | `chapters` (요약본) | 다운로드(←서버), `chapter_updates` 페이로드 — 컬럼명을 페이로드와 동일하게 정렬(v1.1, `period_era`→`period`, `content`→`summary`, `chapter_no` 추가) |
 | `questions_cache` | `questions` | 다운로드(←서버), `priority_questions` 페이로드 |
 | `unrecalled_photos` | `photos`(recall_status=pending) | 다운로드(←서버) |
 | `schedule_cache` | `schedule_items` | 양방향 (`origin=local`분은 업로드) |
@@ -398,11 +406,12 @@ flowchart LR
 
 | 관계 | 카디널리티 | ON DELETE | 비고 |
 |---|---|---|---|
-| users → family_members | 1:N | CASCADE | 시니어 삭제 시 가족 레코드도 정리(§9 재검토 필요) |
+| users → family_members | 1:N | CASCADE | 시니어 삭제 시 가족 레코드도 정리(아래 각주 재검토 필요) |
 | users → devices | 1:N | CASCADE | |
 | users → chapters | 1:N | CASCADE | |
 | chapters → chapter_revisions | 1:N | CASCADE | |
-| chapters → photos (linked_chapter_id) | 1:0..N | 제약없음(FK만) | 인라인 삽입 시에만 연결 |
+| users → devices (primary_device_id) | 0..1:1 | **SET NULL** (v1.3) | 주 단말 지정용 보조 참조 — 소유관계 정본은 `devices.user_id`(CASCADE) |
+| chapters → photos (linked_chapter_id) | 0..1:0..N | 제약없음(FK만) | 인라인 삽입 시에만 연결 |
 | chapters → questions (linked_chapter_id) | 1:0..N | 제약없음(FK만) | |
 | photos ↔ conversation_chunks | 0..1:0..1 | 제약없음(FK만) | **양방향 FK 중복** — 애플리케이션이 양쪽 동시 갱신 |
 | family_members → notification_settings | 1:N | CASCADE | |
@@ -412,7 +421,7 @@ flowchart LR
 | family_members → invitations(invited_by) | 0..1:N | 제약없음 | |
 | family_members → photo_requests(requested_by) | 0..1:N | 제약없음 | |
 | devices → sync_sessions | 1:N | CASCADE | |
-| users → 나머지 9개 엔티티(photos/photo_requests/conversation_chunks/questions/schedule_items/emotion_alerts/emotion_scores/consent_logs/invitations/publications) | 1:N | CASCADE | 소유 루트 원칙 일괄 적용 |
+| users → 나머지 10개 엔티티(photos/photo_requests/conversation_chunks/questions/schedule_items/emotion_alerts/emotion_scores/consent_logs/invitations/publications) | 1:N | CASCADE | 소유 루트 원칙 일괄 적용 |
 
 > ⚠️ **CASCADE 삭제와 보유·파기 정책의 충돌 가능성**: 현재 전 관계가 `ON DELETE CASCADE`인데, CTO 보안 리뷰(B3)는 "원본 음성·전사·벡터 각각의 보유기간·파기방법이 법무 미확정"이라고 지적했다. 만약 향후 법무 검토에서 "즉시 완전삭제"가 아니라 "일정기간 보관 후 파기" 또는 "사용자별 암호키 폐기(crypto-shredding)" 방식이 채택되면, 지금의 단순 CASCADE는 재설계가 필요하다 — Do 단계 착수 전 확정 권장([decisions.md](./decisions/silveryarn-platform.decisions.md) 미결 항목).
 
@@ -442,9 +451,9 @@ flowchart LR
 
 ---
 
-## 11. 알려진 확장 후보 (v1.2에 미반영 — 결정 대기)
+## 11. 알려진 확장 후보 (schema.md v1.4에도 미반영 — 결정 대기)
 
-CTO 보안·백엔드 리뷰([cto-review-2026-09-05.md](../02-design/cto-review-2026-09-05.md))에서 구체적으로 제안됐으나, 이 문서(ERD)는 **schema.md v1.2 확정 상태를 있는 그대로 시각화**하는 것이 목적이라 아래 항목은 반영하지 않았다. Do 단계 착수 전 별도 결정이 필요하다.
+CTO 보안·백엔드 리뷰([cto-review-2026-09-05.md](../02-design/cto-review-2026-09-05.md))에서 구체적으로 제안됐으나, 이 문서(ERD)는 **schema.md 현재 확정 상태를 있는 그대로 시각화**하는 것이 목적이라 아래 항목은 반영하지 않았다. Do 단계 착수 전 별도 결정이 필요하다.
 
 | 후보 엔티티/컬럼 | 목적 | 근거 |
 |---|---|---|
@@ -454,7 +463,7 @@ CTO 보안·백엔드 리뷰([cto-review-2026-09-05.md](../02-design/cto-review-
 | `organizations` + `family_members.org_id` | B2G 시설 단위 멀티테넌시(시설간 열람 차단) | CTO 보안리뷰 B5(c), decisions.md #1(B2C/B2G 병행) |
 | `*.retention_until` / `*.purged_at` | 보유기간·파기 시점 관리 (crypto-shredding 등) | CTO 보안리뷰 B3, decisions.md 미결 항목 |
 
-> 이 5가지를 지금 스키마에 반영할지 결정해주시면 schema.md v1.3으로 확정해서 이 ERD도 함께 갱신하겠습니다.
+> 이 5가지를 지금 스키마에 반영할지 결정해주시면 schema.md 후속 버전으로 확정해서 이 ERD도 함께 갱신하겠습니다.
 
 ---
 
@@ -474,3 +483,6 @@ CTO 보안·백엔드 리뷰([cto-review-2026-09-05.md](../02-design/cto-review-
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 1.0 | 2026-09-07 | schema.md v1.2 + mobile-schema.md 기반 ERD 신규 작성 (흑백 고대비, 도메인별 3분할 + 온디바이스 매핑 + 비관계형 저장소 연계 다이어그램) | NUBiz AX Initiative |
+| 1.1 | 2026-09-07 | 2차 design-validator 검증 반영 — schema.md v1.3 동기화(L-1~L-6) | NUBiz AX Initiative |
+| 1.2 | 2026-09-07 | 3차 design-validator 검증 H-1 반영 — PII 암호화 대상 목록에 assistant_response 추가, §11 스테일 버전 문구("v1.2 확정 상태", "v1.3으로 확정") 정정 | NUBiz AX Initiative |
+| 1.1 | 2026-09-07 | 2차 design-validator 검증(H-2/M-3/M-4/M-2 관련분) 반영 — schema.md v1.3 동기화(conversation_chunks 4컬럼·devices 2컬럼 추가), users→devices ON DELETE SET NULL 관계 추가, autobiography_fts 컬럼명 페이로드 정렬, 교차참조 오류 정정(§9→§8) | NUBiz AX Initiative |

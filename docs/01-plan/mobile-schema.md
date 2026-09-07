@@ -3,8 +3,8 @@
 > **Summary**: 모바일 앱(Room/SQLite)의 로컬 저장소 스키마 초안 — 서버 [`schema.md`](./schema.md)의 서브셋·캐시 역할
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Date**: 2026-09-06
-> **Version**: 0.1 (사용자 제안 "저사양 실시간 대화 프로세스" 보고서 반영, [decisions.md #33](./decisions/silveryarn-platform.decisions.md))
+> **Date**: 2026-09-07
+> **Version**: 0.3 (3차 design-validator 검증 반영 — L-7/L-8)
 > **Status**: Draft — Do 단계에서 Room Entity로 구현 시 최종 확정
 
 > 서버 `schema.md`가 SoR(전체 마스터 데이터)이며, 본 문서는 온디바이스가 오프라인 동작을 위해 로컬에 보관하는 **서브셋**을 정의한다. 컬럼명은 서버와의 동기화 페이로드 매핑을 쉽게 하기 위해 서버 필드명을 최대한 따른다.
@@ -24,7 +24,7 @@
 
 ### 2.1 `conversations` (구술/대화 턴 로컬 버퍼)
 
-서버 `conversation_chunks`(schema.md §3.8)의 로컬 버퍼. 동기화 성공 시 `sync_status='SYNCED'`로 갱신 후, 원본 오디오만 삭제(#30)하고 행 자체는 5일 윈도우 동안 유지(오프라인 재생·문맥 참조용).
+서버 `conversation_chunks`(schema.md §3.8)의 로컬 버퍼. 동기화 성공 시 `sync_status='SYNCED'`로 갱신 후, 원본 오디오만 삭제(#30)하고 행 자체는 5일 윈도우 동안 유지(오프라인 재생·문맥 참조용). **`session_id`/`turn_id`/`mode`/`assistant_response` 4컬럼은 schema.md v1.3에서 서버 대응 컬럼이 추가되어 완전 매핑된다**(2차 검증 H-2, [decisions.md #34](./decisions/silveryarn-platform.decisions.md)).
 
 | Column | Type | Description |
 |---|---|---|
@@ -36,26 +36,27 @@
 | assistant_response | TEXT | 온디바이스 SLM 응답 텍스트 |
 | audio_path | TEXT NULL | 로컬 Opus 파일 경로 — 업로드 성공 시 NULL로 초기화(#30) |
 | linked_chapter_id | TEXT NULL | FTS5 검색으로 참조된 챕터 ID (인지자극 로그용) |
-| response_latency_ms | INTEGER NULL | 발화종료→첫음성 소요시간(ms) — §2.12 성능 모니터링용 |
+| response_latency_ms | INTEGER NULL | 발화종료→첫음성 소요시간(ms) — §2.12 성능 모니터링용, 서버에 직접 대응 컬럼 없음(Device-Only) → 업로드 시 `conversation_chunks` 메타에 병합 저장([sync-contract.md §3](../02-design/sync-contract.md#3-엔티티별-충돌정책-server-wins-전면적용-폐기), L-8) |
 | sync_status | TEXT | `PENDING` \| `UPLOADING` \| `SYNCED` \| `FAILED` |
 | created_at | INTEGER (epoch ms) | 생성 시각 |
 
 ### 2.2 `autobiography_fts` (자서전 로컬 검색 인덱스 — FTS5 가상테이블)
 
-서버 `chapters`(schema.md §3.4)의 요약본을 다운로드해 구성하는 **Zero-Neural RAG**의 핵심 테이블. 사용자 제안 원안의 스키마를 그대로 채택.
+서버 `chapters`(schema.md §3.4)의 요약본을 다운로드해 구성하는 **Zero-Neural RAG**의 핵심 테이블. 사용자 제안 원안의 스키마를 채택하되, **컬럼명을 `GET /sync/download`의 `chapter_updates` 페이로드(design.md §4.3)와 완전히 정렬**했다(2차 검증 M-2 반영 — `period_era`→`period`, `content`→`summary`로 개명, `chapter_no` 추가) — 이 문서 서두의 "서버 필드명을 최대한 따른다" 원칙을 실제로 지키기 위함.
 
 ```sql
 CREATE VIRTUAL TABLE autobiography_fts USING fts5(
     chapter_id UNINDEXED,
-    period_era UNINDEXED,
-    content,
+    chapter_no UNINDEXED,
+    period UNINDEXED,
+    summary,
     keywords,
     tokenize = 'unicode61'
 );
 ```
 
-- 조회 예시: `SELECT chapter_id, content FROM autobiography_fts WHERE autobiography_fts MATCH '비 OR 영암' ORDER BY bm25(autobiography_fts) LIMIT 1;`
-- 갱신: 서버 `GET /api/v1/sync/download` 응답의 `chapter_updates`(design.md §4.3)로 Upsert
+- 조회 예시: `SELECT chapter_id, summary FROM autobiography_fts WHERE autobiography_fts MATCH '비 OR 영암' ORDER BY bm25(autobiography_fts) LIMIT 1;`
+- 갱신: 서버 `GET /api/v1/sync/download` 응답의 `chapter_updates`(design.md §4.3)로 Upsert — 페이로드 필드(`chapter_id`/`chapter_no`/`period`/`keywords`/`summary`)를 그대로 컬럼에 대입
 
 ### 2.3 `questions_cache` (회고 질문 큐 로컬 캐시)
 
@@ -98,13 +99,13 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 
 ### 2.6 `device_state` (기기 상태 — 단일 행)
 
-설치 시 1회 결정되는 값(§9.3) + 로컬 전용 네트워크 정보(#22).
+설치 시 1회 결정되는 값([decisions.md #5](./decisions/silveryarn-platform.decisions.md) 임계값 기준) + 로컬 전용 네트워크 정보(#22). *(v0.3: "§9.3" 문서명 없는 인용을 decisions.md #5로 정정, L-7)*
 
 | Column | Type | Description |
 |---|---|---|
 | install_mode | TEXT | `kiosk` \| `normal` — 설치 시 고정, 서버 `devices.install_mode`와 동기화(조회용) |
 | registered_wifi_ssid | TEXT NULL | **로컬 전용, 서버 미전송** ([decisions.md #22](./decisions/silveryarn-platform.decisions.md)) |
-| slm_model_version | TEXT NULL | 탑재된 온디바이스 SLM 버전 — design.md §2.10 프롬프트팩과 매핑 |
+| slm_model_version | TEXT NULL | 탑재된 온디바이스 SLM 버전 — 서버 `devices.slm_model_version`과 동기화(schema.md v1.3), 프롬프트팩 정의는 [design.md §2.11 4단계](../02-design/features/silveryarn-platform.design.md)(Compaction Engine) 참조 *(v0.3: "design.md §2.10"은 에이전트 페르소나 정의 절이라 오참조였던 것을 정정, L-7)* |
 | prompt_pack_version | TEXT NULL | 동기화로 갱신되는 페르소나/프롬프트 팩 버전 |
 | last_sync_at | INTEGER NULL | |
 
@@ -123,7 +124,8 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 ## Related Documents
 - 서버 스키마(SoR): [schema.md](./schema.md)
 - Design §2.11 Closed-Loop, §2.12 실시간 파이프라인: [silveryarn-platform.design.md](../02-design/features/silveryarn-platform.design.md)
-- Decisions: [silveryarn-platform.decisions.md](./decisions/silveryarn-platform.decisions.md) (#9, #22, #30, #31, #32, #33)
+- Decisions: [silveryarn-platform.decisions.md](./decisions/silveryarn-platform.decisions.md) (#9, #22, #30, #31, #32, #33, #34, #35)
+- ERD: [erd.md §6](./erd.md)
 
 ---
 
@@ -132,3 +134,5 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 0.1 | 2026-09-06 | 사용자 제안 반영 초안 — `autobiography_fts` 등 6개 로컬 테이블 정의 | NUBiz AX Initiative |
+| 0.2 | 2026-09-07 | 2차 design-validator 검증 반영 — `autobiography_fts` 컬럼명을 sync 페이로드와 정렬(M-2), `conversations` 4컬럼의 서버 매핑 완료 명시(H-2) | NUBiz AX Initiative |
+| 0.3 | 2026-09-07 | 3차 design-validator 검증 반영 — L-7: §2.6 "§9.3"/"design.md §2.10" 문서명 없는·부정확한 인용을 decisions.md #5/design.md §2.11로 정정. L-8: `response_latency_ms`의 서버 미대응 문제를 sync-contract.md §3(Device-Only, conversation_chunks 메타 병합)으로 해소 | NUBiz AX Initiative |

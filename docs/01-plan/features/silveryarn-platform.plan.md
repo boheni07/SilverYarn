@@ -8,9 +8,9 @@ version: 1.3
 > **Summary**: 어르신 자서전 제작과 AI 말벗돌봄을 온디바이스(오프라인 우선)-온프레미스 서버 하이브리드 구조로 통합 제공하는 플랫폼
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.1 (PDCA 등록 초안 — 원본 기획서 v0.5 기반)
+> **Version**: 0.4 (3차 design-validator 검증 반영)
 > **Author**: NUBiz AX(AI Transformation) Initiative
-> **Date**: 2026-09-05
+> **Date**: 2026-09-07
 > **Status**: Draft
 
 ---
@@ -69,7 +69,7 @@ version: 1.3
 - [ ] 사진 기반 자동 회고 트리거 및 챕터 인라인 편입 파이프라인
 - [ ] 설치모드 자동 분기 (키오스크/일반 앱, RAM·OS 버전 기준)
 - [ ] 웹 콘솔 (가족 감수·편집, 자서전 뷰어, 관리자 대시보드) — UI/UX 화면설계서 기준
-- [ ] 정서 모니터링 및 가족·복지사 알림 연동
+- [ ] 정서 모니터링 및 가족·복지사 알림 연동 — **일별 정서기록(emotion_scores)/알림(emotion_alerts) write 경로는 Phase 1 피처플래그 OFF**(스키마만 존재), 법무 검토(decisions.md #12) 완료 후 Phase 2에서 활성화([decisions.md #25](../decisions/silveryarn-platform.decisions.md))
 - [ ] 인쇄용 PDF(CMYK 300DPI)/ePub 자동 조판
 
 ### 2.2 Out of Scope (이번 단계)
@@ -94,7 +94,7 @@ version: 1.3
 | FR-04 | 사진 기반 회고 결과는 해당 시기 챕터 본문에 자동 인라인 삽입되어야 함 | High | Pending |
 | FR-05 | 앱 설치 시점에 RAM·OS 버전을 자동 체크하여 키오스크/일반 모드로 분기 설치되어야 함 | High | Pending |
 | FR-06 | 가족은 웹 콘솔에서 AI 챕터 초안을 대조 편집·승인/반려할 수 있어야 함 | High | Pending |
-| FR-07 | 발화 톤·부정어 빈도 기반 정서 점수가 임계치 초과 시 가족·복지사에게 알림이 발송되어야 함 | Medium | Pending |
+| FR-07 | 발화 톤·부정어 빈도 기반 정서 점수가 임계치 초과 시 가족·복지사에게 알림이 발송되어야 함 | Medium | **On Hold — Phase 1 피처플래그 OFF, decisions.md #25** |
 | FR-08 | 일정·복약 발화는 엔티티로 파싱되어 로컬 DB에 등록되고 지정 시각에 능동형 음성 브리핑되어야 함 | Medium | Pending |
 
 ### 3.2 Non-Functional Requirements
@@ -189,20 +189,20 @@ version: 1.3
 Selected Level: Enterprise (On-Premise 변형)
 
 ┌───────────────────────────────────────────────────────────┐
-│ 모바일(온디바이스): presentation(UI) / on-device-ai(VAD·STT│
-│ ·SLM·TTS) / local-storage(SQLite·경량VectorDB) / sync      │
+│ 모바일(온디바이스): presentation(UI) / ondevice(VAD·STT·   │
+│ SLM·TTS) / local(SQLite FTS5, Phase1 기본 RAG) / sync       │
 ├───────────────────────────────────────────────────────────┤
-│ 서버(온프레미스, 마이크로서비스):                            │
-│   services/author-engine, services/care-engine,            │
-│   services/schedule-engine, services/sync-gateway,         │
-│   services/rag-core (LLM·임베딩·Vector DB 오케스트레이션)   │
+│ 서버(온프레미스, 모듈러 모놀리스 우선 — v0.4 정정):          │
+│   services/{author,care,schedule}-engine, sync-gateway,     │
+│   rag-core는 논리적 구분이며, 첫 커밋은 api/worker 2프로세스│
+│   모듈러 모놀리스로 시작 (CTO Enterprise B3, design.md §11) │
 ├───────────────────────────────────────────────────────────┤
 │ 웹 콘솔: apps/web (가족·자서전 사용자), apps/admin (관리자) │
 └───────────────────────────────────────────────────────────┘
 
 > AWS EKS/Terraform 등 bkit Enterprise 기본 인프라 템플릿은 그대로
-> 적용하지 않고, 온프레미스 K8s/베어메탈 GPU 클러스터로 대체 검토
-> (Design 문서 및 infra-architect 상담 필요)
+> 적용하지 않고, 온프레미스 K8s/베어메탈 GPU 클러스터로 대체 확정
+> (structure.md, CONVENTIONS.md §1.2 참조 — v0.4: "검토 필요"에서 격상)
 ```
 
 ---
@@ -217,19 +217,23 @@ Selected Level: Enterprise (On-Premise 변형)
 
 ### 8.2 Conventions to Define/Verify
 
-| Category | Current State | To Define | Priority |
+> *(v0.4 정정 — 3차 검증 M-5: 아래 4항목 모두 Phase 2/4에서 이미 정의 완료됐으나 "missing"으로 남아있던 자기모순을 해소)*
+
+| Category | Current State | Defined In | Priority |
 |----------|---------------|-----------|:--------:|
-| 서비스/모듈 네이밍 | missing | author-engine / care-engine / schedule-engine / sync-gateway 등 | High |
-| 모노레포 구조 | missing | apps/, services/, packages/, infra/ (7.3절 참조) | High |
-| 온디바이스-서버 API 계약 | missing | 동기화 업/다운로드 페이로드 스키마 | High |
-| 환경변수 | missing | 온프레미스 GPU 서버·DB·오브젝트스토리지 접속 정보 | Medium |
+| 서비스/모듈 네이밍 | ✅ 정의 완료 | author-engine / care-engine / schedule-engine / sync-gateway 등 — [structure.md §1](../structure.md) | High |
+| 모노레포 구조 | ✅ 정의 완료 | apps/, services/, packages/(design-tokens 포함), infra/ — [structure.md](../structure.md) (7.3절은 요약만) | High |
+| 온디바이스-서버 API 계약 | ✅ 정의 완료 | [sync-contract.md](../../02-design/sync-contract.md) — 비동기 업로드, 엔티티별 충돌정책, 증분 다운로드 | High |
+| 환경변수 | ✅ 정의 완료 | [CONVENTIONS.md §4](../../../CONVENTIONS.md) — DB_/QDRANT_/NEO4J_/MINIO_/VLLM_/AUTH_/STT_/EMBEDDING_ 등 접두사 | Medium |
 
 ### 8.3 Pipeline Integration
 
 | Phase | Status | Document Location | Command |
 |-------|:------:|-------------------|---------|
-| Phase 1 (Schema) | ✅ | [`docs/01-plan/schema.md`](../schema.md), [`glossary.md`](../glossary.md) | `/phase-1-schema` |
+| Phase 1 (Schema) | ✅ | [`docs/01-plan/schema.md`](../schema.md)(v1.4), [`erd.md`](../erd.md), [`glossary.md`](../glossary.md) | `/phase-1-schema` |
 | Phase 2 (Convention) | ✅ | [`CONVENTIONS.md`](../../../CONVENTIONS.md), [`naming.md`](../naming.md), [`structure.md`](../structure.md) | `/phase-2-convention` |
+| Phase 3 (Mockup) | ✅ | [`design-tokens.md`](../../02-design/design-tokens.md) — 컬러/타이포/접근성 최소기준 | — |
+| Phase 4 (API 설계) | ✅ | [`silveryarn-platform.design.md §4`](../../02-design/features/silveryarn-platform.design.md), [`sync-contract.md`](../../02-design/sync-contract.md) | — |
 
 ---
 
@@ -237,7 +241,7 @@ Selected Level: Enterprise (On-Premise 변형)
 
 1. [x] Design 문서 작성 (`silveryarn-platform.design.md`) — 본 등록 작업에서 초안 작성 완료
 2. [x] 원본 기획서 9장 미결 사항 1차 정리 — 14개 중 11개 확정/보류 처리, 3개는 법무·경영 검토 필요로 분류 ([decisions.md](../decisions/silveryarn-platform.decisions.md))
-3. [x] `/phase-1-schema`로 엔티티 정식 스키마 정의 완료, design-validator 반영 v1.1(17개 엔티티) ([schema.md](../schema.md), [glossary.md](../glossary.md))
+3. [x] `/phase-1-schema`로 엔티티 정식 스키마 정의 완료, 3차 design-validator까지 반영한 현재 v1.4(17개 엔티티) ([schema.md](../schema.md), [glossary.md](../glossary.md))
 4. [x] `/phase-2-convention`으로 서버(Python)·모바일(Kotlin)·웹(TS) 컨벤션 확정 ([CONVENTIONS.md](../../../CONVENTIONS.md))
 5. [x] `design-validator` 에이전트로 기획서·프로세스흐름도·UI/UX 3개 원본 문서 간 정합성 검증 완료, High+Medium 23건 및 원본 문서 오류 7건 수정 완료 (2026-09-05)
 6. [ ] 온프레미스 인프라(K8s/베어메탈 GPU 클러스터) 설계 — infra-architect 상담
@@ -251,3 +255,6 @@ Selected Level: Enterprise (On-Premise 변형)
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 0.1 | 2026-09-05 | Plan/ 폴더 원본 기획서(v0.5) 기반 초안 등록 | NUBiz AX Initiative |
+| 0.2 | 2026-09-05 | design-validator 1차 검증(33건) 반영, decisions.md #1~#23 의사결정 로그 연동, 스택 확정사항(FastAPI/Next.js/Keycloak) 동기화 | NUBiz AX Initiative |
+| 0.3 | 2026-09-07 | 2차 design-validator 검증 반영 — Vector DB/Neo4j 행 추가(§7.2), 챕터윤문 LLM 확정 행 추가, 정서모니터링 In Scope/FR-07에 Phase 1 OFF 명시(M-10), "경량VectorDB"→FTS5 표현 정정(M-8) | NUBiz AX Initiative |
+| 0.4 | 2026-09-07 | 3차 design-validator 검증 반영 — M-5: §7.3 마이크로서비스 표현을 모듈러 모놀리스 우선 원칙과 일치시킴, §8.2 "missing" 4항목이 실제로는 이미 정의 완료된 자기모순 해소(sync-contract.md 링크 포함), §8.3에 Phase 3/4 행 추가, §9-3 schema.md 버전 표기 "v1.1"→현재판으로 정정 | NUBiz AX Initiative |

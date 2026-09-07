@@ -1,11 +1,12 @@
 # 은빛실타래 — 비즈니스/업무/프로세스 흐름도 (Workflow Diagrams)
 
-> **Summary**: 현재(v0.4) 설계 상태를 반영한 전체 업무·프로세스 흐름도 모음 — Mermaid 다이어그램 20종 (흑백 고대비판)
+> **Summary**: 현재(v0.6) 설계 상태를 반영한 전체 업무·프로세스 흐름도 모음 — Mermaid 다이어그램 20종 (흑백 고대비판)
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Date**: 2026-09-06
+> **Version**: 0.4 *(v0.4 신규 — 헤더에 Version 필드 없던 것을 3차 검증 L-3로 정정, 상세 이력은 하단 Version History)*
+> **Date**: 2026-09-07
 > **Status**: Draft
-> **Source of truth**: [`silveryarn-platform.design.md`](./features/silveryarn-platform.design.md)(v0.4), [`schema.md`](../01-plan/schema.md)(v1.2), [`mobile-schema.md`](../01-plan/mobile-schema.md), [`decisions.md`](../01-plan/decisions/silveryarn-platform.decisions.md)
+> **Source of truth**: [`silveryarn-platform.design.md`](./features/silveryarn-platform.design.md)(v0.6), [`sync-contract.md`](./sync-contract.md)(v0.1), [`schema.md`](../01-plan/schema.md)(v1.4), [`mobile-schema.md`](../01-plan/mobile-schema.md)(v0.3), [`decisions.md`](../01-plan/decisions/silveryarn-platform.decisions.md)(v0.7)
 
 > 원본 `Plan/자서전_말벗돌봄_프로세스_흐름도.md`(기획서 v0.5 기준)를 대체하지 않고, **그 이후 확정된 아키텍처 변경분**(Closed-Loop, 실시간 대화 파이프라인, Zero-Neural RAG, Neo4j 지식그래프, 온프레미스 vLLM 확정)까지 반영해 전체를 다시 정리한 현재판이다. 원본은 기획 의도 이해용으로 계속 보존한다(CLAUDE.md SoR 원칙).
 >
@@ -158,26 +159,31 @@ sequenceDiagram
 
     Note over D: Wi-Fi 접속 + 유휴/충전 감지
     D->>G: POST /api/v1/sync/upload (Opus 음성 + 로컬 STT 텍스트 + 사진)
-    G->>D: 200 OK
+    G->>D: 202 Accepted (session_id, job_id)
     Note over D: 원본 오디오 즉시 삭제 (decisions.md #30)
     G->>S: 배치 작업 큐 등록
     S->>S: Whisper Large-v3 재전사 → 기존 청크 Diff 비교
     S->>S: 신규분만 임베딩(Qdrant)+지식그래프(Neo4j) 적재
-    S->>S: 온프레미스 vLLM 챕터 초안 생성/갱신
+    S->>S: 온프레미스 vLLM 챕터 초안 생성 → chapters(draft/in_review) 저장
     S->>F: 신규 챕터 초안 알림
     F->>F: 원고 대조 편집, 사진 배치
     F-->>S: 승인 또는 반려
     alt 승인
-        S->>S: chapter_revisions 기록, 챕터 확정
+        S->>S: chapter_revisions(action=approved) 기록, 챕터 확정
     else 반려
+        S->>S: chapter_revisions(action=rejected) 기록
         S->>S: vLLM 재생성 → 초안 갱신
         S->>F: 재생성 초안 재전달
     end
     S->>S: Compaction Engine — FTS5 차분·프롬프트팩·질문셋 패키징
-    D->>G: GET /api/v1/sync/download
+    D->>G: GET /api/v1/sync/sessions/{session_id} (폴링)
+    G-->>D: status: completed
+    D->>G: GET /api/v1/sync/download?since={sync_version}
     G-->>D: 200 OK (chapter_updates, priority_questions, schedule_items)
     Note over D: autobiography_fts / questions_cache / schedule_cache Upsert
 ```
+
+> ℹ️ **3차 검증 반영**: L-4 — "반려" 분기에 `chapter_revisions(action=rejected)` 기록이 누락돼 있던 것을 추가(§7과 일치). 업로드 응답을 200→202(Accepted)로, 다운로드 전 상태 폴링과 `since` 증분 파라미터를 추가([sync-contract.md](./sync-contract.md) H-3 반영).
 
 ---
 
@@ -206,12 +212,14 @@ flowchart TD
     N --> O["챕터 자동 귀속<br/>childhood/youth/adulthood/present"]
     D -- "연결사진ID 존재 시" --> O2["챕터 본문에 사진 자동 인라인 삽입<br/>(placement_status=proposed)"]
     O --> O2
-    O2 --> CR["chapter_revisions 이력 기록"]:::strong
-    CR --> P["웹 콘솔로 초안 전달"]
+    O2 --> DRAFT["chapters 저장(status=draft/in_review)"]:::strong
+    DRAFT --> P["웹 콘솔로 초안 전달"]
     QQ --> Q["다음 동기화 시 모바일로 배포"]
 
     classDef strong fill:#ffffff,color:#111111,stroke:#111111,stroke-width:3px;
 ```
+
+> ℹ️ **2차 검증 M-5 정정**: `chapter_revisions`(감수 이력)는 `action`(approved/rejected) 컬럼이 NOT NULL이라 **가족 감수 결과가 있어야만** 생성 가능하다. 위 작가 엔진 단계에서는 아직 감수 전이므로 `chapters`만 draft/in_review 상태로 저장하고, `chapter_revisions` 행은 실제 감수가 이뤄지는 §7(가족 협업·감수 워크플로우)에서 생성한다.
 
 ---
 
@@ -436,6 +444,8 @@ stateDiagram-v2
     Offline --> [*]: 앱 종료
 ```
 
+> ✅ `ServerWins` 상태 표기는 다이어그램 단순화를 위해 유지하나, 실제 엔티티별 세부 정책은 §17과 동일하게 [sync-contract.md §3](./sync-contract.md#3-엔티티별-충돌정책-server-wins-전면적용-폐기)에서 확정됐다(3차 검증 H-3).
+
 ---
 
 ## 14. 자서전 제작 전체 라이프사이클 (매크로)
@@ -531,6 +541,8 @@ flowchart TD
     classDef strong fill:#ffffff,color:#111111,stroke:#111111,stroke-width:3px;
 ```
 
+> ✅ **CTO팀 아키텍처 리뷰(Enterprise B1) — 해결됨(3차 검증 H-3)**: 위 "Server-Wins"는 더 이상 엔티티 구분 없이 무차별 적용되지 않는다. `conversation_chunks`·`schedule_items`(완료표시)·`device_state`처럼 **단말에서만 생성되는 데이터**는 [sync-contract.md §3](./sync-contract.md#3-엔티티별-충돌정책-server-wins-전면적용-폐기)에서 필드 단위로 Device-Wins/Append-Only 정책을 별도 확정했다 — 상세는 [cto-review §1 B1](../cto-review-2026-09-05.md#1-enterprise-architect--아키텍처-전략-심사) 참조.
+
 ---
 
 ## 18. 데이터 계층 흐름 — 서버 스키마 ↔ 온디바이스 스키마 매핑
@@ -539,7 +551,7 @@ flowchart TD
 %%{init: {'theme':'base', 'themeVariables': {'primaryColor':'#ffffff','primaryTextColor':'#111111','primaryBorderColor':'#111111','lineColor':'#111111','background':'#ffffff','mainBkg':'#ffffff','textColor':'#111111','clusterBkg':'#ffffff','clusterBorder':'#111111','edgeLabelBackground':'#ffffff'}}}%%
 flowchart LR
     subgraph SRV["🖥️ 서버 PostgreSQL (schema.md, 17개 엔티티)"]
-        sc[("chapters")]; sp[("photos")]; sq[("questions")]; ss[("schedule_items")]
+        sc[("chapters")]; sp[("photos")]; sq[("questions")]; ss[("schedule_items")]; scc[("conversation_chunks")]
     end
     subgraph MOB["📱 온디바이스 SQLite (mobile-schema.md, 6개 테이블)"]
         mc[("autobiography_fts")]; mq[("questions_cache")]; mp[("unrecalled_photos")]; ms[("schedule_cache")]; mv[("conversations")]; md[("device_state")]
@@ -548,8 +560,11 @@ flowchart LR
     sq -->|"priority_questions"| mq
     sp -->|"미회고 사진"| mp
     ss -->|"schedule_items"| ms
-    mv -->|"업로드 후 오디오 삭제, 텍스트 5일 유지"| sc
+    mv -->|"업로드 후 오디오 삭제, 텍스트 5일 유지"| scc
+    scc -.->|"§4 청킹·귀속 후 반영"| sc
 ```
+
+> ℹ️ **2차 검증 M-6 정정**: 모바일 `conversations`(원본 발화)의 업로드 목적지는 `chapters`가 아니라 `conversation_chunks`다. `chapters` 갱신은 §4 작가 엔진이 `conversation_chunks`를 청킹·귀속 처리한 **이후 결과물**이므로 점선으로 별도 표시했다.
 
 ---
 
@@ -579,6 +594,7 @@ flowchart LR
     D2["#14 예산·인력"]:::off -.->|"착수 자체 차단"| ALL["전체 Do 단계"]:::off
     D3["#27 SLM 모델선정"]:::off -.->|"부분 차단"| P2["§2 실시간대화<br/>SLM 추론 단계"]:::off
     D4["#9 최근5일 캐시"]:::off -.->|"기본값 유지, 재조정 가능"| P18["§18 로컬 스키마<br/>conversations 보존정책"]:::off
+    D6["보유·파기 정책 미확정<br/>(CTO Security B3)"]:::off -.->|"ON DELETE CASCADE 전면적용 위험"| PALL["전 엔티티 삭제 정책"]:::off
 
     classDef off fill:#f4f4f4,color:#777777,stroke:#999999,stroke-width:1px,stroke-dasharray: 3 3;
 ```
@@ -601,3 +617,5 @@ flowchart LR
 |---------|------|---------|--------|
 | 0.1 | 2026-09-06 | Closed-Loop/실시간파이프라인/Neo4j/FTS5 반영한 현재판 워크플로우 20종 신규 작성 | NUBiz AX Initiative |
 | 0.2 | 2026-09-06 | 색상(남색/보라/청록/골드) 기반 구분을 전면 폐지하고 흑백 고대비 스타일로 재작성 — 모든 다이어그램에 흑백 강제 테마 지시자 추가, 역할 구분은 노드 도형·subgraph 레이블·선 스타일로 대체 | NUBiz AX Initiative (사용자 피드백 반영) |
+| 0.3 | 2026-09-07 | 2차 design-validator 검증 반영 — H-3: sync-contract 미작성(§17)·보유정책 미확정(§13,§20) 경고 각주 추가 및 §20에 D5/D6 미결항목 반영. M-5: §4에서 감수 전 `chapter_revisions` 생성 오류 정정(draft 상태 `chapters` 저장으로 변경, 실제 이력 생성은 §7). M-6: §18에 누락된 `conversation_chunks` 노드 추가 및 `conversations`→`chapters` 오표기 화살표를 `conversation_chunks` 경유로 정정 | NUBiz AX Initiative |
+| 0.4 | 2026-09-07 | 3차 design-validator 검증 반영 — H-3 해소: [sync-contract.md](./sync-contract.md) 신규 작성에 따라 §17/§13의 "미해결" 경고를 "해결됨"으로 갱신, §20에서 sync-contract 관련 D5 미결노드 제거(D6 보유·파기 정책은 여전히 미확정으로 유지). L-4: §3 시퀀스의 "반려" 분기에 `chapter_revisions(action=rejected)` 기록 추가, 업로드 응답 200→202 Accepted 및 세션 폴링·증분 다운로드(`since`) 반영 | NUBiz AX Initiative |

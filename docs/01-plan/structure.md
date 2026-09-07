@@ -2,7 +2,7 @@
 
 > Phase 2 Deliverable — 모노레포 전체 구조 (Design 문서 §11.1을 실행 가능한 수준으로 구체화)
 
-**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-05 · **Version**: 1.0
+**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-07 · **Version**: 1.3
 
 ---
 
@@ -26,8 +26,9 @@ silveryarn/
 │       │                          (design-validator F-2, design.md §9.1과 정합)*
 │       └── infrastructure/
 │           └── migrations/       # Alembic 마이그레이션
-├── packages/                   # 서버 서비스 간 공유 코드 (Python 패키지)
-│   └── py-common/               # 공통 domain 엔티티, 유틸
+├── packages/                   # 서버 서비스 간 공유 코드 (Python 패키지) + 크로스플랫폼 자산
+│   ├── py-common/                # 공통 유틸·인프라 헬퍼 (도메인 엔티티는 각 서비스 domain/에 위치 — F-2, §2 주석 참조. v1.3: "공통 domain 엔티티" 표현이 F-2 정정 취지와 충돌하던 것을 완화, M-6)
+│   └── design-tokens/            # 디자인 토큰 단일소스(JSON) → 웹 Tailwind config·모바일 Kotlin Color object 빌드 산출 (v1.3 신규, CONVENTIONS §4.4, M-7/FE-B2)
 ├── infra/                      # 온프레미스 K8s/베어메탈 GPU 클러스터 (AWS 템플릿 미적용)
 │   ├── k8s/
 │   │   ├── base/
@@ -53,7 +54,7 @@ services/{engine}/
 │   └── {resource}_service.py
 ├── domain/             # Domain — 순수 엔티티, 비즈니스 규칙 (schema.md 매핑)
 │   └── {resource}.py
-├── infrastructure/     # Infrastructure — SQLAlchemy repo, Qdrant/MinIO/vLLM client
+├── infrastructure/     # Infrastructure — SQLAlchemy repo, Qdrant/Neo4j/MinIO/vLLM client
 │   └── {resource}_repository.py
 ├── tests/
 │   └── test_{resource}_service.py
@@ -78,32 +79,32 @@ apps/mobile/src/main/java/com/silveryarn/mobile/
 │   ├── stt/
 │   ├── slm/
 │   └── tts/
-├── local/                # Room(SQLite), 경량 VectorDB
+├── local/                # Room(SQLite, FTS5 — Phase 1 기본 RAG, decisions.md #32)
 │   ├── db/
-│   └── vectorstore/
+│   └── vectorstore/       # 경량 VectorDB(임베딩) — 고사양 단말 한정 Phase 2+ 검토, Phase 1 미사용
 ├── installmode/          # 설치모드 자동분기 (Device Owner Mode 프로비저닝) — decisions.md #5,#6
 └── sync/                 # Wi-Fi 배치 동기화 워커 (WorkManager)
 ```
 
 ---
 
-## 4. 웹 콘솔 내부 구조 (Next.js, `apps/web`·`apps/admin` 공통 패턴)
+## 4. 웹 콘솔 내부 구조 (Next.js, `apps/web`·`apps/admin` 공통 패턴) — v1.2 정정
+
+> ⚠️ **정정 사유(2차 검증 M-7, CTO FE-B3)**: `presentation/app/`은 Next.js가 인식하지 못하는 경로라 라우팅이 동작하지 않는다. CONVENTIONS.md §3.2와 동일 구조로 통일했다.
 
 ```
 apps/web/src/
-├── presentation/
-│   ├── components/       # UI 컴포넌트
-│   ├── hooks/             # useChapterReview 등
-│   └── app/                # Next.js App Router 페이지
-│       ├── (family)/        # 가족 대시보드, 원고 감수 등
-│       └── (user)/           # 자서전 사용자 화면
-├── application/
-│   └── services/            # API 서비스 래퍼
-├── domain/
-│   └── types/                # schema.md 엔티티와 1:1 매핑되는 TS 타입
-└── infrastructure/
-    └── lib/api/                # 서버 API 클라이언트
+├── app/                     # Next.js App Router 규약 위치 (라우트 그룹)
+│   ├── (family)/              # 가족 대시보드, 원고 감수 등
+│   └── (user)/                 # 자서전 사용자 화면
+├── components/               # UI 컴포넌트
+├── features/                 # 화면 단위 콜로케이션
+├── services/                  # Application — API 서비스 래퍼
+├── lib/api/                   # Infrastructure — 서버 API 클라이언트
+└── types/                     # Domain — schema.md 엔티티와 1:1 매핑되는 TS 타입
 ```
+
+계층 규율은 폴더 중첩이 아니라 ESLint `import/no-restricted-paths`로 강제한다(CONVENTIONS.md §3.2).
 
 > `apps/admin`은 동일 패턴에 `(admin)/` 라우트 그룹만 다르게 구성 (사용자 관리, Wi-Fi 동기화 모니터링, 기기 관리 등 — UI/UX 화면설계서 "웹·관리자" 절 참조).
 
@@ -158,3 +159,6 @@ Presentation ──→ Application ──→ Domain ←── Infrastructure
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 1.0 | 2026-09-05 | Phase 2 초안 | NUBiz AX Initiative |
+| 1.1 | 2026-09-05 | design-validator F-1(의존성 표 모순) 정정 | NUBiz AX Initiative |
+| 1.2 | 2026-09-07 | 2차 design-validator 검증 반영 — Neo4j client 추가(§2), §4 웹 콘솔 App Router 경로 정정(M-7/FE-B3), "경량 VectorDB" 표현 정정(§3, M-8) | NUBiz AX Initiative |
+| 1.3 | 2026-09-07 | 3차 design-validator 검증 반영 — M-6: `packages/py-common` 설명이 F-2 정정 취지와 충돌하던 것을 완화("공통 domain 엔티티"→"공통 유틸·인프라 헬퍼"). M-7(FE-B2): `packages/design-tokens/` 신규 추가(디자인 토큰 배포 메커니즘). L-6: §4 제목 버전 표기 정정("v1.1"→"v1.2") | NUBiz AX Initiative |

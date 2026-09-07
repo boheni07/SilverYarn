@@ -3,14 +3,18 @@
 > Phase 1 Deliverable: silveryarn-platform 데이터 구조 정의
 
 **Project**: 은빛실타래 (SilverYarn)
-**Date**: 2026-09-05
-**Version**: 1.2 (Closed-Loop 제안 반영 — conversation_chunks에 graph_node_ref 추가)
+**Date**: 2026-09-07
+**Version**: 1.4 (3차 design-validator 검증 H-1 반영 — PII 암호화 대상 목록에 assistant_response 추가)
 **Source**: Design 문서 §3 Data Model 초안 + UI/UX 화면설계서 필드 단위 대조 결과 반영
 **용어 정의**: [glossary.md](./glossary.md) 참조
 
 > **v1.1 변경 요약** (design-validator 리포트 2026-09-05 반영): `chapters`에 제목/순번/반려상태 추가, `chapter_revisions`·`emotion_scores`·`notification_settings`·`invitations`·`photo_requests`·`publications` 6개 엔티티 신설, `photos`/`devices`/`schedule_items`/`questions`/`users`/`conversation_chunks` 필드 보강, enum 값을 영문으로 통일(한글 표시명은 별도 매핑). 상세 변경 사유는 각 절의 "v1.1" 주석 참조.
 >
 > **v1.2 변경 요약** (사용자 제안 "Closed-Loop Architecture" 보고서 반영, 2026-09-06): `conversation_chunks`에 `graph_node_ref` 추가 — Neo4j 지식그래프 노드 참조([decisions.md #29](./decisions/silveryarn-platform.decisions.md)).
+>
+> **v1.3 변경 요약** (2차 design-validator 검증 반영, 2026-09-07): ① `conversation_chunks`에 `session_id`·`turn_id`·`mode`·`assistant_response` 4컬럼 추가 — AI 응답 텍스트가 서버에 영구 미보존되던 공백 해소, 온디바이스 `conversations` 테이블과 완전 매핑([decisions.md #34](./decisions/silveryarn-platform.decisions.md)). ② `devices`에 `slm_model_version`·`prompt_pack_version` 추가 — 키오스크 잠금 단말의 원격 프롬프트팩 갱신 추적([decisions.md #35](./decisions/silveryarn-platform.decisions.md)). ③ `users.primary_device_id` FK에 `ON DELETE SET NULL` 명시.
+>
+> **v1.4 변경 요약** (3차 design-validator 검증 H-1 반영, 2026-09-07): decisions.md #34에서 `assistant_response`를 PII 암호화 대상으로 이미 확정했으나 §5 PII 컬럼 목록에는 반영되지 않았던 누락을 정정 — 목록에 `assistant_response` 추가.
 
 ---
 
@@ -31,7 +35,7 @@
 | `chapter_revisions` **(신규 v1.1)** | 챕터 감수 이력(승인/반려/코멘트) | id, chapter_id, version, reviewer_id, action |
 | `photos` | 업로드 사진·회고 상태·인라인 배치 | id, uploader_type, recall_status, caption, placement_status |
 | `photo_requests` **(신규 v1.1)** | 가족→당사자 사진 추가 요청 | id, requested_by, message, status |
-| `conversation_chunks` | 구술/회고 청크 (RAG 인덱싱 단위) | id, transcript_on_device, transcript_server, meta |
+| `conversation_chunks` | 구술/회고 청크 (RAG 인덱싱 단위) | id, transcript_on_device, transcript_server, assistant_response, mode, meta |
 | `questions` | 미중복 회고 질문 큐 | id, text, type, linked_chapter_id |
 | `schedule_items` | 일정·복약 항목 (비서 모드) | id, kind, location, due_at, recurrence |
 | `emotion_alerts` | 정서 모니터링 임계치 초과 알림 | id, score, triggered_at, closed_at |
@@ -94,6 +98,8 @@
 | android_version | varchar(20) | Y | Android OS 버전 — 판별 기준값 |
 | install_mode | enum(`kiosk`,`normal`) | Y | 설치 시 1회 결정, 고정 (decisions.md #5) |
 | ai_tops | numeric(5,1) | N | NPU 성능(TOPS) — 보조 지표 |
+| slm_model_version | varchar(50) | N | 탑재된 온디바이스 SLM 버전 — v1.3 신규, 2차 검증 M-3 반영(CTO Enterprise B4) |
+| prompt_pack_version | varchar(50) | N | 동기화로 갱신되는 페르소나/프롬프트 팩 버전 — v1.3 신규 |
 | installed_at | timestamptz | Y | 설치 일시 |
 | last_sync_at | timestamptz | N | 마지막 동기화 완료 시각 |
 
@@ -200,6 +206,10 @@
 | linked_photo_id | UUID | N | FK → photos.id |
 | embedding_id | varchar(100) | N | Qdrant Vector DB 포인트 참조 |
 | graph_node_ref | varchar(100) | N | Neo4j 지식그래프 노드 참조(인물·사건·감정 관계 추적) — v1.2 신규, decisions.md #29 |
+| session_id | varchar(100) | N | 온디바이스 대화 세션 식별자 — v1.3 신규, mobile-schema.md `conversations.session_id`와 매핑 |
+| turn_id | integer | N | 세션 내 턴 순번 — v1.3 신규 |
+| mode | enum(`author`,`care`,`assist`) | N | 발생 모드(작가/말벗돌봄/비서) — v1.3 신규 |
+| assistant_response | text | N | 온디바이스 SLM 응답 텍스트 (PII — 암호화 대상) — v1.3 신규, 2차 검증 H-2 반영. Critic Agent 대화품질 회고분석·대화 복원에 필요 |
 | created_at | timestamptz | Y | 생성 시각 |
 
 ---
@@ -388,7 +398,7 @@
 
 ## 5. PostgreSQL DDL
 
-> PII 컬럼(`name`, `contact`, `body_text`, `body_text_snapshot`, `transcript_*`, `birth_date`)은 애플리케이션 레벨 암호화 또는 `pgcrypto` 적용을 Do 단계에서 최종 결정한다.
+> PII 컬럼(`name`, `contact`, `body_text`, `body_text_snapshot`, `transcript_*`, `birth_date`, **`assistant_response`**)은 애플리케이션 레벨 암호화 또는 `pgcrypto` 적용을 Do 단계에서 최종 결정한다. *(v1.4: `assistant_response`는 decisions.md #34에서 영구보존 확정 시 암호화 대상 포함이 함께 결정됐으나 이 목록에 누락돼 있던 것을 3차 검증 H-1로 정정)*
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -423,13 +433,15 @@ CREATE TABLE devices (
   android_version VARCHAR(20) NOT NULL,
   install_mode install_mode NOT NULL,
   ai_tops NUMERIC(5,1),
+  slm_model_version VARCHAR(50),
+  prompt_pack_version VARCHAR(50),
   installed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_sync_at TIMESTAMPTZ
 );
 
 ALTER TABLE users
   ADD CONSTRAINT fk_users_primary_device
-  FOREIGN KEY (primary_device_id) REFERENCES devices(id);
+  FOREIGN KEY (primary_device_id) REFERENCES devices(id) ON DELETE SET NULL;
 
 CREATE TYPE chapter_period AS ENUM ('childhood', 'youth', 'adulthood', 'present');
 CREATE TYPE chapter_status AS ENUM ('draft', 'in_review', 'rejected', 'confirmed');
@@ -493,6 +505,7 @@ CREATE TABLE photo_requests (
   fulfilled_at TIMESTAMPTZ
 );
 
+CREATE TYPE conversation_mode AS ENUM ('author', 'care', 'assist');
 CREATE TABLE conversation_chunks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -507,6 +520,10 @@ CREATE TABLE conversation_chunks (
   linked_photo_id UUID REFERENCES photos(id),
   embedding_id VARCHAR(100),
   graph_node_ref VARCHAR(100),
+  session_id VARCHAR(100),
+  turn_id INTEGER,
+  mode conversation_mode,
+  assistant_response TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -656,6 +673,7 @@ CREATE INDEX idx_devices_display_id ON devices(display_id);
 | | `adulthood` | 중장년기 |
 | | `present` | 현재 |
 | `chapter_status` | `draft` / `in_review` / `rejected` / `confirmed` | 초안 / 감수중 / 반려 / 확정 |
+| `conversation_mode` | `author` / `care` / `assist` | 자서전 작가 모드 / 말벗돌봄 모드 / 비서 모드 |
 
 ---
 
