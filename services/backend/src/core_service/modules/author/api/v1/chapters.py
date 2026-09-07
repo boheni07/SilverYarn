@@ -19,6 +19,10 @@ from core_service.modules.author.infrastructure.chapter_repository import Chapte
 from core_service.modules.author.infrastructure.chapter_revision_repository import (
     ChapterRevisionRepository,
 )
+from core_service.modules.family_members.application.family_member_service import (
+    FamilyMemberService,
+)
+from core_service.modules.family_members.deps import get_family_member_service
 from core_service.shared.schemas import DataResponse
 
 router = APIRouter(tags=["chapters"])
@@ -50,6 +54,10 @@ class ChapterRevisionResponse(BaseModel):
 class ChapterReviewRequest(BaseModel):
     action: RevisionAction
     review_comment: str | None = None
+    # TODO(Keycloak 연동 후 제거): 지금은 AuthContext가 스텁이라 "현재 로그인한
+    # 가족 구성원"을 토큰에서 구할 수 없어, 호출자가 reviewer_id를 직접 넘긴다.
+    # family_members 모듈에 실존하는 id인지는 아래 review_chapter()에서 검증한다.
+    reviewer_id: uuid.UUID | None = None
 
 
 def _service(session: AsyncSession = Depends(get_db)) -> ChapterService:
@@ -120,18 +128,22 @@ async def review_chapter(
     chapter_id: uuid.UUID,
     body: ChapterReviewRequest,
     service: ChapterService = Depends(_service),
+    family_service: FamilyMemberService = Depends(get_family_member_service),
     ctx: AuthContext = Depends(require_auth),  # TODO: role(family)만 허용하도록 강화
 ) -> DataResponse[ChapterResponse]:
     """design.md §4.2 — 감수 승인/반려 (chapter_revisions 생성은 이 시점에만 발생, M-5).
 
-    ⚠️ reviewer_id는 family_members.id여야 하는데, 이 스캐폴딩엔 family 모듈이 아직
-    없어 AuthContext.subject(스텁)를 그대로 UUID로 캐스팅할 수 없다. family 모듈
-    구현 전까지는 None으로 기록한다 — TODO: family 모듈 구현 후 실제 reviewer_id 연결.
+    reviewer_id가 넘어오면 family_members 모듈에 실존하는지 먼저 검증한다(잘못된
+    id로 서명 기록이 남는 것을 막기 위함) — 없으면 FamilyMemberService.get_family_member가
+    NOT_FOUND를 던진다. AuthContext(ctx)에서 자동으로 구하지 못하는 이유는 위 요청 필드
+    주석 참조 — Keycloak 연동 후에는 이 파라미터 없이 ctx에서 바로 구하도록 바꾼다.
     """
-    _ = ctx  # 현재 스텁이라 reviewer_id로 못 씀 — 위 docstring 참조
+    _ = ctx
+    if body.reviewer_id is not None:
+        await family_service.get_family_member(body.reviewer_id)  # 존재하지 않으면 NOT_FOUND
     chapter = await service.review_chapter(
         chapter_id=chapter_id,
-        reviewer_id=None,
+        reviewer_id=body.reviewer_id,
         action=body.action,
         comment=body.review_comment,
     )

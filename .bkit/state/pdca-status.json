@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-09-07T14:20:20.241Z",
+  "lastUpdated": "2026-09-07T14:27:41.865Z",
   "activeFeatures": [
     "silveryarn-platform",
     "presentations",
@@ -23,7 +23,8 @@
     "schedule",
     "migrations",
     "versions",
-    "tests"
+    "tests",
+    "family_members"
   ],
   "primaryFeature": "silveryarn-platform",
   "features": {
@@ -120,7 +121,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:01:39.998Z",
-        "lastUpdated": "2026-09-07T14:19:36.142Z"
+        "lastUpdated": "2026-09-07T14:27:18.913Z"
       },
       "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\main.py"
     },
@@ -172,9 +173,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:04.724Z",
-        "lastUpdated": "2026-09-07T14:17:59.434Z"
+        "lastUpdated": "2026-09-07T14:25:00.305Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\author\\domain\\chapter.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\family_members\\domain\\family_member.py"
     },
     "infrastructure": {
       "phase": "do",
@@ -185,9 +186,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:12.145Z",
-        "lastUpdated": "2026-09-07T14:18:34.580Z"
+        "lastUpdated": "2026-09-07T14:25:13.624Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\author\\infrastructure\\chapter_revision_repository.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\family_members\\infrastructure\\family_member_repository.py"
     },
     "application": {
       "phase": "do",
@@ -198,9 +199,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:24.319Z",
-        "lastUpdated": "2026-09-07T14:18:55.316Z"
+        "lastUpdated": "2026-09-07T14:25:29.585Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\author\\application\\chapter_service.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\family_members\\application\\family_member_service.py"
     },
     "api": {
       "phase": "do",
@@ -211,9 +212,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:38.061Z",
-        "lastUpdated": "2026-09-07T14:18:57.890Z"
+        "lastUpdated": "2026-09-07T14:25:33.238Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\author\\api\\__init__.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\family_members\\api\\__init__.py"
     },
     "v1": {
       "phase": "do",
@@ -224,7 +225,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:40.284Z",
-        "lastUpdated": "2026-09-07T14:19:24.569Z"
+        "lastUpdated": "2026-09-07T14:27:05.371Z"
       },
       "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\author\\api\\v1\\chapters.py"
     },
@@ -302,7 +303,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:06:53.446Z",
-        "lastUpdated": "2026-09-07T14:19:41.905Z"
+        "lastUpdated": "2026-09-07T14:27:26.107Z"
       },
       "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\migrations\\env.py"
     },
@@ -331,6 +332,19 @@
         "lastUpdated": "2026-09-07T14:08:41.194Z"
       },
       "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\conftest.py"
+    },
+    "family_members": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-09-07T14:24:52.610Z",
+        "lastUpdated": "2026-09-07T14:27:41.863Z"
+      },
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\family_members\\test_family_member_service.py"
     }
   },
   "pipeline": {
@@ -361,7 +375,7 @@
   "session": {
     "startedAt": "2026-09-05T08:17:53.299Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-09-07T14:20:20.241Z"
+    "lastActivity": "2026-09-07T14:27:41.865Z"
   },
   "history": [
     {
@@ -997,6 +1011,138 @@
     {
       "timestamp": "2026-09-07T14:20:20.241Z",
       "feature": "author",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:24:52.631Z",
+      "feature": "family_members",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:24:55.147Z",
+      "feature": "domain",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:25:00.307Z",
+      "feature": "domain",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:25:02.935Z",
+      "feature": "infrastructure",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:25:13.626Z",
+      "feature": "infrastructure",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:25:16.071Z",
+      "feature": "application",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:25:29.590Z",
+      "feature": "application",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:25:33.240Z",
+      "feature": "api",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:25:36.153Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:25:46.985Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:25:57.552Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:26:22.867Z",
+      "feature": "family_members",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:26:28.712Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:26:33.161Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:26:48.076Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:26:53.341Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:27:05.374Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:27:14.390Z",
+      "feature": "core_service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:27:18.914Z",
+      "feature": "core_service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:27:26.109Z",
+      "feature": "migrations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:27:31.110Z",
+      "feature": "family_members",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T14:27:41.865Z",
+      "feature": "family_members",
       "phase": "do",
       "action": "updated"
     }

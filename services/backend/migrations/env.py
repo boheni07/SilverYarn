@@ -17,6 +17,9 @@ from core_service.modules.author.infrastructure.chapter_revision_repository impo
     ChapterRevisionModel,
 )
 from core_service.modules.devices.infrastructure.device_repository import DeviceModel  # noqa: F401
+from core_service.modules.family_members.infrastructure.family_member_repository import (  # noqa: F401
+    FamilyMemberModel,
+)
 from core_service.modules.sync.infrastructure.sync_repository import SyncSessionModel  # noqa: F401
 from core_service.modules.users.infrastructure.user_repository import UserModel  # noqa: F401
 
