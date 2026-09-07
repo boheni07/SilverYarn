@@ -9,6 +9,9 @@ from core_service.core.config import get_settings
 from core_service.core.errors import register_error_handlers
 from core_service.core.logging import configure_logging
 from core_service.modules.author.api.v1.chapters import router as chapters_router
+from core_service.modules.care.api.v1.conversation_chunks import (
+    router as conversation_chunks_router,
+)
 from core_service.modules.devices.api.v1.devices import router as devices_router
 from core_service.modules.family_members.api.v1.family_members import (
     router as family_members_router,
@@ -29,7 +32,8 @@ app.include_router(sync_router, prefix=settings.api_prefix)
 app.include_router(chapters_router, prefix=settings.api_prefix)
 app.include_router(family_members_router, prefix=settings.api_prefix)
 app.include_router(invitations_router, prefix=settings.api_prefix)
-# TODO: care/schedule 모듈 API 완성 후 여기 추가
+app.include_router(conversation_chunks_router, prefix=settings.api_prefix)
+# TODO: schedule 모듈 API 완성 후 여기 추가
 
 
 @app.get("/health")

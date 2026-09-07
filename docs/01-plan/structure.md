@@ -2,7 +2,7 @@
 
 > Phase 2 Deliverable — 모노레포 전체 구조 (Design 문서 §11.1을 실행 가능한 수준으로 구체화)
 
-**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-08 · **Version**: 1.7
+**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-08 · **Version**: 1.8
 
 ---
 
@@ -73,7 +73,7 @@ services/backend/src/core_service/
 >
 > **모듈 간 재사용**: 다른 모듈의 Application 서비스가 필요하면(예: `author`가 챕터 감수자 검증에 `family_members`를 씀) 그 모듈 루트의 `deps.py`(공개 조합 지점, FastAPI `Depends` 프로바이더)만 import한다. `family_members/deps.py`가 최초 사례 — 다른 모듈도 교차 참조가 생기면 동일 패턴을 따른다.
 >
-> **Phase 1 구현 범위**: `users`·`devices`·`author`(chapters/chapter_revisions)·`family_members`·`invitations` 모듈은 API/Application/Domain/Infrastructure 4계층 전부 참조 구현으로 완료. `sync` 모듈은 [sync-contract.md](../../02-design/sync-contract.md)의 엔드포인트 시그니처만 골격으로 구현(로직은 TODO). `care`·`schedule` 모듈은 도메인 엔티티만 정의하고 API/Application/Infrastructure는 후속 스프린트에서 구현한다. `author` 모듈은 workflow-diagrams.md §4/§7의 M-5 정정(감수 전 chapter_revisions 생성 금지)을 코드 레벨에서 그대로 구현했다 — `save_draft()`(§4용, worker 연결은 TODO)와 `review_chapter()`(§7용, chapter_revisions 생성은 여기서만)를 분리. `family_members`는 다른 모듈(`author`의 `chapter_revisions.reviewer_id` 등)이 참조하는 루트 엔티티라 우선 구현했으며, 모듈 간 재사용은 `deps.py`라는 공개 조합 지점을 통해서만 하고 다른 모듈의 `infrastructure/`를 직접 import하지 않는 경계 규칙을 여기서 처음 적용했다(§2 의존 규칙의 모듈 간 확장). `invitations`는 `family_members`의 임시 직접생성 경로(`POST /users/{userId}/family-members`)를 대체하는 정식 온보딩 경로다 — 수락(`POST /invitations/{token}/accept`) 시점에 `family_members/deps.py`를 통해 실제 family_member 행을 만들며, 두 모듈이 같은 FastAPI 요청의 `Depends(get_db)` 세션을 공유(요청별 캐싱)하므로 하나의 트랜잭션으로 묶인다. `family_role` enum처럼 2개 이상 모듈이 같은 Postgres enum을 참조하는 값 객체는 `core_service/shared/domain_enums.py`(공유 커널)에 두고 어느 한쪽 모듈의 domain/도 다른 모듈이 직접 import하지 않게 했다.
+> **Phase 1 구현 범위**: `users`·`devices`·`author`(chapters/chapter_revisions)·`family_members`·`invitations`·`care`(conversation_chunks) 모듈은 API/Application/Domain/Infrastructure 4계층 전부 참조 구현으로 완료. `sync` 모듈은 [sync-contract.md](../../02-design/sync-contract.md)의 엔드포인트 시그니처만 골격으로 구현(로직은 TODO). `schedule` 모듈은 도메인 엔티티만 정의하고 API/Application/Infrastructure는 후속 스프린트에서 구현한다. `care`는 `conversation_chunks`만 구현했다 — `emotion_alerts`/`emotion_scores`는 Phase 1 피처플래그 OFF(decisions.md #25)라 이번 라운드에서 의도적으로 제외했고, 검색은 실제 Qdrant 하이브리드 서치(design.md §2.4) 전까지 임시 DB ILIKE로 대체돼 있다(코드에 TODO 명시). `author` 모듈은 workflow-diagrams.md §4/§7의 M-5 정정(감수 전 chapter_revisions 생성 금지)을 코드 레벨에서 그대로 구현했다 — `save_draft()`(§4용, worker 연결은 TODO)와 `review_chapter()`(§7용, chapter_revisions 생성은 여기서만)를 분리. `family_members`는 다른 모듈(`author`의 `chapter_revisions.reviewer_id` 등)이 참조하는 루트 엔티티라 우선 구현했으며, 모듈 간 재사용은 `deps.py`라는 공개 조합 지점을 통해서만 하고 다른 모듈의 `infrastructure/`를 직접 import하지 않는 경계 규칙을 여기서 처음 적용했다(§2 의존 규칙의 모듈 간 확장). `invitations`는 `family_members`의 임시 직접생성 경로(`POST /users/{userId}/family-members`)를 대체하는 정식 온보딩 경로다 — 수락(`POST /invitations/{token}/accept`) 시점에 `family_members/deps.py`를 통해 실제 family_member 행을 만들며, 두 모듈이 같은 FastAPI 요청의 `Depends(get_db)` 세션을 공유(요청별 캐싱)하므로 하나의 트랜잭션으로 묶인다. `family_role` enum처럼 2개 이상 모듈이 같은 Postgres enum을 참조하는 값 객체는 `core_service/shared/domain_enums.py`(공유 커널)에 두고 어느 한쪽 모듈의 domain/도 다른 모듈이 직접 import하지 않게 했다.
 
 ---
 
@@ -178,3 +178,4 @@ Presentation ──→ Application ──→ Domain ←── Infrastructure
 | 1.5 | 2026-09-07 | `author` 모듈(chapters/chapter_revisions) 4계층 구현 완료 반영 — §2 "Phase 1 구현 범위" 갱신 | NUBiz AX Initiative |
 | 1.6 | 2026-09-07 | `family_members` 모듈 4계층 구현 완료 반영. 모듈 간 재사용 패턴(`deps.py` 공개 조합 지점) 신규 문서화 — §2 | NUBiz AX Initiative |
 | 1.7 | 2026-09-08 | `invitations` 모듈 4계층 구현 완료 반영 — family_members 정식 온보딩 경로 완성. 2개 이상 모듈이 공유하는 enum은 `core_service/shared/domain_enums.py`(공유 커널)에 둔다는 원칙 신규 문서화 — §2 | NUBiz AX Initiative |
+| 1.8 | 2026-09-08 | `care` 모듈(conversation_chunks) 4계층 구현 완료 반영 — emotion_alerts/emotion_scores는 Phase 1 피처플래그 OFF(decisions.md #25)로 의도적 제외, 검색은 임시 ILIKE(실제는 Qdrant 하이브리드 서치 예정)임을 명시 | NUBiz AX Initiative |
