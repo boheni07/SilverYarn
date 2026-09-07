@@ -20,6 +20,9 @@ from core_service.modules.devices.infrastructure.device_repository import Device
 from core_service.modules.family_members.infrastructure.family_member_repository import (  # noqa: F401
     FamilyMemberModel,
 )
+from core_service.modules.invitations.infrastructure.invitation_repository import (  # noqa: F401
+    InvitationModel,
+)
 from core_service.modules.sync.infrastructure.sync_repository import SyncSessionModel  # noqa: F401
 from core_service.modules.users.infrastructure.user_repository import UserModel  # noqa: F401
 

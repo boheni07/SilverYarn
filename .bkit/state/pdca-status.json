@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-09-07T14:27:41.865Z",
+  "lastUpdated": "2026-09-07T20:13:29.906Z",
   "activeFeatures": [
     "silveryarn-platform",
     "presentations",
@@ -24,7 +24,8 @@
     "migrations",
     "versions",
     "tests",
-    "family_members"
+    "family_members",
+    "invitations"
   ],
   "primaryFeature": "silveryarn-platform",
   "features": {
@@ -121,7 +122,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:01:39.998Z",
-        "lastUpdated": "2026-09-07T14:27:18.913Z"
+        "lastUpdated": "2026-09-07T20:11:20.129Z"
       },
       "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\main.py"
     },
@@ -173,9 +174,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:04.724Z",
-        "lastUpdated": "2026-09-07T14:25:00.305Z"
+        "lastUpdated": "2026-09-07T20:09:36.525Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\family_members\\domain\\family_member.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\invitations\\domain\\invitation.py"
     },
     "infrastructure": {
       "phase": "do",
@@ -186,9 +187,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:12.145Z",
-        "lastUpdated": "2026-09-07T14:25:13.624Z"
+        "lastUpdated": "2026-09-07T20:09:56.450Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\family_members\\infrastructure\\family_member_repository.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\invitations\\infrastructure\\invitation_repository.py"
     },
     "application": {
       "phase": "do",
@@ -199,9 +200,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:24.319Z",
-        "lastUpdated": "2026-09-07T14:25:29.585Z"
+        "lastUpdated": "2026-09-07T20:10:20.852Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\family_members\\application\\family_member_service.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\invitations\\application\\invitation_service.py"
     },
     "api": {
       "phase": "do",
@@ -212,9 +213,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:38.061Z",
-        "lastUpdated": "2026-09-07T14:25:33.238Z"
+        "lastUpdated": "2026-09-07T20:10:33.103Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\family_members\\api\\__init__.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\invitations\\api\\__init__.py"
     },
     "v1": {
       "phase": "do",
@@ -225,9 +226,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:40.284Z",
-        "lastUpdated": "2026-09-07T14:27:05.371Z"
+        "lastUpdated": "2026-09-07T20:11:00.164Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\author\\api\\v1\\chapters.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\invitations\\api\\v1\\invitations.py"
     },
     "devices": {
       "phase": "do",
@@ -303,7 +304,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:06:53.446Z",
-        "lastUpdated": "2026-09-07T14:27:26.107Z"
+        "lastUpdated": "2026-09-07T20:11:31.415Z"
       },
       "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\migrations\\env.py"
     },
@@ -342,9 +343,22 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:24:52.610Z",
-        "lastUpdated": "2026-09-07T14:27:41.863Z"
+        "lastUpdated": "2026-09-07T20:13:29.904Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\family_members\\test_family_member_service.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\family_members\\__init__.py"
+    },
+    "invitations": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-09-07T20:08:47.283Z",
+        "lastUpdated": "2026-09-07T20:11:55.297Z"
+      },
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\invitations\\test_invitation_service.py"
     }
   },
   "pipeline": {
@@ -375,7 +389,7 @@
   "session": {
     "startedAt": "2026-09-05T08:17:53.299Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-09-07T14:27:41.865Z"
+    "lastActivity": "2026-09-07T20:13:29.906Z"
   },
   "history": [
     {
@@ -1142,6 +1156,126 @@
     },
     {
       "timestamp": "2026-09-07T14:27:41.865Z",
+      "feature": "family_members",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:08:47.301Z",
+      "feature": "invitations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:08:51.870Z",
+      "feature": "domain",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:09:00.816Z",
+      "feature": "domain",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:09:22.066Z",
+      "feature": "core_service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:09:30.607Z",
+      "feature": "domain",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:09:36.527Z",
+      "feature": "domain",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:09:42.596Z",
+      "feature": "infrastructure",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:09:56.454Z",
+      "feature": "infrastructure",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:10:01.358Z",
+      "feature": "application",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:10:20.855Z",
+      "feature": "application",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:10:28.566Z",
+      "feature": "invitations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:10:33.105Z",
+      "feature": "api",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:10:37.847Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:11:00.169Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:11:13.978Z",
+      "feature": "core_service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:11:20.131Z",
+      "feature": "core_service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:11:31.417Z",
+      "feature": "migrations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:11:37.100Z",
+      "feature": "invitations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:11:55.300Z",
+      "feature": "invitations",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-07T20:13:29.906Z",
       "feature": "family_members",
       "phase": "do",
       "action": "updated"
