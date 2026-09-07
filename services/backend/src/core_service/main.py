@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from core_service.core.config import get_settings
 from core_service.core.errors import register_error_handlers
 from core_service.core.logging import configure_logging
+from core_service.modules.author.api.v1.chapters import router as chapters_router
 from core_service.modules.devices.api.v1.devices import router as devices_router
 from core_service.modules.sync.api.v1.sync import router as sync_router
 from core_service.modules.users.api.v1.users import router as users_router
@@ -21,7 +22,8 @@ register_error_handlers(app)
 app.include_router(users_router, prefix=settings.api_prefix)
 app.include_router(devices_router, prefix=settings.api_prefix)
 app.include_router(sync_router, prefix=settings.api_prefix)
-# TODO: author/care/schedule 모듈 API 완성 후 여기 추가
+app.include_router(chapters_router, prefix=settings.api_prefix)
+# TODO: care/schedule 모듈 API 완성 후 여기 추가
 
 
 @app.get("/health")

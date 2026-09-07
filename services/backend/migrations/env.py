@@ -12,6 +12,10 @@ from core_service.core.config import get_settings
 from core_service.core.db import Base
 
 # 각 모듈의 ORM 모델을 import해야 Base.metadata에 테이블이 등록된다.
+from core_service.modules.author.infrastructure.chapter_repository import ChapterModel  # noqa: F401
+from core_service.modules.author.infrastructure.chapter_revision_repository import (  # noqa: F401
+    ChapterRevisionModel,
+)
 from core_service.modules.devices.infrastructure.device_repository import DeviceModel  # noqa: F401
 from core_service.modules.sync.infrastructure.sync_repository import SyncSessionModel  # noqa: F401
 from core_service.modules.users.infrastructure.user_repository import UserModel  # noqa: F401

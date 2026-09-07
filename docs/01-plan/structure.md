@@ -2,7 +2,7 @@
 
 > Phase 2 Deliverable — 모노레포 전체 구조 (Design 문서 §11.1을 실행 가능한 수준으로 구체화)
 
-**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-07 · **Version**: 1.4
+**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-07 · **Version**: 1.5
 
 ---
 
@@ -71,7 +71,7 @@ services/backend/src/core_service/
 
 > 예: `modules/users/api/v1/users.py`, `modules/devices/domain/device.py`. 각 모듈은 자신의 4계층만 알고 다른 모듈의 `infrastructure/`를 직접 import하지 않는다(§6 의존 규칙과 동일 원칙을 모듈 경계에도 적용) — 이 경계가 지켜지면 향후 `modules/{module}/`을 통째로 별도 `services/{module}/`로 물리 분리해도 코드 이동만으로 끝난다.
 >
-> **Phase 1 구현 범위**: `users`·`devices` 모듈은 API/Application/Domain/Infrastructure 4계층 전부 참조 구현으로 완료. `sync` 모듈은 [sync-contract.md](../../02-design/sync-contract.md)의 엔드포인트 시그니처만 골격으로 구현(로직은 TODO). `author`·`care`·`schedule` 모듈은 도메인 엔티티만 정의하고 API/Application/Infrastructure는 후속 스프린트에서 구현한다.
+> **Phase 1 구현 범위**: `users`·`devices`·`author`(chapters/chapter_revisions) 모듈은 API/Application/Domain/Infrastructure 4계층 전부 참조 구현으로 완료. `sync` 모듈은 [sync-contract.md](../../02-design/sync-contract.md)의 엔드포인트 시그니처만 골격으로 구현(로직은 TODO). `care`·`schedule` 모듈은 도메인 엔티티만 정의하고 API/Application/Infrastructure는 후속 스프린트에서 구현한다. `author` 모듈은 workflow-diagrams.md §4/§7의 M-5 정정(감수 전 chapter_revisions 생성 금지)을 코드 레벨에서 그대로 구현했다 — `save_draft()`(§4용, worker 연결은 TODO)와 `review_chapter()`(§7용, chapter_revisions 생성은 여기서만)를 분리.
 
 ---
 
@@ -173,3 +173,4 @@ Presentation ──→ Application ──→ Domain ←── Infrastructure
 | 1.2 | 2026-09-07 | 2차 design-validator 검증 반영 — Neo4j client 추가(§2), §4 웹 콘솔 App Router 경로 정정(M-7/FE-B3), "경량 VectorDB" 표현 정정(§3, M-8) | NUBiz AX Initiative |
 | 1.3 | 2026-09-07 | 3차 design-validator 검증 반영 — M-6: `packages/py-common` 설명이 F-2 정정 취지와 충돌하던 것을 완화("공통 domain 엔티티"→"공통 유틸·인프라 헬퍼"). M-7(FE-B2): `packages/design-tokens/` 신규 추가(디자인 토큰 배포 메커니즘). L-6: §4 제목 버전 표기 정정("v1.1"→"v1.2") | NUBiz AX Initiative |
 | 1.4 | 2026-09-07 | Do 단계 착수 — §1/§2를 `services/{engine}` 개별 마이크로서비스 제안에서 `services/backend/` 단일 배포 모듈러 모놀리스로 확정 반영(decisions.md #44, CTO Enterprise B3). 실제 스캐폴딩 코드와 동기화 | NUBiz AX Initiative |
+| 1.5 | 2026-09-07 | `author` 모듈(chapters/chapter_revisions) 4계층 구현 완료 반영 — §2 "Phase 1 구현 범위" 갱신 | NUBiz AX Initiative |

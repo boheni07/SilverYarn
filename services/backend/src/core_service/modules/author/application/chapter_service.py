@@ -1,0 +1,85 @@
+"""Chapter 유스케이스 — workflow-diagrams.md §4(작가 엔진)·§7(가족 협업·감수) 매핑.
+
+§4(초안 생성/갱신)와 §7(감수)은 서로 다른 유스케이스로 분리돼 있다:
+  - save_draft(): 작가 엔진(향후 worker.py 파이프라인)이 호출 — chapter_revisions 미생성
+  - review_chapter(): 가족 웹 콘솔이 호출(API 경유) — 이때만 chapter_revisions 생성
+이 분리는 3차 검증 M-5에서 정정된 워크플로우 오류(감수 전 이력 생성)를 코드 레벨에서
+다시 어기지 않기 위한 것이다.
+"""
+
+import uuid
+
+from core_service.core.errors import ApiError
+from core_service.modules.author.domain.chapter import (
+    Chapter,
+    ChapterPeriod,
+    ChapterRevision,
+    ChapterStatus,
+    RevisionAction,
+)
+from core_service.modules.author.infrastructure.chapter_repository import ChapterRepository
+from core_service.modules.author.infrastructure.chapter_revision_repository import (
+    ChapterRevisionRepository,
+)
+
+
+class ChapterService:
+    def __init__(self, chapters: ChapterRepository, revisions: ChapterRevisionRepository):
+        self._chapters = chapters
+        self._revisions = revisions
+
+    async def get_chapter(self, chapter_id: uuid.UUID) -> Chapter:
+        chapter = await self._chapters.get_by_id(chapter_id)
+        if chapter is None:
+            raise ApiError("NOT_FOUND", f"챕터({chapter_id})를 찾을 수 없습니다.")
+        return chapter
+
+    async def list_chapters_for_user(self, user_id: uuid.UUID) -> list[Chapter]:
+        return await self._chapters.list_by_user(user_id)
+
+    async def save_draft(
+        self,
+        user_id: uuid.UUID,
+        chapter_no: int,
+        title: str,
+        period: ChapterPeriod,
+        body_text: str,
+    ) -> Chapter:
+        """workflow-diagrams.md §4 O2단계 — chapters(draft/in_review) 저장. TODO: worker.py에서 호출."""
+        if not title or len(title) > 200:
+            raise ApiError("VALIDATION_ERROR", "title은 1~200자여야 합니다.")
+        if not body_text:
+            raise ApiError("VALIDATION_ERROR", "body_text는 비어 있을 수 없습니다.")
+        return await self._chapters.upsert_draft(
+            user_id=user_id, chapter_no=chapter_no, title=title, period=period, body_text=body_text
+        )
+
+    async def list_revisions(self, chapter_id: uuid.UUID) -> list[ChapterRevision]:
+        await self.get_chapter(chapter_id)  # 존재 확인
+        return await self._revisions.list_by_chapter(chapter_id)
+
+    async def review_chapter(
+        self,
+        chapter_id: uuid.UUID,
+        reviewer_id: uuid.UUID | None,
+        action: RevisionAction,
+        comment: str | None,
+    ) -> Chapter:
+        """workflow-diagrams.md §7 — 승인/반려. 이 메서드만이 chapter_revisions를 생성한다."""
+        chapter = await self.get_chapter(chapter_id)
+        try:
+            chapter.ensure_reviewable()
+        except ValueError as exc:
+            raise ApiError("CONFLICT", str(exc)) from exc
+
+        await self._revisions.create(
+            chapter_id=chapter.id,
+            version=chapter.version,
+            body_text_snapshot=chapter.body_text,
+            reviewer_id=reviewer_id,
+            review_comment=comment,
+            action=action,
+        )
+
+        new_status = ChapterStatus.CONFIRMED if action == RevisionAction.APPROVED else ChapterStatus.REJECTED
+        return await self._chapters.update_status(chapter.id, new_status)
