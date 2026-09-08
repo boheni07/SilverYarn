@@ -48,6 +48,9 @@ export default function HomePage() {
           <Button className="flex-1" onClick={() => goTo("/chapters")}>
             자서전 뷰어로 이동
           </Button>
+          <Button variant="secondary" className="flex-1" onClick={() => goTo("/photos")}>
+            사진 갤러리로 이동
+          </Button>
           <Button variant="secondary" className="flex-1" onClick={() => goTo("/review")}>
             가족 감수 화면으로 이동
           </Button>

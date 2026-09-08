@@ -94,6 +94,9 @@ class FakeStorageClient:
     def presigned_put_url(self, object_name: str, expires: _timedelta = timedelta(minutes=15)) -> str:
         return f"https://minio.internal/silveryarn-photos/{object_name}?signed=1"
 
+    def presigned_get_url(self, object_name: str, expires: _timedelta = timedelta(minutes=15)) -> str:
+        return f"https://minio.internal/silveryarn-photos/{object_name}?signed=get"
+
     async def remove_object(self, object_name: str) -> None:
         self.removed_objects.append(object_name)
 
@@ -235,3 +238,25 @@ class TestCleanupOrphanPendingUploads:
 
     async def test_정리_대상_없으면_0_반환(self, service: PhotoService) -> None:
         assert await service.cleanup_orphan_pending_uploads() == 0
+
+
+class TestGetViewUrl:
+    """apps/web 사진 갤러리용 — 업로드 완료된 사진만 조회 URL을 내려준다."""
+
+    async def test_uploaded_사진은_view_url_반환(self, service: PhotoService) -> None:
+        photo, _, _ = await service.request_upload_url(
+            user_id=uuid.uuid4(), uploader_type=UploaderType.SELF, content_type="image/jpeg", file_size=1000
+        )
+        uploaded = await service.complete_upload(photo.id)
+
+        view_url = service.get_view_url(uploaded)
+
+        assert view_url is not None
+        assert uploaded.storage_ref in view_url
+
+    async def test_pending_upload_사진은_None(self, service: PhotoService) -> None:
+        photo, _, _ = await service.request_upload_url(
+            user_id=uuid.uuid4(), uploader_type=UploaderType.SELF, content_type="image/jpeg", file_size=1000
+        )
+
+        assert service.get_view_url(photo) is None

@@ -45,6 +45,13 @@ class StorageClient:
         """sync-contract.md §4 1단계 응답의 `upload_url` — 15분 만료 문서 스펙 그대로."""
         return self._client.presigned_put_object(self._bucket, object_name, expires=expires)
 
+    def presigned_get_url(self, object_name: str, expires: timedelta = timedelta(minutes=15)) -> str:
+        """apps/web 사진 갤러리가 실제로 이미지를 보여줄 때 쓴다 — 버킷을 public-read로
+        열지 않고(가족 사진은 PII에 준하는 민감 데이터) 매 조회 응답마다 짧게 만료되는
+        서명 URL을 새로 발급한다. presigned_put_url과 마찬가지로 로컬 HMAC 서명
+        계산만 하고 네트워크 호출은 없다."""
+        return self._client.presigned_get_object(self._bucket, object_name, expires=expires)
+
     async def remove_object(self, object_name: str) -> None:
         """photos orphan cleanup(sync-contract.md §4)용 — pending_upload로 24시간
         넘게 남은 행을 지울 때, 실제로 MinIO에 파일이 올라갔을 수도 있는 경우까지

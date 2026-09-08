@@ -43,9 +43,32 @@ npm run build
 3. **반려된 챕터가 감수 목록에서 사라짐** — `(family)/review` 페이지가 `draft`/`in_review` 상태만 필터링해, 반려(`rejected`, schema.md #status v1.1) 직후 가족이 반려 사실을 다시 볼 수 없었다. `rejected`도 필터에 포함하도록 수정.
 4. **`.env.example`이 커밋 안 되는 `.gitignore`** — create-next-app 기본 `.gitignore`가 `.env*`로 값 파일과 템플릿 파일을 구분 없이 전부 막아, 이 저장소의 관례(루트 `.env.example`처럼 템플릿은 커밋)와 어긋났다. `.env`/`.env.local`/`.env.*.local`만 막도록 좁혔다.
 
+### `(user)/photos` 사진 갤러리 화면 신규 — 실 MinIO로 업로드까지 검증 (2026-09-08)
+
+design.md §5.1 "사진·타임라인 갤러리" 화면 구현 — sync-contract.md §4 Presigned URL
+3단계 흐름을 실제로 소비하는 첫 화면이다(그동안 backend curl·모바일 스캐폴딩으로만
+검증됐다). `PhotoUploadForm`(client component)이 파일 선택 → `POST
+/photos/upload-url` → **브라우저가 MinIO에 직접 PUT**(우리 백엔드 미경유) →
+`POST /photos/{id}/complete` 3단계를 그대로 수행한다.
+
+사진을 실제로 "보여주는" 문제도 새로 풀었다 — `storage_ref`는 내부 MinIO 오브젝트
+키일 뿐 브라우저가 바로 못 연다. 버킷을 public-read로 열지 않고(가족 사진은 PII에
+준하는 민감 데이터), `GET /users/{userId}/photos` 응답에 `view_url`(짧게 만료되는
+presigned GET URL, `uploaded` 상태일 때만 존재)을 새로 추가해 해결했다
+(`PhotoService.get_view_url`). `next/image`는 `unoptimized`로 렌더 — presigned
+URL은 배포마다 도메인이 달라 `next.config`의 `remotePatterns`에 고정 등록할 수
+없다.
+
+실 백엔드(uvicorn)+실 MinIO+`next dev`를 함께 띄우고 claude-in-chrome으로 실제
+파일을 업로드해 확인: 테스트 JPEG 업로드 → 3단계 API 호출 모두 성공 → 갤러리에
+**실제 이미지가 렌더링**됨을 스크린샷으로 확인 → Postgres에서 `status=uploaded`
+직접 확인. 지원하지 않는 파일 형식(.txt) 선택 시 클라이언트 측 검증이 서버 왕복
+없이 바로 에러를 보여주고 기존 갤러리 내용은 그대로 유지되는 것도 확인.
+
 ## 아직 안 된 것 (의도적 범위 제한)
 
 - **실제 로그인 없음** — 루트 `page.tsx`는 Keycloak SSO(decisions.md #17) 붙기 전까지 쓰는 임시 개발용 진입점(userId 텍스트 입력)이다. 절대 실제 로그인 대체물이 아니다.
-- 화면은 `(user)/chapters`(자서전 뷰어)와 `(family)/review`(원고 감수) 2개만 구현 — architecture 증명 목적. 나머지 화면(온보딩, 사진 인라인 편집 등)은 요청 시 추가.
+- 화면은 `(user)/chapters`(자서전 뷰어)·`(user)/photos`(사진 갤러리)·`(family)/review`(원고 감수) 3개만 구현 — architecture 증명 목적. 나머지 화면(온보딩, 사진 인라인 편집 등)은 요청 시 추가.
+- 사진 **삭제·캡션 편집** UI 없음 — 백엔드에도 아직 해당 엔드포인트가 없다(업로드/조회만 구현).
+- AI 자동 인라인 사진 삽입 제안(`photos.placement_status=proposed` → 챕터 본문 편입) 화면 없음 — 백엔드 자체가 아직 미구현(services/backend/README.md 참조).
 - 반려 후 작가 엔진 재생성 루프(workflow-diagrams.md §7)는 백엔드 미구현 — 현재 UI는 반려 상태 표시까지만 하고 재작성 트리거는 없다.
-- `apps/admin`은 미착수 — 동일 패턴에 `(admin)/` 라우트 그룹만 다르게 구성될 예정(structure.md §4).

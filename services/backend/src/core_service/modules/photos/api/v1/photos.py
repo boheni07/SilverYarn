@@ -66,6 +66,7 @@ class PhotoResponse(BaseModel):
     file_size_kb: int | None
     mime_type: str | None
     uploaded_at: datetime
+    view_url: str | None
 
 
 def _service(session: AsyncSession = Depends(get_db)) -> PhotoService:
@@ -141,6 +142,7 @@ async def list_user_photos(
                 file_size_kb=p.file_size_kb,
                 mime_type=p.mime_type,
                 uploaded_at=p.uploaded_at,
+                view_url=service.get_view_url(p),
             )
             for p in photos
         ]

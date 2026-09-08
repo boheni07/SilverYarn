@@ -29,6 +29,7 @@ _ALLOWED_CONTENT_TYPES = {
 }
 
 _UPLOAD_URL_TTL = timedelta(minutes=15)  # sync-contract.md §4 1단계 스펙
+_VIEW_URL_TTL = timedelta(minutes=15)  # 조회할 때마다 새로 발급하므로 업로드와 동일하게 짧게
 
 
 class PhotoService:
@@ -85,6 +86,15 @@ class PhotoService:
     async def list_photos_for_user(self, user_id: uuid.UUID) -> list[Photo]:
         """GET /users/{userId}/photos — design.md §4.2."""
         return await self._repo.list_by_user(user_id)
+
+    def get_view_url(self, photo: Photo) -> str | None:
+        """apps/web 사진 갤러리용 — 아직 업로드가 안 끝난 사진(pending_upload)은
+        MinIO에 파일이 없을 수 있어 None을 반환한다(화면에서 '업로드 중' 등으로
+        처리). storage_ref가 곧 presigned URL의 object_name(request_upload_url
+        참조)이라 그대로 재사용한다."""
+        if photo.status != PhotoUploadStatus.UPLOADED:
+            return None
+        return self._storage.presigned_get_url(photo.storage_ref, expires=_VIEW_URL_TTL)
 
     async def cleanup_orphan_pending_uploads(self, older_than: timedelta = _ORPHAN_CLEANUP_THRESHOLD) -> int:
         """sync-contract.md §4 orphan cleanup — worker.py의 arq cron job이 주기적으로
