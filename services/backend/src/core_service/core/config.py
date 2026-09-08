@@ -72,6 +72,19 @@ class Settings(BaseSettings):
     redis_host: str = Field(default="localhost", alias="REDIS_HOST")
     redis_port: int = Field(default=6379, alias="REDIS_PORT")
 
+    # --- CORS (apps/web 브라우저 요청 허용) ---
+    # ⚠️ Server Component의 fetch는 Node 프로세스에서 실행돼 CORS 대상이 아니지만,
+    # "use client" 컴포넌트의 fetch는 브라우저에서 직접 나간다 — CORSMiddleware가
+    # 없으면 그 요청만 조용히 "Failed to fetch"로 실패한다(에러 응답조차 못 받음).
+    # apps/web 실제 e2e 테스트 중(리뷰 화면 승인 버튼) 발견하고 추가했다.
+    cors_allowed_origins_raw: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000", alias="CORS_ALLOWED_ORIGINS"
+    )
+
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_allowed_origins_raw.split(",") if origin.strip()]
+
     @property
     def database_url(self) -> str:
         """SQLAlchemy async DSN (asyncpg 드라이버)."""

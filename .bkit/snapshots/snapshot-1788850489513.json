@@ -1,0 +1,2080 @@
+{
+  "timestamp": "2026-09-08T06:54:49.506Z",
+  "reason": "compaction",
+  "status": {
+    "version": "3.0",
+    "lastUpdated": "2026-09-08T06:52:44.184Z",
+    "activeFeatures": [
+      "silveryarn-platform",
+      "presentations",
+      "02-design",
+      "01-plan",
+      "tmp",
+      "core_service",
+      "core",
+      "modules",
+      "users",
+      "domain",
+      "infrastructure",
+      "application",
+      "api",
+      "v1",
+      "devices",
+      "sync",
+      "author",
+      "care",
+      "schedule",
+      "migrations",
+      "versions",
+      "tests",
+      "family_members",
+      "invitations",
+      "clients",
+      "photos",
+      "web",
+      "ui",
+      "(user)",
+      "chapters",
+      "[chapterId]",
+      "(family)",
+      "chapter-review",
+      "review"
+    ],
+    "primaryFeature": "silveryarn-platform",
+    "features": {
+      "silveryarn-platform": {
+        "phase": "design",
+        "phaseNumber": 2,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {
+          "plan": "docs/01-plan/features/silveryarn-platform.plan.md",
+          "design": "docs/02-design/features/silveryarn-platform.design.md"
+        },
+        "timestamps": {
+          "started": "2026-09-05T08:19:04.662Z",
+          "lastUpdated": "2026-09-05T08:19:04.662Z"
+        },
+        "stateMachine": {
+          "currentState": "design",
+          "previousState": "plan",
+          "stateHistory": [],
+          "retryCount": 0,
+          "maxRetries": 5,
+          "circuitBreakerOpen": false
+        },
+        "metrics": {
+          "qualityScore": null,
+          "conventionCompliance": null,
+          "apiCompliance": null,
+          "cycleTimeMs": null,
+          "iterationEfficiency": null
+        },
+        "phaseTimestamps": {},
+        "automationLevel": 2
+      },
+      "presentations": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-05T09:58:38.845Z",
+          "lastUpdated": "2026-09-06T08:26:41.786Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\docs\\presentations\\_verify.js"
+      },
+      "02-design": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-06T09:18:29.649Z",
+          "lastUpdated": "2026-09-06T09:26:57.482Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\docs\\02-design\\_check_mermaid.js"
+      },
+      "01-plan": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T12:52:57.818Z",
+          "lastUpdated": "2026-09-07T12:52:57.818Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\docs\\01-plan\\_check_erd.js"
+      },
+      "tmp": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T13:32:48.704Z",
+          "lastUpdated": "2026-09-07T13:55:42.582Z"
+        },
+        "lastFile": "C:\\Users\\asus\\.claude\\jobs\\bf8b57f2\\tmp\\verify_mermaid2.js"
+      },
+      "core_service": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:01:39.998Z",
+          "lastUpdated": "2026-09-08T06:52:44.180Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\main.py"
+      },
+      "core": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:01:42.439Z",
+          "lastUpdated": "2026-09-08T06:52:17.138Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\core\\config.py"
+      },
+      "modules": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:02:58.989Z",
+          "lastUpdated": "2026-09-07T14:08:02.143Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\__init__.py"
+      },
+      "users": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:03:02.040Z",
+          "lastUpdated": "2026-09-07T14:08:14.719Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\users\\test_user_service.py"
+      },
+      "domain": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:03:04.724Z",
+          "lastUpdated": "2026-09-08T05:36:35.469Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\photos\\domain\\photo.py"
+      },
+      "infrastructure": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:03:12.145Z",
+          "lastUpdated": "2026-09-08T05:36:59.634Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\photos\\infrastructure\\photo_repository.py"
+      },
+      "application": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:03:24.319Z",
+          "lastUpdated": "2026-09-08T05:28:22.469Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\sync\\application\\upload_pipeline_service.py"
+      },
+      "api": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:03:38.061Z",
+          "lastUpdated": "2026-09-08T06:21:43.684Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\apps\\web\\src\\lib\\api\\client.ts"
+      },
+      "v1": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:03:40.284Z",
+          "lastUpdated": "2026-09-08T05:02:54.576Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\sync\\api\\v1\\sync.py"
+      },
+      "devices": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:03:52.753Z",
+          "lastUpdated": "2026-09-08T05:01:33.723Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\devices\\deps.py"
+      },
+      "sync": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:04:47.529Z",
+          "lastUpdated": "2026-09-08T05:29:48.834Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\sync\\test_upload_pipeline_service.py"
+      },
+      "author": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:05:43.966Z",
+          "lastUpdated": "2026-09-08T05:00:13.786Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\author\\deps.py"
+      },
+      "care": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:05:58.031Z",
+          "lastUpdated": "2026-09-08T05:00:30.452Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\care\\deps.py"
+      },
+      "schedule": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:06:14.107Z",
+          "lastUpdated": "2026-09-07T20:35:12.066Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\schedule\\test_schedule_item_service.py"
+      },
+      "migrations": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:06:53.446Z",
+          "lastUpdated": "2026-09-08T05:27:40.739Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\migrations\\env.py"
+      },
+      "versions": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:07:53.836Z",
+          "lastUpdated": "2026-09-07T14:07:53.836Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\migrations\\versions\\0001_initial_schema.py"
+      },
+      "tests": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:07:58.973Z",
+          "lastUpdated": "2026-09-07T14:08:41.194Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\conftest.py"
+      },
+      "family_members": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T14:24:52.610Z",
+          "lastUpdated": "2026-09-07T20:13:29.904Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\family_members\\__init__.py"
+      },
+      "invitations": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-07T20:08:47.283Z",
+          "lastUpdated": "2026-09-07T20:11:55.297Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\invitations\\test_invitation_service.py"
+      },
+      "clients": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-08T04:55:42.960Z",
+          "lastUpdated": "2026-09-08T04:57:10.608Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\core\\clients\\graph_client.py"
+      },
+      "photos": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-08T05:36:18.020Z",
+          "lastUpdated": "2026-09-08T05:36:18.020Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\photos\\__init__.py"
+      },
+      "web": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-08T06:19:13.070Z",
+          "lastUpdated": "2026-09-08T06:31:40.387Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\apps\\web\\src\\services\\errors.ts"
+      },
+      "ui": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-08T06:22:17.994Z",
+          "lastUpdated": "2026-09-08T06:22:40.058Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\apps\\web\\src\\components\\ui\\StatusBadge.tsx"
+      },
+      "(user)": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-08T06:23:47.508Z",
+          "lastUpdated": "2026-09-08T06:23:47.508Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\apps\\web\\src\\app\\(user)\\layout.tsx"
+      },
+      "chapters": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-08T06:24:11.325Z",
+          "lastUpdated": "2026-09-08T06:27:59.831Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\apps\\web\\src\\app\\(user)\\chapters\\page.tsx"
+      },
+      "[chapterId]": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-08T06:24:22.821Z",
+          "lastUpdated": "2026-09-08T06:24:22.822Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\apps\\web\\src\\app\\(user)\\chapters\\[chapterId]\\page.tsx"
+      },
+      "(family)": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-08T06:24:38.863Z",
+          "lastUpdated": "2026-09-08T06:24:38.863Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\apps\\web\\src\\app\\(family)\\layout.tsx"
+      },
+      "chapter-review": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-08T06:25:15.517Z",
+          "lastUpdated": "2026-09-08T06:25:15.517Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\apps\\web\\src\\features\\chapter-review\\ChapterReviewPanel.tsx"
+      },
+      "review": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-09-08T06:25:29.478Z",
+          "lastUpdated": "2026-09-08T06:28:15.556Z"
+        },
+        "lastFile": "C:\\PROJECT\\SilverYarn\\apps\\web\\src\\app\\(family)\\review\\page.tsx"
+      }
+    },
+    "pipeline": {
+      "currentPhase": 3,
+      "level": "Enterprise",
+      "phaseHistory": [
+        {
+          "phase": 1,
+          "name": "Schema/Terminology Definition",
+          "completedAt": "2026-09-05T08:19:04.662Z",
+          "documents": [
+            "docs/01-plan/glossary.md",
+            "docs/01-plan/schema.md"
+          ]
+        },
+        {
+          "phase": 2,
+          "name": "Coding Convention",
+          "completedAt": "2026-09-05T08:19:04.662Z",
+          "documents": [
+            "CONVENTIONS.md",
+            "docs/01-plan/naming.md",
+            "docs/01-plan/structure.md"
+          ]
+        }
+      ]
+    },
+    "session": {
+      "startedAt": "2026-09-05T08:17:53.299Z",
+      "onboardingCompleted": true,
+      "lastActivity": "2026-09-08T06:52:44.184Z"
+    },
+    "history": [
+      {
+        "timestamp": "2026-09-05T08:19:04.662Z",
+        "feature": "silveryarn-platform",
+        "phase": "plan",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-05T08:19:04.662Z",
+        "feature": "silveryarn-platform",
+        "phase": "design",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-05T09:58:38.847Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-05T13:23:56.393Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-05T13:24:12.537Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T05:52:47.680Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T05:53:07.647Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T05:53:24.037Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T05:53:36.996Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T05:53:52.328Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T07:58:12.614Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T07:58:48.146Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T07:58:57.031Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T07:59:23.978Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T07:59:39.087Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T07:59:47.579Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T07:59:58.090Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T08:00:51.139Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T08:01:24.833Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T08:01:37.361Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T08:26:41.788Z",
+        "feature": "presentations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T09:18:29.655Z",
+        "feature": "02-design",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-06T09:26:57.485Z",
+        "feature": "02-design",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T12:52:57.841Z",
+        "feature": "01-plan",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T13:32:48.709Z",
+        "feature": "tmp",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T13:55:42.584Z",
+        "feature": "tmp",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:01:39.999Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:01:42.442Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:01:57.960Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:02:04.242Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:02:14.659Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:02:19.808Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:02:29.664Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:02:33.132Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:02:36.861Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:02:58.992Z",
+        "feature": "modules",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:03:02.042Z",
+        "feature": "users",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:03:04.727Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:03:09.811Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:03:12.147Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:03:21.810Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:03:24.323Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:03:29.844Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:03:35.347Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:03:38.063Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:03:40.286Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:03:48.499Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:03:52.757Z",
+        "feature": "devices",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:03:55.266Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:04:02.615Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:04:05.708Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:04:17.350Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:04:19.954Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:04:26.187Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:04:28.576Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:04:30.970Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:04:40.920Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:04:47.532Z",
+        "feature": "sync",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:04:50.206Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:04:57.695Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:05:00.175Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:05:09.512Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:05:12.104Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:05:20.099Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:05:22.509Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:05:24.787Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:05:37.408Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:05:43.968Z",
+        "feature": "author",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:05:46.642Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:05:52.710Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:05:58.037Z",
+        "feature": "care",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:06:02.152Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:06:08.830Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:06:14.111Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:06:17.438Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:06:23.051Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:06:29.997Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:06:38.290Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:06:53.454Z",
+        "feature": "migrations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:07:53.843Z",
+        "feature": "versions",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:07:58.978Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:08:02.149Z",
+        "feature": "modules",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:08:05.253Z",
+        "feature": "users",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:08:14.722Z",
+        "feature": "users",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:08:18.477Z",
+        "feature": "devices",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:08:25.186Z",
+        "feature": "devices",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:08:37.130Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:08:41.196Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:09:56.402Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:10:07.054Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:10:11.979Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:17:59.436Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:18:05.679Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:18:22.647Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:18:34.583Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:18:37.642Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:18:55.319Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:18:57.892Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:19:00.840Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:19:24.572Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:19:31.486Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:19:36.144Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:19:41.907Z",
+        "feature": "migrations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:19:50.555Z",
+        "feature": "author",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:19:55.793Z",
+        "feature": "author",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:20:20.241Z",
+        "feature": "author",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:24:52.631Z",
+        "feature": "family_members",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:24:55.147Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:25:00.307Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:25:02.935Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:25:13.626Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:25:16.071Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:25:29.590Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:25:33.240Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:25:36.153Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:25:46.985Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:25:57.552Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:26:22.867Z",
+        "feature": "family_members",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:26:28.712Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:26:33.161Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:26:48.076Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:26:53.341Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:27:05.374Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:27:14.390Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:27:18.914Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:27:26.109Z",
+        "feature": "migrations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:27:31.110Z",
+        "feature": "family_members",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T14:27:41.865Z",
+        "feature": "family_members",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:08:47.301Z",
+        "feature": "invitations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:08:51.870Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:09:00.816Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:09:22.066Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:09:30.607Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:09:36.527Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:09:42.596Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:09:56.454Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:10:01.358Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:10:20.855Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:10:28.566Z",
+        "feature": "invitations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:10:33.105Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:10:37.847Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:11:00.169Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:11:13.978Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:11:20.131Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:11:31.417Z",
+        "feature": "migrations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:11:37.100Z",
+        "feature": "invitations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:11:55.300Z",
+        "feature": "invitations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:13:29.906Z",
+        "feature": "family_members",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:25:25.626Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:25:35.355Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:26:04.207Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:26:08.816Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:26:22.628Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:26:27.253Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:26:31.792Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:26:51.083Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:27:04.874Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:27:10.558Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:27:21.801Z",
+        "feature": "migrations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:27:33.356Z",
+        "feature": "care",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:27:38.376Z",
+        "feature": "care",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:28:00.540Z",
+        "feature": "care",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:32:54.024Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:32:59.025Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:33:15.207Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:33:20.037Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:33:33.230Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:33:38.563Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:33:43.402Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:34:04.998Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:34:16.226Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:34:23.662Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:34:35.881Z",
+        "feature": "migrations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:34:45.513Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:34:50.235Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-07T20:35:12.068Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:55:42.970Z",
+        "feature": "clients",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:55:53.836Z",
+        "feature": "clients",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:56:01.695Z",
+        "feature": "clients",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:56:21.508Z",
+        "feature": "clients",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:56:48.795Z",
+        "feature": "clients",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:57:10.612Z",
+        "feature": "clients",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:57:28.622Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:57:45.121Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:57:54.023Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:58:07.994Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:58:16.730Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:58:48.987Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:59:33.515Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T04:59:55.951Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:00:06.316Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:00:13.789Z",
+        "feature": "author",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:00:30.456Z",
+        "feature": "care",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:01:05.328Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:01:22.622Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:01:33.729Z",
+        "feature": "devices",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:02:02.558Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:02:11.352Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:02:40.997Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:02:54.580Z",
+        "feature": "v1",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:03:14.007Z",
+        "feature": "sync",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:04:10.424Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:05:16.353Z",
+        "feature": "sync",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:06:00.323Z",
+        "feature": "sync",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:06:49.300Z",
+        "feature": "sync",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:27:17.934Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:27:40.744Z",
+        "feature": "migrations",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:28:22.485Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:28:45.631Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:29:01.882Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:29:48.840Z",
+        "feature": "sync",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:36:18.034Z",
+        "feature": "photos",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:36:24.572Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:36:35.475Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:36:41.885Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:36:59.641Z",
+        "feature": "infrastructure",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T05:37:08.966Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:19:13.075Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:19:21.046Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:19:29.176Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:19:39.932Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:19:50.985Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:20:00.323Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:20:10.017Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:20:21.934Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:20:30.987Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:20:39.726Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:20:47.838Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:20:57.655Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:21:07.718Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:21:24.036Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:21:43.687Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:21:53.198Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:22:03.819Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:22:18.002Z",
+        "feature": "ui",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:22:26.981Z",
+        "feature": "ui",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:22:40.065Z",
+        "feature": "ui",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:22:52.237Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:23:24.252Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:23:47.514Z",
+        "feature": "(user)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:24:11.329Z",
+        "feature": "chapters",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:24:22.826Z",
+        "feature": "[chapterId]",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:24:38.868Z",
+        "feature": "(family)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:24:56.856Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:25:15.523Z",
+        "feature": "chapter-review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:25:29.486Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:27:49.597Z",
+        "feature": "chapters",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:27:59.835Z",
+        "feature": "chapters",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:28:08.033Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:28:15.562Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:31:40.392Z",
+        "feature": "web",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:52:17.142Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:52:33.837Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-09-08T06:52:44.184Z",
+        "feature": "core_service",
+        "phase": "do",
+        "action": "updated"
+      }
+    ],
+    "stateMachine": {
+      "defaultWorkflow": "default",
+      "activeWorkflows": {},
+      "totalTransitions": 0
+    },
+    "automation": {
+      "globalLevel": 2,
+      "trustScore": 40,
+      "pendingApprovals": 0,
+      "lastGateResult": null
+    },
+    "team": {
+      "enabled": true,
+      "stateFile": ".bkit/runtime/agent-state.json",
+      "eventsFile": ".bkit/runtime/agent-events.jsonl"
+    }
+  }
+}
