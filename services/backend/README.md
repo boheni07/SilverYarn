@@ -89,13 +89,27 @@ diff). 원문 계약엔 없던 `device_id` 필수 쿼리 파라미터를 추가�
 챕터만 오는지, 미응답 일정은 매번 다시 오는지까지 확인. `device_id` 누락(422)·
 존재하지 않는 기기(404)·Device Token 없음(401) 에러 경로도 curl로 확인.
 
+### `photos` orphan cleanup 배치 실제 구현 — 실 MinIO로 3가지 케이스 검증 (2026-09-08)
+
+sync-contract.md §4가 명시한 "24시간 지나도 pending_upload면 정리"를 arq cron
+job으로 구현했다(`worker.py`의 `cleanup_orphan_photos`, 매시 정각 실행 —
+`WorkerSettings.cron_jobs`, API 요청 경로가 아니라 워커 프로세스 전용). MinIO
+삭제(`StorageClient.remove_object`)는 대부분의 경우 객체가 애초에 없는 게
+정상이라(presigned URL을 15분 안에 안 쓰면 그냥 방치되는 게 흔한 케이스)
+`NoSuchKey`를 에러로 취급하지 않는다.
+
+실 Postgres+MinIO로 3가지 케이스를 만들어 검증: (1) 24시간 넘게 지났고 실제로
+MinIO에 파일까지 올라간 행 → DB 행과 MinIO 오브젝트 둘 다 삭제 확인(`mc ls`로
+직접 확인), (2) 24시간 넘게 지났지만 파일은 결국 안 올라간 행(가장 흔한 케이스)
+→ DB 행만 조용히 삭제(NoSuchKey 무시), (3) 아직 24시간 안 지난 최근 행 →
+그대로 남아있음을 확인.
+
 ## 아직 안 된 것 (의도적 범위 제한)
 
 - **온프레미스 AI 인프라 실물 연동 검증**: `core/clients/`(STT/Embedding/LLM)는 실제 서비스가 없는 상태에서 REST 계약을 추정해 작성했다 — 실 서비스 배포 후 계약이 다르면 이 파일들만 교체. Qdrant/Neo4j 클라이언트는 실제 컨테이너로 검증 완료(단, Qdrant는 embed 단계가 항상 실패해 실제로 upsert까지는 못 가봄 — EmbeddingClient 실 서비스 필요)
 - **챕터 자동 귀속 재설계**: `UploadPipelineService`의 `PERIOD_TO_CHAPTER_NO`가 인생 시기 4개를 고정 챕터 번호에 매핑하는 최소 구현이다 — 같은 시기 내 다중 챕터 분화 미지원
 - **Compaction Engine(design.md §2.11) 미구현** — `GET /sync/download`의 `chapter_updates.summary`가 AI 요약이 아니라 `body_text` 원문 그대로, `keywords`는 항상 빈 배열이다. 온디바이스 FTS5 검색은 되지만 "요약"은 아직 아니다 — 실 요약 파이프라인이 생기면 sync.py의 해당 자리만 교체
 - 질문(`questions`) **자동 생성** 미구현 — author 모듈에 조회(`list_priority_questions_for_user`) 경로만 추가했다. 실제로 질문을 만드는 쪽(작가 엔진/온프레미스 LLM)은 아직 없어, 이 테이블에 아무도 안 넣으면 `priority_questions`는 계속 빈 배열
-- `photos` orphan cleanup 배치 — sync-contract.md §4가 명시한 "24시간 지나도 `pending_upload`면 정리"가 아직 없어, 3단계 콜백이 영영 안 오면 그 행이 영구히 `pending_upload`로 남는다
 - AI 자동 인라인 사진 삽입 제안(`photos.placement_status=proposed` → 챕터 본문 편입) — author 모듈이 담당할 몫으로 아직 미구현
 - `photo_requests`의 사진↔요청 1:1 매핑 — 두 테이블 사이에 연결 FK가 없어 "이 사용자가 사진을 올렸다"를 대기 중인 모든 요청에 대한 응답으로 해석해 일괄 충족 처리한다(정밀한 매핑이 필요해지면 photos에 fulfilled_request_id 같은 컬럼 추가 검토)
 - PII 컬럼(schema.md §5) 암호화 — pgcrypto vs 애플리케이션 레벨 결정 대기

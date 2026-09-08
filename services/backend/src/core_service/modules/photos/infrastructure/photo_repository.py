@@ -146,3 +146,23 @@ class PhotoRepository:
         model.status = PhotoUploadStatus.UPLOADED.value
         await self._session.flush()
         return model.to_domain()
+
+    async def list_pending_upload_older_than(self, threshold: datetime) -> list[Photo]:
+        """orphan cleanup 배치(sync-contract.md §4)의 대상 조회 — 3단계 확인 콜백이
+        `threshold` 이전에 생성된 행 중 아직도 안 온 것들. `uploaded_at`은 생성
+        시각으로 즉시 세팅되므로(create_pending) "얼마나 오래 pending_upload로
+        남아 있었는지"의 근사값으로 쓸 수 있다."""
+        stmt = select(PhotoModel).where(
+            PhotoModel.status == PhotoUploadStatus.PENDING_UPLOAD.value,
+            PhotoModel.uploaded_at < threshold,
+        )
+        result = await self._session.execute(stmt)
+        return [model.to_domain() for model in result.scalars()]
+
+    async def delete(self, photo_id: uuid.UUID) -> None:
+        """orphan cleanup 배치 전용 — 실제 업로드가 끝내 확인되지 않은 행은 복구할
+        내용이 없어(사진 자체가 없거나 있어도 메타데이터 미완성) 그냥 지운다."""
+        model = await self._session.get(PhotoModel, photo_id)
+        if model is not None:
+            await self._session.delete(model)
+            await self._session.flush()

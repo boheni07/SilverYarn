@@ -17,12 +17,14 @@ import logging
 import uuid
 from typing import Any
 
+from arq import cron
 from arq.connections import RedisSettings
 
 from core_service.core import model_registry  # noqa: F401  (Base.metadata에 전 테이블 등록)
 from core_service.core.clients.embedding_client import EmbeddingClient
 from core_service.core.clients.graph_client import GraphClient
 from core_service.core.clients.llm_client import LLMClient
+from core_service.core.clients.storage_client import StorageClient
 from core_service.core.clients.stt_client import STTClient
 from core_service.core.clients.vectordb_client import VectorDBClient
 from core_service.core.config import get_settings
@@ -39,6 +41,8 @@ from core_service.modules.care.domain.conversation_chunk import ConversationMode
 from core_service.modules.care.infrastructure.conversation_chunk_repository import (
     ConversationChunkRepository,
 )
+from core_service.modules.photos.application.photo_service import PhotoService
+from core_service.modules.photos.infrastructure.photo_repository import PhotoRepository
 from core_service.modules.sync.application.upload_pipeline_service import (
     UploadPipelineInput,
     UploadPipelineService,
@@ -116,6 +120,29 @@ async def process_upload(
             await _update_sync_status(sync_session_id, SyncStatus.SUCCESS)
 
 
+async def cleanup_orphan_photos(ctx: dict[str, Any]) -> None:
+    """sync-contract.md §4 orphan cleanup — 매시 정각 실행(WorkerSettings.cron_jobs).
+
+    3단계 확인 콜백이 24시간 넘게 안 온 `pending_upload` 사진 행을 정리한다.
+    process_upload와 달리 실패해도 sync_sessions처럼 상태를 기록할 대상이 없어
+    (photos에는 그런 상태 이력 컬럼이 없음) 그냥 로그만 남기고 다음 시간에 재시도.
+    """
+    _ = ctx
+    session_factory = get_session_factory()
+    async with session_factory() as db_session:
+        try:
+            service = PhotoService(PhotoRepository(db_session), StorageClient())
+            cleaned = await service.cleanup_orphan_pending_uploads()
+            await db_session.commit()
+            if cleaned:
+                logger.info("photos orphan cleanup — %d건 정리", cleaned)
+        except Exception:
+            logger.exception("photos orphan cleanup 잡 실패")
+            await db_session.rollback()
+            raise
+
+
 class WorkerSettings:
     functions = [process_upload]
+    cron_jobs = [cron(cleanup_orphan_photos, hour=set(range(24)), minute=0)]
     redis_settings = RedisSettings(host=settings.redis_host, port=settings.redis_port)

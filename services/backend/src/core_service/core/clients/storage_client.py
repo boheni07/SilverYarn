@@ -15,6 +15,7 @@ import asyncio
 from datetime import timedelta
 
 from minio import Minio
+from minio.error import S3Error
 
 from core_service.core.config import get_settings
 
@@ -43,3 +44,18 @@ class StorageClient:
     def presigned_put_url(self, object_name: str, expires: timedelta = timedelta(minutes=15)) -> str:
         """sync-contract.md §4 1단계 응답의 `upload_url` — 15분 만료 문서 스펙 그대로."""
         return self._client.presigned_put_object(self._bucket, object_name, expires=expires)
+
+    async def remove_object(self, object_name: str) -> None:
+        """photos orphan cleanup(sync-contract.md §4)용 — pending_upload로 24시간
+        넘게 남은 행을 지울 때, 실제로 MinIO에 파일이 올라갔을 수도 있는 경우까지
+        같이 정리한다. 대부분은 presigned URL을 아예 쓰지 않아(15분 만료 후 방치)
+        객체가 애초에 없는 게 정상 케이스라 NoSuchKey는 에러로 취급하지 않는다."""
+
+        def _remove() -> None:
+            try:
+                self._client.remove_object(self._bucket, object_name)
+            except S3Error as exc:
+                if exc.code != "NoSuchKey":
+                    raise
+
+        await asyncio.to_thread(_remove)

@@ -2,7 +2,7 @@
 
 > Phase 4 보강 산출물 — 3차 design-validator 검증 H-3, CTO Enterprise B1/백엔드 BE-B1/BE-B2/BE-B4 반영. `workflow-diagrams.md` §3(시퀀스)·§17(충돌 플로우차트)·§20(미결 영향)에서 각주로 예고된 계약 산출물의 본문이다.
 
-**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-08 · **Version**: 0.2
+**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-08 · **Version**: 0.4
 
 > 이 문서는 `docs/02-design/features/silveryarn-platform.design.md` §4(API Specification)를 동기화 도메인에 한해 상세화한다. 충돌하면 design.md가 아니라 **이 문서가 동기화 관련 SoR**이며, design.md §4.2/§6.1은 이 문서의 요약만 담는다(design.md v0.6에서 갱신 예정).
 
@@ -115,7 +115,7 @@ Auth: Device Token
    Response 200: { "data": { "photo_id": "p_...-uuid", "status": "uploaded" } }
 ```
 
-- 3단계 확인 콜백이 없으면 `photos` 행은 `status=pending_upload`로 남고, 24시간 후 배치 작업이 정리(orphan cleanup).
+- 3단계 확인 콜백이 없으면 `photos` 행은 `status=pending_upload`로 남고, 24시간 후 배치 작업이 정리(orphan cleanup). **구현(v0.4)**: `worker.py`의 arq cron job(`cleanup_orphan_photos`, 매시 정각)이 `PhotoService.cleanup_orphan_pending_uploads()`를 호출 — `uploaded_at`(생성 시각) 기준 24시간 지난 `pending_upload` 행을 찾아 MinIO 오브젝트 삭제(best-effort — 대부분은 presigned URL을 아예 안 써서 객체가 없는 게 정상 케이스라 `NoSuchKey`는 무시) 후 DB 행 삭제.
 - 클라이언트 측 리사이즈(장변 1600px)·JPEG 80% 압축은 1단계 이전에 온디바이스에서 수행(decisions.md #10).
 
 ---
@@ -165,3 +165,4 @@ design.md §4.1의 표준 에러 코드에 아래 2종을 추가한다 (L-12):
 | 0.1 | 2026-09-07 | 3차 design-validator 검증 H-3 반영 — 신규 작성. 비동기 업로드 계약(§2), 엔티티별 충돌정책(§3, Server-Wins 전면적용 폐기), Presigned URL 업로드(§4), 증분 다운로드(§5), 에러코드 추가(§6) | NUBiz AX Initiative |
 | 0.2 | 2026-09-08 | photos 모듈 실제 구현 중 발견 — §4 1단계 요청 예시에 `user_id`/`uploader_type` 보강(photos.user_id NOT NULL이라 서버가 반드시 알아야 하는데 원래 예시엔 빠져 있었음, schema.md v1.6과 함께) | NUBiz AX Initiative |
 | 0.3 | 2026-09-08 | `GET /sync/download` 실제 구현 중 발견 — §5에 `device_id` 필수 쿼리 파라미터 신규(호출 주체 식별 수단이 원문에 없었음), 엔티티별 워터마크 방식이 실제로는 다르다는 것을 명시(chapters=updated_at, questions=created_at 근사, schedule_items=pending 상태 전체), chapter_updates의 summary/keywords가 Compaction Engine 미구현으로 body_text 원문/빈 배열 대체임을 문서화 | NUBiz AX Initiative |
+| 0.4 | 2026-09-08 | photos orphan cleanup 배치 실제 구현 — §4에 구현 상세 반영(`worker.py`의 arq cron job, 매시 정각 실행, MinIO 삭제는 best-effort). 실 Postgres+MinIO로 3가지 케이스(오브젝트 있는 채로 방치/오브젝트 없이 방치/최근 생성) 검증 | NUBiz AX Initiative |

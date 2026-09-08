@@ -72,16 +72,30 @@ class FakePhotoRepository:
         photo.status = PhotoUploadStatus.UPLOADED
         return photo
 
+    async def list_pending_upload_older_than(self, threshold: datetime) -> list[Photo]:
+        return [
+            p
+            for p in self._store.values()
+            if p.status == PhotoUploadStatus.PENDING_UPLOAD and p.uploaded_at < threshold
+        ]
+
+    async def delete(self, photo_id: uuid.UUID) -> None:
+        self._store.pop(photo_id, None)
+
 
 class FakeStorageClient:
     def __init__(self) -> None:
         self.ensure_bucket_called = False
+        self.removed_objects: list[str] = []
 
     async def ensure_bucket(self) -> None:
         self.ensure_bucket_called = True
 
     def presigned_put_url(self, object_name: str, expires: _timedelta = timedelta(minutes=15)) -> str:
         return f"https://minio.internal/silveryarn-photos/{object_name}?signed=1"
+
+    async def remove_object(self, object_name: str) -> None:
+        self.removed_objects.append(object_name)
 
 
 @pytest.fixture
@@ -181,3 +195,43 @@ class TestListPhotosForUser:
     async def test_사진_없으면_빈_목록(self, service: PhotoService) -> None:
         result = await service.list_photos_for_user(uuid.uuid4())
         assert result == []
+
+
+class TestCleanupOrphanPendingUploads:
+    """sync-contract.md §4 orphan cleanup — worker.py의 arq cron job이 호출."""
+
+    async def test_임계값보다_오래된_pending만_정리(
+        self, service: PhotoService, repo: FakePhotoRepository, storage: FakeStorageClient
+    ) -> None:
+        old_photo, _, _ = await service.request_upload_url(
+            user_id=uuid.uuid4(), uploader_type=UploaderType.SELF, content_type="image/jpeg", file_size=1000
+        )
+        repo._store[old_photo.id].uploaded_at = datetime.now(UTC) - timedelta(hours=25)
+
+        recent_photo, _, _ = await service.request_upload_url(
+            user_id=uuid.uuid4(), uploader_type=UploaderType.SELF, content_type="image/jpeg", file_size=1000
+        )
+
+        cleaned = await service.cleanup_orphan_pending_uploads()
+
+        assert cleaned == 1
+        assert await repo.get_by_id(old_photo.id) is None
+        assert await repo.get_by_id(recent_photo.id) is not None
+        assert storage.removed_objects == [old_photo.storage_ref]
+
+    async def test_이미_uploaded면_정리_대상_아님(
+        self, service: PhotoService, repo: FakePhotoRepository
+    ) -> None:
+        photo, _, _ = await service.request_upload_url(
+            user_id=uuid.uuid4(), uploader_type=UploaderType.SELF, content_type="image/jpeg", file_size=1000
+        )
+        await service.complete_upload(photo.id)
+        repo._store[photo.id].uploaded_at = datetime.now(UTC) - timedelta(hours=25)
+
+        cleaned = await service.cleanup_orphan_pending_uploads()
+
+        assert cleaned == 0
+        assert await repo.get_by_id(photo.id) is not None
+
+    async def test_정리_대상_없으면_0_반환(self, service: PhotoService) -> None:
+        assert await service.cleanup_orphan_pending_uploads() == 0
