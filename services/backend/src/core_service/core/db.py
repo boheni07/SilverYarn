@@ -40,6 +40,21 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
 
 
 async def get_db() -> AsyncGenerator[AsyncSession]:
-    """FastAPI Depends용 세션 제공자 — 실제 요청 처리 시점에만 엔진이 생성된다."""
+    """FastAPI Depends용 세션 제공자 — 실제 요청 처리 시점에만 엔진이 생성된다.
+
+    ⚠️ **커밋을 반드시 여기서 한다**: 모든 Repository는 `flush()`만 하고 `commit()`을
+    호출하지 않는다(의도적 — 하나의 요청 안에서 여러 Repository가 같은 트랜잭션을
+    공유하게 하려면 커밋 시점은 세션 소유자인 이 함수만 알아야 한다, invitations
+    수락 흐름처럼 두 모듈이 한 트랜잭션을 공유하는 경우가 실제로 있다). `commit()`을
+    빼먹으면 `async with session`의 `__aexit__`가 커밋되지 않은 트랜잭션을 그냥
+    닫아버려 — Postgres 세션 종료 시 암묵적으로 롤백된다 — 지금까지의 모든 쓰기
+    엔드포인트가 실제로는 아무것도 저장하지 못하는 상태였다. sync 파이프라인
+    구현 중 실제 커밋 경로를 따라가다 발견했다.
+    """
     async with get_session_factory()() as session:
-        yield session
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

@@ -1,7 +1,9 @@
 """conversation_chunks 테이블 SQLAlchemy 매핑 + Repository — schema.md §5 DDL과 1:1.
 
 Append-Only 엔티티다(sync-contract.md §3 — 충돌정책 표에서도 "충돌 없음"으로 분류).
-이 Repository에 update 메서드가 없는 것은 누락이 아니라 의도다.
+원본 구술 필드(transcript_*, meta_*)는 절대 갱신하지 않는다 — 유일한 예외는
+`attach_knowledge_refs()`로, 지식화 파이프라인이 만든 외부 시스템 포인터
+(embedding_id/graph_node_ref) 2개만 최초 1회 채운다.
 """
 
 import uuid
@@ -151,5 +153,21 @@ class ConversationChunkRepository:
             created_at=datetime.now(),
         )
         self._session.add(model)
+        await self._session.flush()
+        return model.to_domain()
+
+    async def attach_knowledge_refs(
+        self, chunk_id: uuid.UUID, embedding_id: str | None, graph_node_ref: str | None
+    ) -> ConversationChunk:
+        """지식화 파이프라인(§3)이 Qdrant/Neo4j 적재 후 포인터를 채워 넣는다.
+
+        Append-Only 원칙(모듈 상단 docstring)에 대한 유일한 예외 — 원본 구술 내용은
+        절대 바꾸지 않고, 외부 시스템 포인터 2개만 최초 1회 채운다.
+        """
+        model = await self._session.get(ConversationChunkModel, chunk_id)
+        if model is None:
+            raise LookupError(f"conversation_chunk {chunk_id} not found")
+        model.embedding_id = embedding_id
+        model.graph_node_ref = graph_node_ref
         await self._session.flush()
         return model.to_domain()

@@ -37,6 +37,12 @@ class ChapterService:
     async def list_chapters_for_user(self, user_id: uuid.UUID) -> list[Chapter]:
         return await self._chapters.list_by_user(user_id)
 
+    async def get_chapter_by_user_and_no(self, user_id: uuid.UUID, chapter_no: int) -> Chapter | None:
+        """UploadPipelineService가 기존 챕터 본문(있으면)을 조회할 때 사용 —
+        모듈 경계 규칙상 다른 모듈이 ChapterRepository를 직접 만지지 않도록
+        이 공개 메서드를 통해서만 조회하게 한다."""
+        return await self._chapters.get_by_user_and_no(user_id, chapter_no)
+
     async def save_draft(
         self,
         user_id: uuid.UUID,

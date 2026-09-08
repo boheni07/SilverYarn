@@ -1,10 +1,14 @@
-"""Sync 유스케이스 — sync-contract.md §2(비동기 처리 계약)의 서버측 골격.
+"""Sync 유스케이스 — sync-contract.md §2(비동기 처리 계약)의 서버측.
 
-TODO(다음 스프린트): 실제 잡 큐 enqueue(arq), Whisper 재전사 → 지식화(Neo4j/Qdrant)
-→ vLLM 윤문 파이프라인은 미구현. 지금은 sync_sessions 행 생성 + 202 응답까지만 골격화.
+`start_upload_session()`이 sync_sessions 행 생성과 arq 잡 enqueue를 함께 책임진다
+— 이 둘은 "업로드 접수"라는 하나의 유스케이스이므로 API 레이어에 흩어놓지 않는다.
+실제 파이프라인 실행(STT/LLM/Qdrant/Neo4j)은 worker.py + UploadPipelineService가
+맡는다 — 이 서비스는 접수와 상태 조회만 담당한다.
 """
 
 import uuid
+
+from arq.connections import ArqRedis
 
 from core_service.core.errors import ApiError
 from core_service.modules.sync.domain.sync_session import SyncDirection, SyncSession
@@ -12,16 +16,39 @@ from core_service.modules.sync.infrastructure.sync_repository import SyncSession
 
 
 class SyncService:
-    def __init__(self, repo: SyncSessionRepository):
+    def __init__(self, repo: SyncSessionRepository, arq_pool: ArqRedis):
         self._repo = repo
+        self._pool = arq_pool
 
-    async def start_upload_session(self, device_id: uuid.UUID, checksum: str) -> SyncSession:
-        """POST /sync/upload — sync-contract.md §2.1. 실제 파일 저장·잡 enqueue는 TODO."""
+    async def start_upload_session(
+        self,
+        device_id: uuid.UUID,
+        user_id: uuid.UUID,
+        checksum: str,
+        raw_audio_ref: str,
+        transcript_on_device: str,
+        mode: str | None = None,
+        device_session_id: str | None = None,
+        turn_id: int | None = None,
+    ) -> tuple[SyncSession, str]:
+        """POST /sync/upload — sync-contract.md §2.1. (SyncSession, job_id) 튜플 반환."""
         session = await self._repo.create(
             device_id=device_id, direction=SyncDirection.UPLOAD, checksum=checksum
         )
-        # TODO: await enqueue_job("process_upload", session_id=session.id) — core_service.worker
-        return session
+        job = await self._pool.enqueue_job(
+            "process_upload",
+            session_id=str(session.id),
+            user_id=str(user_id),
+            raw_audio_ref=raw_audio_ref,
+            transcript_on_device=transcript_on_device,
+            mode=mode,
+            device_session_id=device_session_id,
+            turn_id=turn_id,
+        )
+        # job이 None이면 arq의 잡 중복제거(_job_id 미사용 시 거의 발생 안 함)로 이미
+        # 같은 잡이 큐에 있다는 뜻 — 이 경우도 세션은 이미 만들어졌으니 실패로 보지 않는다.
+        job_id = job.job_id if job is not None else f"dedup_{session.id}"
+        return session, job_id
 
     async def get_session_status(self, session_id: uuid.UUID) -> SyncSession:
         session = await self._repo.get_by_id(session_id)

@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-09-07T20:35:12.069Z",
+  "lastUpdated": "2026-09-08T05:06:49.300Z",
   "activeFeatures": [
     "silveryarn-platform",
     "presentations",
@@ -25,7 +25,8 @@
     "versions",
     "tests",
     "family_members",
-    "invitations"
+    "invitations",
+    "clients"
   ],
   "primaryFeature": "silveryarn-platform",
   "features": {
@@ -122,9 +123,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:01:39.998Z",
-        "lastUpdated": "2026-09-07T20:34:23.659Z"
+        "lastUpdated": "2026-09-08T05:01:22.618Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\main.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\worker.py"
     },
     "core": {
       "phase": "do",
@@ -135,9 +136,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:01:42.439Z",
-        "lastUpdated": "2026-09-07T14:10:11.976Z"
+        "lastUpdated": "2026-09-08T05:01:05.324Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\core\\errors.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\core\\db.py"
     },
     "modules": {
       "phase": "do",
@@ -187,9 +188,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:12.145Z",
-        "lastUpdated": "2026-09-07T20:33:15.205Z"
+        "lastUpdated": "2026-09-08T04:58:48.964Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\schedule\\infrastructure\\schedule_item_repository.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\sync\\infrastructure\\sync_repository.py"
     },
     "application": {
       "phase": "do",
@@ -200,9 +201,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:24.319Z",
-        "lastUpdated": "2026-09-07T20:33:33.228Z"
+        "lastUpdated": "2026-09-08T05:04:10.420Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\schedule\\application\\schedule_item_service.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\sync\\application\\upload_pipeline_service.py"
     },
     "api": {
       "phase": "do",
@@ -226,9 +227,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:40.284Z",
-        "lastUpdated": "2026-09-07T20:34:04.997Z"
+        "lastUpdated": "2026-09-08T05:02:54.576Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\schedule\\api\\v1\\schedule_items.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\sync\\api\\v1\\sync.py"
     },
     "devices": {
       "phase": "do",
@@ -239,9 +240,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:03:52.753Z",
-        "lastUpdated": "2026-09-07T14:08:25.181Z"
+        "lastUpdated": "2026-09-08T05:01:33.723Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\devices\\test_install_mode.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\devices\\deps.py"
     },
     "sync": {
       "phase": "do",
@@ -252,9 +253,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:04:47.529Z",
-        "lastUpdated": "2026-09-07T14:04:47.529Z"
+        "lastUpdated": "2026-09-08T05:06:49.296Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\sync\\__init__.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\sync\\test_upload_pipeline_service.py"
     },
     "author": {
       "phase": "do",
@@ -265,9 +266,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:05:43.966Z",
-        "lastUpdated": "2026-09-07T14:20:20.239Z"
+        "lastUpdated": "2026-09-08T05:00:13.786Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\author\\test_chapter_service.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\author\\deps.py"
     },
     "care": {
       "phase": "do",
@@ -278,9 +279,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-09-07T14:05:58.031Z",
-        "lastUpdated": "2026-09-07T20:28:00.537Z"
+        "lastUpdated": "2026-09-08T05:00:30.452Z"
       },
-      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\care\\test_conversation_chunk_service.py"
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\modules\\care\\deps.py"
     },
     "schedule": {
       "phase": "do",
@@ -359,6 +360,19 @@
         "lastUpdated": "2026-09-07T20:11:55.297Z"
       },
       "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\tests\\modules\\invitations\\test_invitation_service.py"
+    },
+    "clients": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-09-08T04:55:42.960Z",
+        "lastUpdated": "2026-09-08T04:57:10.608Z"
+      },
+      "lastFile": "C:\\PROJECT\\SilverYarn\\services\\backend\\src\\core_service\\core\\clients\\graph_client.py"
     }
   },
   "pipeline": {
@@ -389,7 +403,7 @@
   "session": {
     "startedAt": "2026-09-05T08:17:53.299Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-09-07T20:35:12.069Z"
+    "lastActivity": "2026-09-08T05:06:49.300Z"
   },
   "history": [
     {
@@ -1445,6 +1459,180 @@
     {
       "timestamp": "2026-09-07T20:35:12.068Z",
       "feature": "schedule",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:55:42.970Z",
+      "feature": "clients",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:55:53.836Z",
+      "feature": "clients",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:56:01.695Z",
+      "feature": "clients",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:56:21.508Z",
+      "feature": "clients",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:56:48.795Z",
+      "feature": "clients",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:57:10.612Z",
+      "feature": "clients",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:57:28.622Z",
+      "feature": "core",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:57:45.121Z",
+      "feature": "infrastructure",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:57:54.023Z",
+      "feature": "infrastructure",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:58:07.994Z",
+      "feature": "application",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:58:16.730Z",
+      "feature": "application",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:58:48.987Z",
+      "feature": "infrastructure",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:59:33.515Z",
+      "feature": "application",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T04:59:55.951Z",
+      "feature": "application",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:00:06.316Z",
+      "feature": "application",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:00:13.789Z",
+      "feature": "author",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:00:30.456Z",
+      "feature": "care",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:01:05.328Z",
+      "feature": "core",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:01:22.622Z",
+      "feature": "core_service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:01:33.729Z",
+      "feature": "devices",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:02:02.558Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:02:11.352Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:02:40.997Z",
+      "feature": "application",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:02:54.580Z",
+      "feature": "v1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:03:14.007Z",
+      "feature": "sync",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:04:10.424Z",
+      "feature": "application",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:05:16.353Z",
+      "feature": "sync",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:06:00.323Z",
+      "feature": "sync",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-08T05:06:49.300Z",
+      "feature": "sync",
       "phase": "do",
       "action": "updated"
     }

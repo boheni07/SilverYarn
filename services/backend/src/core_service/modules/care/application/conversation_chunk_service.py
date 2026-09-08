@@ -1,10 +1,10 @@
 """ConversationChunk 유스케이스 — workflow-diagrams.md §2(온디바이스 파이프라인)·
 §3(배치 동기화)의 서버측 적재 지점.
 
-`record_chunk()`는 author 모듈의 `save_draft()`와 같은 성격이다: worker.py의
-sync 파이프라인이 호출할 자리(TODO, 아직 미연결)이며 공개 POST 엔드포인트로
-노출하지 않는다 — 대화 청크는 클라이언트가 임의로 만드는 리소스가 아니라 업로드
-파이프라인의 산출물이기 때문이다.
+`record_chunk()`는 author 모듈의 `save_draft()`와 같은 성격이다: sync 모듈의
+UploadPipelineService가 호출하며 공개 POST 엔드포인트로 노출하지 않는다 — 대화
+청크는 클라이언트가 임의로 만드는 리소스가 아니라 업로드 파이프라인의 산출물이기
+때문이다.
 """
 
 import uuid
@@ -76,3 +76,11 @@ class ConversationChunkService:
             linked_photo_id=linked_photo_id,
             assistant_response=assistant_response,
         )
+
+    async def attach_knowledge_refs(
+        self, chunk_id: uuid.UUID, embedding_id: str | None, graph_node_ref: str | None
+    ) -> ConversationChunk:
+        """UploadPipelineService가 Qdrant/Neo4j 적재 성공 후 호출 — 둘 다 None이면
+        아무 의미 없는 호출이지만 막지 않는다(파이프라인이 두 단계 다 실패해도
+        청크 자체는 이미 존재해야 하므로, 이 메서드를 항상 호출해도 안전하게)."""
+        return await self._repo.attach_knowledge_refs(chunk_id, embedding_id, graph_node_ref)

@@ -2,7 +2,7 @@
 
 > Phase 2 Deliverable — 모노레포 전체 구조 (Design 문서 §11.1을 실행 가능한 수준으로 구체화)
 
-**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-08 · **Version**: 1.9
+**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-08 · **Version**: 1.10
 
 ---
 
@@ -24,12 +24,12 @@ silveryarn/
 │       │   └── versions/
 │       ├── src/core_service/
 │       │   ├── main.py             # FastAPI app 진입점 (api 프로세스)
-│       │   ├── worker.py           # 비동기 잡 워커 진입점 (arq, sync-contract.md §2)
-│       │   ├── core/                # config·db·logging·표준 에러 포맷(design.md §4.1)
-│       │   ├── modules/             # 도메인 모듈 — 상세는 §2
-│       │   │   ├── users/ devices/    # 구현 완료 (참조 패턴)
-│       │   │   └── author/ care/ schedule/ sync/  # 골격만 (Phase 2+ 구현 예정)
-│       │   └── shared/              # 모듈 간 공유 커널(공통 예외 등, 도메인 엔티티 아님)
+│       │   ├── worker.py           # 비동기 잡 워커 진입점 (arq) — process_upload가 UploadPipelineService 실행
+│       │   ├── core/                # config·db·logging·표준 에러 포맷(design.md §4.1)·auth·queue(arq pool)
+│       │   │   └── clients/           # STT/Embedding/LLM(vLLM)/Qdrant/Neo4j 클라이언트 (횡단 관심사)
+│       │   ├── modules/             # 도메인 모듈 — 상세는 §2. 8개 논리 모듈 전부 구현 완료
+│       │   │   └── users/ devices/ author/ family_members/ invitations/ care/ schedule/ sync/
+│       │   └── shared/              # 모듈 간 공유 커널 — domain_enums.py(공유 enum), schemas.py(공통 응답 포맷)
 │       └── tests/
 ├── packages/                   # 서버 서비스 간 공유 코드 (Python 패키지) + 크로스플랫폼 자산 — 아직 스캐폴딩 전
 │   ├── py-common/                # 공통 유틸·인프라 헬퍼 (도메인 엔티티는 각 모듈 domain/에 위치 — F-2, §2 주석 참조)
@@ -73,7 +73,17 @@ services/backend/src/core_service/
 >
 > **모듈 간 재사용**: 다른 모듈의 Application 서비스가 필요하면(예: `author`가 챕터 감수자 검증에 `family_members`를 씀) 그 모듈 루트의 `deps.py`(공개 조합 지점, FastAPI `Depends` 프로바이더)만 import한다. `family_members/deps.py`가 최초 사례 — 다른 모듈도 교차 참조가 생기면 동일 패턴을 따른다.
 >
-> **Phase 1 구현 범위**: `users`·`devices`·`author`(chapters/chapter_revisions)·`family_members`·`invitations`·`care`(conversation_chunks)·`schedule`(schedule_items) 모듈은 API/Application/Domain/Infrastructure 4계층 전부 참조 구현으로 완료 — 7개 논리 모듈 전부. `sync` 모듈만 [sync-contract.md](../../02-design/sync-contract.md)의 엔드포인트 시그니처를 골격으로 구현(실제 파이프라인 로직은 TODO)한 상태로 남아있다. `care`는 `conversation_chunks`만 구현했다 — `emotion_alerts`/`emotion_scores`는 Phase 1 피처플래그 OFF(decisions.md #25)라 의도적으로 제외했고, 검색은 실제 Qdrant 하이브리드 서치(design.md §2.4) 전까지 임시 DB ILIKE로 대체돼 있다(코드에 TODO 명시). `schedule`은 chapters/conversation_chunks와 달리 POST 생성을 공개로 노출한다 — AI 파이프라인 산출물이 아니라 가족·당사자가 직접 입력하는 리소스이기 때문이다. `author` 모듈은 workflow-diagrams.md §4/§7의 M-5 정정(감수 전 chapter_revisions 생성 금지)을 코드 레벨에서 그대로 구현했다 — `save_draft()`(§4용, worker 연결은 TODO)와 `review_chapter()`(§7용, chapter_revisions 생성은 여기서만)를 분리. `family_members`는 다른 모듈(`author`의 `chapter_revisions.reviewer_id` 등)이 참조하는 루트 엔티티라 우선 구현했으며, 모듈 간 재사용은 `deps.py`라는 공개 조합 지점을 통해서만 하고 다른 모듈의 `infrastructure/`를 직접 import하지 않는 경계 규칙을 여기서 처음 적용했다(§2 의존 규칙의 모듈 간 확장). `invitations`는 `family_members`의 임시 직접생성 경로(`POST /users/{userId}/family-members`)를 대체하는 정식 온보딩 경로다 — 수락(`POST /invitations/{token}/accept`) 시점에 `family_members/deps.py`를 통해 실제 family_member 행을 만들며, 두 모듈이 같은 FastAPI 요청의 `Depends(get_db)` 세션을 공유(요청별 캐싱)하므로 하나의 트랜잭션으로 묶인다. `family_role` enum처럼 2개 이상 모듈이 같은 Postgres enum을 참조하는 값 객체는 `core_service/shared/domain_enums.py`(공유 커널)에 두고 어느 한쪽 모듈의 domain/도 다른 모듈이 직접 import하지 않게 했다.
+> **Phase 1 구현 범위**: `users`·`devices`·`author`(chapters/chapter_revisions)·`family_members`·`invitations`·`care`(conversation_chunks)·`schedule`(schedule_items)·`sync` 8개 논리 모듈 전부 4계층(또는 그에 준하는) 구현 완료. `care`는 `conversation_chunks`만 구현했다 — `emotion_alerts`/`emotion_scores`는 Phase 1 피처플래그 OFF(decisions.md #25)라 의도적으로 제외했고, 검색은 실제 Qdrant 하이브리드 서치(design.md §2.4) 전까지 임시 DB ILIKE로 대체돼 있다(코드에 TODO 명시). `schedule`은 chapters/conversation_chunks와 달리 POST 생성을 공개로 노출한다 — AI 파이프라인 산출물이 아니라 가족·당사자가 직접 입력하는 리소스이기 때문이다.
+>
+> **sync 모듈의 파이프라인 오케스트레이션**: `SyncService`(접수+arq enqueue)와 `UploadPipelineService`(worker.py가 실행하는 실제 파이프라인 — STT 재전사→지식추출→임베딩/그래프 적재→챕터 갱신)로 분리했다. 각 외부 시스템 호출은 `core/clients/`(STT/Embedding/LLM/Qdrant/Neo4j, 횡단 관심사라 `core/`에 위치 — `core/db.py`와 동일 원칙)를 거치며, 실제 서비스가 없는 상태에서 REST 계약을 추정해 작성했다. 파이프라인은 각 단계를 best-effort로 감싸 부분 실패해도 계속 진행하고, `conversation_chunks` 적재 자체가 실패할 때만 `sync_sessions.status=failed`로 남긴다. `author`/`care`/`devices` 모듈에도 `deps.py`(공개 조합 지점)를 추가해 sync가 이들을 교차 참조할 수 있게 했다 — `family_members/deps.py`에서 시작한 패턴의 확장.
+>
+> **실제 커밋 버그 발견·수정**: `core/db.py`의 `get_db()`가 `session.commit()`을 호출하지 않아 — `flush()`만으로는 트랜잭션이 커밋되지 않으므로 — 지금까지 구현한 모든 쓰기 엔드포인트가 실제 Postgres에서는 아무것도 영속화하지 못하는 상태였다. 전부 페이크 Repository로 단위테스트해왔던 탓에 발견이 늦었다 — sync 파이프라인 구현 중 실제 트랜잭션 경계를 따라가다 확인하고 수정했다.
+>
+> **author 모듈**: workflow-diagrams.md §4/§7의 M-5 정정(감수 전 chapter_revisions 생성 금지)을 코드 레벨에서 그대로 구현했다 — `save_draft()`(§4용, 이제 UploadPipelineService가 호출)와 `review_chapter()`(§7용, chapter_revisions 생성은 여기서만)를 분리.
+>
+> **family_members 모듈**: 다른 모듈(`author`의 `chapter_revisions.reviewer_id` 등)이 참조하는 루트 엔티티라 우선 구현했으며, 모듈 간 재사용은 `deps.py`라는 공개 조합 지점을 통해서만 하고 다른 모듈의 `infrastructure/`를 직접 import하지 않는 경계 규칙을 여기서 처음 적용했다(§2 의존 규칙의 모듈 간 확장).
+>
+> **invitations 모듈**: `family_members`의 임시 직접생성 경로(`POST /users/{userId}/family-members`)를 대체하는 정식 온보딩 경로다 — 수락(`POST /invitations/{token}/accept`) 시점에 `family_members/deps.py`를 통해 실제 family_member 행을 만들며, 두 모듈이 같은 FastAPI 요청의 `Depends(get_db)` 세션을 공유(요청별 캐싱)하므로 하나의 트랜잭션으로 묶인다. `family_role` enum처럼 2개 이상 모듈이 같은 Postgres enum을 참조하는 값 객체는 `core_service/shared/domain_enums.py`(공유 커널)에 두고 어느 한쪽 모듈의 domain/도 다른 모듈이 직접 import하지 않게 했다.
 
 ---
 
@@ -180,3 +190,4 @@ Presentation ──→ Application ──→ Domain ←── Infrastructure
 | 1.7 | 2026-09-08 | `invitations` 모듈 4계층 구현 완료 반영 — family_members 정식 온보딩 경로 완성. 2개 이상 모듈이 공유하는 enum은 `core_service/shared/domain_enums.py`(공유 커널)에 둔다는 원칙 신규 문서화 — §2 | NUBiz AX Initiative |
 | 1.8 | 2026-09-08 | `care` 모듈(conversation_chunks) 4계층 구현 완료 반영 — emotion_alerts/emotion_scores는 Phase 1 피처플래그 OFF(decisions.md #25)로 의도적 제외, 검색은 임시 ILIKE(실제는 Qdrant 하이브리드 서치 예정)임을 명시 | NUBiz AX Initiative |
 | 1.9 | 2026-09-08 | `schedule` 모듈(schedule_items) 4계층 구현 완료 반영 — 7개 논리 모듈(users/devices/author/family_members/invitations/care/schedule) 전부 구현 완료, `sync`만 골격 단계로 남음 | NUBiz AX Initiative |
+| 1.10 | 2026-09-08 | `sync` 모듈 파이프라인 오케스트레이션 구현 반영(UploadPipelineService, core/clients/, core/queue.py) — 8개 논리 모듈 전부 구현 완료. `get_db()` 커밋 누락 버그 발견·수정 기록, `deps.py` 패턴을 author/care/devices로 확장 | NUBiz AX Initiative |

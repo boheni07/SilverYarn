@@ -67,3 +67,20 @@ class SyncSessionRepository:
         self._session.add(model)
         await self._session.flush()
         return model.to_domain()
+
+    async def update_status(
+        self, session_id: uuid.UUID, status: SyncStatus, increment_retry: bool = False
+    ) -> SyncSession:
+        """UploadPipelineService가 파이프라인 종료 시 호출 — success/failed는 종결
+        상태라 finished_at을 찍고, retrying으로 되돌아갈 때만 finished_at을 남기지
+        않는다(아직 끝나지 않았으므로)."""
+        model = await self._session.get(SyncSessionModel, session_id)
+        if model is None:
+            raise LookupError(f"sync_session {session_id} not found")
+        model.status = status.value
+        if increment_retry:
+            model.retry_count += 1
+        if status in (SyncStatus.SUCCESS, SyncStatus.FAILED):
+            model.finished_at = datetime.now()
+        await self._session.flush()
+        return model.to_domain()
