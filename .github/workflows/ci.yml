@@ -7,7 +7,13 @@ name: CI
 # 실 인프라(Postgres/Redis/Qdrant/Neo4j/MinIO) 없이 돌아간다는 전제 — 지금 backend
 # 테스트는 전부 Fake*Repository로 Application 계층만 검증하고(services/backend/tests의
 # 모든 test_*_service.py), 실 DB e2e 검증은 이 세션에서처럼 로컬 docker-compose로
-# 사람이 직접 돌린다. apps/mobile은 아직 스캐폴딩 전이라 job이 없다.
+# 사람이 직접 돌린다.
+#
+# mobile job은 이 리포를 작업한 로컬 환경에 JDK/Android SDK/Gradle이 아예 없어
+# (apps/mobile/README.md "환경 제약") 스캐폴딩 코드를 한 번도 컴파일해 본 적이 없는
+# 상태로 커밋됐다 — 그 첫 실제 컴파일 검증을 GitHub Actions 러너에게 맡긴다.
+# gradle-wrapper.jar도 로컬에서 못 만들어서 `./gradlew` 대신 `gradle/actions/setup-gradle`이
+# 설치해 주는 시스템 gradle을 직접 부른다.
 
 on:
   push:
@@ -67,6 +73,38 @@ jobs:
       - run: npm run lint
       - run: npm run type-check
       - run: npm run build
+
+  mobile:
+    name: apps/mobile
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # local.properties.example의 sdk.dir 자리는 setup-android가 ANDROID_HOME으로
+      # 이미 채워 주고, AGP가 환경변수에서 자동으로 찾는다 — 여기선 API_BASE_URL만 필요.
+      - name: local.properties
+        run: echo "API_BASE_URL=http://127.0.0.1:8000" > local.properties
+
+      - name: ktlint
+        run: gradle ktlintCheck --no-daemon
+
+      - name: unit tests
+        run: gradle test --no-daemon
+
+      - name: assembleDebug
+        run: gradle assembleDebug --no-daemon
 
   admin:
     name: apps/admin
