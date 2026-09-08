@@ -48,13 +48,15 @@ async def create_user(
 async def list_users(
     page: int = 1,
     page_size: int = 20,
+    name: str | None = None,
     service: UserService = Depends(_service),
     # Admin — TODO: role 체크 강화 (devices.py list_user_devices와 동일 패턴).
     # apps/admin "전체 사용자 목록" 화면용(2026-09-08 신규) — design.md §4.1의
-    # PaginatedResponse 봉투를 실제로 쓰는 첫 엔드포인트다.
+    # PaginatedResponse 봉투를 실제로 쓰는 첫 엔드포인트다. name은 이름 검색
+    # 필터(2026-09-08 추가, ILIKE 부분일치).
     _ctx: AuthContext = Depends(require_auth),
 ) -> PaginatedResponse[UserResponse]:
-    users, total = await service.list_users(page=page, page_size=page_size)
+    users, total = await service.list_users(page=page, page_size=page_size, name=name)
     return PaginatedResponse(
         data=[UserResponse(**u.__dict__) for u in users],
         pagination=Pagination(page=page, page_size=page_size, total=total),

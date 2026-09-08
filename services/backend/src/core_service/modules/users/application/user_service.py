@@ -23,11 +23,12 @@ class UserService:
             raise ApiError("VALIDATION_ERROR", "name은 1~100자여야 합니다.")
         return await self._repo.create(name=name, birth_date=birth_date)
 
-    async def list_users(self, page: int, page_size: int) -> tuple[list[User], int]:
-        """apps/admin "전체 사용자 목록" — page는 1부터 시작(design.md §4.1 예시와 동일)."""
+    async def list_users(self, page: int, page_size: int, name: str | None = None) -> tuple[list[User], int]:
+        """apps/admin "전체 사용자 목록" — page는 1부터 시작(design.md §4.1 예시와 동일).
+        name을 주면 부분일치 검색(ILIKE)으로 좁힌다."""
         if page < 1:
             raise ApiError("VALIDATION_ERROR", "page는 1 이상이어야 합니다.")
         if not (1 <= page_size <= 100):
             raise ApiError("VALIDATION_ERROR", "page_size는 1~100 사이여야 합니다.")
         offset = (page - 1) * page_size
-        return await self._repo.list_all(offset=offset, limit=page_size)
+        return await self._repo.list_all(offset=offset, limit=page_size, name=name)

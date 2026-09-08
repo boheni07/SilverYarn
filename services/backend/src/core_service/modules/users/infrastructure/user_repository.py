@@ -43,18 +43,32 @@ class UserRepository:
         model = await self._session.get(UserModel, user_id)
         return model.to_domain() if model else None
 
-    async def list_all(self, offset: int, limit: int) -> tuple[list[User], int]:
+    async def list_all(self, offset: int, limit: int, name: str | None = None) -> tuple[list[User], int]:
         """apps/admin "전체 사용자 목록" 화면용 — design.md §4.1 표준 페이지네이션 봉투를
         실제로 쓰는 첫 엔드포인트다(PaginatedResponse가 이전엔 정의만 되고 미사용).
         정렬 기준은 name이 아니라 created_at DESC(최근 가입자가 먼저 보이는 게 운영에
         더 유용) — users 테이블에 이 정렬을 위한 별도 인덱스는 없지만(schema.md §6),
         전체 사용자 수 자체가 온프레미스 배포 특성상 크지 않을 것으로 보고 지금은
         Seq Scan을 감수한다. 실사용 규모가 커지면 idx_users_created_at 추가 검토.
+
+        name은 부분일치 ILIKE 검색 — care 모듈의 conversation_chunks 검색과 달리
+        이건 "임시" 표시가 없다: 이름 문자열 매칭은 애초에 하이브리드 서치 같은 게
+        필요 없는 단순 조회라 ILIKE가 최종 구현이다(2026-09-08).
         """
-        count_result = await self._session.execute(select(func.count()).select_from(UserModel))
+        conditions = [UserModel.name.ilike(f"%{name}%")] if name else []
+
+        count_result = await self._session.execute(
+            select(func.count()).select_from(UserModel).where(*conditions)
+        )
         total = count_result.scalar_one()
 
-        stmt = select(UserModel).order_by(UserModel.created_at.desc()).offset(offset).limit(limit)
+        stmt = (
+            select(UserModel)
+            .where(*conditions)
+            .order_by(UserModel.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
         result = await self._session.execute(stmt)
         users = [model.to_domain() for model in result.scalars()]
         return users, total

@@ -29,8 +29,11 @@ class FakeUserRepository:
         self._store[user.id] = user
         return user
 
-    async def list_all(self, offset: int, limit: int) -> tuple[list[User], int]:
-        users = sorted(self._store.values(), key=lambda u: u.created_at, reverse=True)
+    async def list_all(self, offset: int, limit: int, name: str | None = None) -> tuple[list[User], int]:
+        users = list(self._store.values())
+        if name:
+            users = [u for u in users if name.lower() in u.name.lower()]
+        users.sort(key=lambda u: u.created_at, reverse=True)
         return users[offset : offset + limit], len(users)
 
 
@@ -99,3 +102,40 @@ class TestListUsers:
         users, total = await service.list_users(page=1, page_size=20)
         assert users == []
         assert total == 0
+
+
+class TestListUsersNameSearch:
+    """이름 부분일치 검색(2026-09-08 신규)."""
+
+    async def test_이름_부분일치로_좁혀진다(self, service: UserService) -> None:
+        await service.create_user(name="김순자", birth_date=None)
+        await service.create_user(name="박영희", birth_date=None)
+        await service.create_user(name="김철수", birth_date=None)
+
+        users, total = await service.list_users(page=1, page_size=20, name="김")
+
+        assert total == 2
+        assert {u.name for u in users} == {"김순자", "김철수"}
+
+    async def test_대소문자_구분_없음(self, service: UserService) -> None:
+        await service.create_user(name="TestUser", birth_date=None)
+
+        users, total = await service.list_users(page=1, page_size=20, name="testuser")
+
+        assert total == 1
+
+    async def test_일치하는_사용자_없으면_빈_목록(self, service: UserService) -> None:
+        await service.create_user(name="김순자", birth_date=None)
+
+        users, total = await service.list_users(page=1, page_size=20, name="존재하지않음")
+
+        assert users == []
+        assert total == 0
+
+    async def test_name_생략하면_전체_반환(self, service: UserService) -> None:
+        await service.create_user(name="김순자", birth_date=None)
+        await service.create_user(name="박영희", birth_date=None)
+
+        users, total = await service.list_users(page=1, page_size=20)
+
+        assert total == 2

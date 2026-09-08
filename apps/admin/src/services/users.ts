@@ -10,11 +10,21 @@ export async function getUser(userId: string): Promise<User> {
   return apiClient.get<User>(`/users/${userId}`, { authToken: "dev" });
 }
 
-/** GET /users?page=&page_size= — apps/admin 사용자 목록 화면(신규, 2026-09-08). */
-export async function listUsers(page: number, pageSize: number): Promise<{ users: User[]; pagination: Pagination }> {
-  const { data, pagination } = await apiClient.getPaginated<User>(
-    `/users?page=${page}&page_size=${pageSize}`,
-    { authToken: "dev" },
-  );
+/** GET /users?page=&page_size=&name= — apps/admin 사용자 목록 화면(신규 2026-09-08,
+ * name 이름 검색 추가 2026-09-08). */
+export async function listUsers(params: {
+  page: number;
+  pageSize: number;
+  name?: string;
+}): Promise<{ users: User[]; pagination: Pagination }> {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    page_size: String(params.pageSize),
+  });
+  if (params.name) query.set("name", params.name);
+
+  const { data, pagination } = await apiClient.getPaginated<User>(`/users?${query}`, {
+    authToken: "dev",
+  });
   return { users: data, pagination };
 }

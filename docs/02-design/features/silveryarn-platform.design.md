@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.11 (동기화 모니터링 응답에 기기 표시명 조합 반영)
+> **Version**: 0.12 (전체 사용자 목록에 이름 검색 반영)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -534,7 +534,7 @@ interface Publication {         // v1.1 신규
 | POST | /api/v1/invitations | 가족 구성원 초대 | 2FA + Role(family) |
 | POST | /api/v1/users/{userId}/publications | 인쇄/출판 요청 | 2FA + Role |
 | GET | /api/v1/users/{userId}/devices | 기기 사양·설치모드 조회 (관리자, 조회 전용) — *(v0.6: `/devices/{userId}` → 소유자 중첩 규칙에 맞게 정정, M-8)* | Admin |
-| GET | /api/v1/users?page={page}&pageSize={pageSize} | 전체 사용자 목록 조회, 페이지네이션(신규, 0.7) — F-3 예외(사전에 소유자를 특정할 수 없는 전역 조회) | Admin |
+| GET | /api/v1/users?page={page}&pageSize={pageSize}&name={name} | 전체 사용자 목록 조회, 페이지네이션(신규 0.8) + 이름 부분일치 검색(신규 0.12) — F-3 예외(사전에 소유자를 특정할 수 없는 전역 조회) | Admin |
 | GET | /api/v1/users/{userId}/questions | 회고 질문 큐 조회 (신규, L-12) | 2FA + Role |
 | GET | /api/v1/users/{userId}/schedule-items | 일정/복약 목록 조회 (신규, L-12) | 2FA + Role |
 | GET | /api/v1/users/{userId}/consent-logs | 동의 이력 조회 (신규, L-12) | 2FA + Role |
@@ -756,3 +756,4 @@ silveryarn/
 | 0.9 | 2026-09-08 | apps/admin `(admin)/users` 사용자 목록 화면(신규) — `GET /users`를 실제로 쓰는 첫 화면. User.createdAt/updatedAt이 실제 UserResponse에는 있었지만 §3.1 TS 인터페이스에 누락돼 있던 걸 발견·보강(SoR 원칙 2, Device/SyncSession과 동일 패턴) | NUBiz AX Initiative |
 | 0.10 | 2026-09-08 | `GET /sync/sessions`를 페이지네이션+"전체 기기 통합 모니터링"으로 확장 — `deviceId`가 선택이 됐고(생략 시 전체 기기), `status` 필터·페이지네이션 추가(§4.2). `(admin)/sync-monitor`가 같은 라우트로 기기별/전체 두 모드를 겸함. `idx_sync_started_at` 인덱스 신규(schema.md v1.5) — 기기 무관 전역 정렬은 기존 `idx_sync_device`(device_id 선두 컬럼)로 못 타기 때문 | NUBiz AX Initiative |
 | 0.11 | 2026-09-08 | `GET /sync/sessions` 응답에 `deviceDisplayId` 추가(§4.2) — devices 모듈의 신규 `DeviceService.get_display_ids()`(IN 쿼리 일괄 조회)를 라우터에서 조합, sync 모듈이 devices 테이블을 직접 조인하지 않는 원칙(structure.md §2)은 유지. SyncSession 엔티티(§3.1) 자체 컬럼이 아니라 이 응답에서만 붙는 필드임을 명시 | NUBiz AX Initiative |
+| 0.12 | 2026-09-08 | `GET /users`에 `name` 이름 검색 파라미터 추가(§4.2, ILIKE 부분일치) — apps/admin `(admin)/users` 화면에 검색창 신설. care 모듈의 conversation_chunks ILIKE 검색과 달리 "실제 하이브리드 서치로 교체 예정" TODO 없음(단순 이름 문자열 매칭이라 ILIKE가 최종 구현) | NUBiz AX Initiative |
