@@ -14,10 +14,11 @@ plugins {
 // CONVENTIONS.md §4.1 — local.properties(Git 제외)에서 API_BASE_URL을 읽어
 // BuildConfig 필드로 주입한다. 파일이 없으면(최초 clone 직후) 빈 문자열로 폴백—
 // local.properties.example을 복사하라는 안내는 README.md 참조.
-val localProperties = Properties().apply {
-    val file = rootProject.file("local.properties")
-    if (file.exists()) file.inputStream().use { load(it) }
-}
+val localProperties =
+    Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) file.inputStream().use { load(it) }
+    }
 val apiBaseUrl: String = localProperties.getProperty("API_BASE_URL", "")
 
 android {

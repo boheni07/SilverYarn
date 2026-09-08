@@ -13,7 +13,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  *
  * `AppDatabase.autobiographyFtsStore()`가 이 클래스를 만들어 준다.
  */
-class AutobiographyFtsStore(private val db: SupportSQLiteDatabase) {
+class AutobiographyFtsStore(
+    private val db: SupportSQLiteDatabase,
+) {
     /** mobile-schema.md §2.2 "갱신: ... Upsert" — FTS5엔 UNIQUE 제약이 없어(rowid
      * 기반 가상테이블) delete+insert로 흉내낸다. GET /sync/download의
      * chapter_updates(design.md §4.3)를 그대로 이 컬럼명에 대입해 호출한다. */
@@ -29,7 +31,10 @@ class AutobiographyFtsStore(private val db: SupportSQLiteDatabase) {
     }
 
     /** mobile-schema.md §2.2 조회 예시 그대로 — bm25() 랭킹 함수로 정렬. */
-    fun search(query: String, limit: Int = 1): List<AutobiographySearchResult> {
+    fun search(
+        query: String,
+        limit: Int = 1,
+    ): List<AutobiographySearchResult> {
         val sqliteQuery =
             SimpleSQLiteQuery(
                 """

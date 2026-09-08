@@ -10,7 +10,9 @@ import android.os.Build
  * 로직만 JVM 유닛테스트로 검증 가능하게 했다(services/backend와 동일한 도메인/
  * 인프라 분리 원칙, structure.md §2).
  */
-class DeviceCapabilityReader(private val context: Context) {
+class DeviceCapabilityReader(
+    private val context: Context,
+) {
     fun resolveInstallMode(): InstallMode {
         val ramGb = totalRamGb()
         return InstallModeResolver.resolve(ramGb, Build.VERSION.SDK_INT)

@@ -11,13 +11,15 @@ import retrofit2.http.Query
 
 /**
  * services/backend 실 엔드포인트와 1:1 매핑 — 서버 쪽 Pydantic 요청/응답 모델
- * (core_service/modules/{devices,sync}/api/v1/*.py)을 그대로 옮겼다. 필드가
+ * (core_service/modules/{devices,sync}/api/v1 아래의 *.py)을 그대로 옮겼다. 필드가
  * 갈라지면 여기와 서버 둘 중 하나가 낡은 것이니 서버 코드를 SoR로 맞춘다.
  */
 interface SyncApi {
     /** POST /devices — 설치 시 1회 등록. Device Token이 아직 없는 유일한 예외 호출. */
     @POST("devices")
-    suspend fun registerDevice(@Body body: DeviceRegisterRequest): ApiEnvelope<DeviceResponse>
+    suspend fun registerDevice(
+        @Body body: DeviceRegisterRequest,
+    ): ApiEnvelope<DeviceResponse>
 
     /** POST /sync/upload — sync-contract.md §2.1, 202 Accepted 비동기 접수. */
     @POST("sync/upload")
@@ -87,7 +89,9 @@ data class SyncSessionStatusResponse(
  * 대신 sync.py가 자체적으로 dict를 반환한다(core_service/modules/sync/api/v1/sync.py
  * download() 참조) — 그래서 이것만 ApiEnvelope가 아니라 직접 파싱한다. */
 @JsonClass(generateAdapter = true)
-data class SyncDownloadResponse(val data: SyncDownloadPayload)
+data class SyncDownloadResponse(
+    val data: SyncDownloadPayload,
+)
 
 @JsonClass(generateAdapter = true)
 data class SyncDownloadPayload(

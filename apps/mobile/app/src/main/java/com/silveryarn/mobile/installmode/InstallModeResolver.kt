@@ -19,7 +19,10 @@ object InstallModeResolver {
     private const val KIOSK_RAM_THRESHOLD_GB = 6.0
     private const val KIOSK_MAX_ANDROID_SDK_INT = 30 // Android 11
 
-    fun resolve(ramGb: Double, androidSdkInt: Int): InstallMode =
+    fun resolve(
+        ramGb: Double,
+        androidSdkInt: Int,
+    ): InstallMode =
         if (ramGb < KIOSK_RAM_THRESHOLD_GB || androidSdkInt <= KIOSK_MAX_ANDROID_SDK_INT) {
             InstallMode.KIOSK
         } else {

@@ -15,7 +15,10 @@ import android.content.Intent
  * 판정 결과가 KIOSK일 때만 lockTask 화이트리스트를 실제로 설정.
  */
 class SilverYarnDeviceAdminReceiver : DeviceAdminReceiver() {
-    override fun onEnabled(context: Context, intent: Intent) {
+    override fun onEnabled(
+        context: Context,
+        intent: Intent,
+    ) {
         super.onEnabled(context, intent)
     }
 }

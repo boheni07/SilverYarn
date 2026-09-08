@@ -7,3 +7,6 @@ max_line_length = 120
 insert_final_newline = true
 charset = utf-8
 ij_kotlin_allow_trailing_comma = true
+# Jetpack Compose 컨벤션 — @Composable 함수는 PascalCase(UI 위젯처럼 취급)가 표준이라
+# ktlint 기본 function-naming(lowerCamelCase 강제) 룰의 예외로 둔다.
+ktlint_function_naming_ignore_when_annotated_with = Composable

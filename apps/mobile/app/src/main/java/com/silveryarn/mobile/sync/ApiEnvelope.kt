@@ -27,4 +27,7 @@ data class ApiErrorBody(
     val message: String,
 )
 
-class ApiException(val code: String, message: String) : Exception(message)
+class ApiException(
+    val code: String,
+    message: String,
+) : Exception(message)

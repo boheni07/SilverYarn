@@ -3,18 +3,20 @@ package com.silveryarn.mobile.ondevice.tts
 import android.content.Context
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.Locale
 import java.util.UUID
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
-import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
  * CONVENTIONS.md §2.2.1 "TTS: Android 네이티브 TTS" 후보의 구현체 — 추가 모델
  * 다운로드나 의존성 없이 OS 내장 TTS를 그대로 쓴다. 문장 단위 호출을 코루틴으로
  * 감싸 [SlmEngine.generateStreamed]가 내보내는 문장마다 순차 재생할 수 있게 했다.
  */
-class AndroidNativeTtsEngine(context: Context) : TtsEngine {
+class AndroidNativeTtsEngine(
+    context: Context,
+) : TtsEngine {
     private var isReady = false
 
     // 발화(utteranceId)별 continuation — UtteranceProgressListener 콜백 하나를

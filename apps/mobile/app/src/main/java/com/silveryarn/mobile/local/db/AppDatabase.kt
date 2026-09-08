@@ -28,9 +28,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun conversationDao(): ConversationDao
+
     abstract fun questionCacheDao(): QuestionCacheDao
+
     abstract fun unrecalledPhotoDao(): UnrecalledPhotoDao
+
     abstract fun scheduleCacheDao(): ScheduleCacheDao
+
     abstract fun deviceStateDao(): DeviceStateDao
 
     /** autobiography_fts는 Room `@Entity`가 아니라 raw SQL 테이블이라(AutobiographyFtsStore.kt
@@ -45,7 +49,8 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): AppDatabase =
             instance ?: synchronized(this) {
-                instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, DB_NAME)
+                instance ?: Room
+                    .databaseBuilder(context.applicationContext, AppDatabase::class.java, DB_NAME)
                     .addCallback(
                         object : Callback() {
                             override fun onCreate(db: SupportSQLiteDatabase) {
@@ -53,8 +58,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 db.execSQL(CREATE_AUTOBIOGRAPHY_FTS_SQL)
                             }
                         },
-                    )
-                    .build()
+                    ).build()
                     .also { instance = it }
             }
     }

@@ -17,7 +17,8 @@ object RetrofitClient {
     private val moshi = Moshi.Builder().build()
 
     val syncApi: SyncApi by lazy {
-        Retrofit.Builder()
+        Retrofit
+            .Builder()
             .baseUrl("${BuildConfig.API_BASE_URL}/api/v1/")
             .client(OkHttpClient.Builder().build())
             .addConverterFactory(MoshiConverterFactory.create(moshi))

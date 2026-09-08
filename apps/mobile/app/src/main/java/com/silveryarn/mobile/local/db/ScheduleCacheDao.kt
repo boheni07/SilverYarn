@@ -21,5 +21,8 @@ interface ScheduleCacheDao {
     suspend fun incrementRemindCount(id: String)
 
     @Query("UPDATE schedule_cache SET status = :status WHERE id = :id")
-    suspend fun updateStatus(id: String, status: String)
+    suspend fun updateStatus(
+        id: String,
+        status: String,
+    )
 }

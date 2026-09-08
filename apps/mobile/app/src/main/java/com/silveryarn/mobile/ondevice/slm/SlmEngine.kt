@@ -10,5 +10,8 @@ import kotlinx.coroutines.flow.Flow
  */
 interface SlmEngine {
     /** @param context FTS5 검색(autobiography_fts) + 최근 대화 이력으로 구성한 프롬프트 컨텍스트 */
-    fun generateStreamed(userQuery: String, context: String): Flow<String>
+    fun generateStreamed(
+        userQuery: String,
+        context: String,
+    ): Flow<String>
 }

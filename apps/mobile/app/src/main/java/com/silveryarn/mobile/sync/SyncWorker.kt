@@ -22,7 +22,10 @@ import com.silveryarn.mobile.local.db.AppDatabase
  *   services/backend README "아직 안 된 것" — 로컬 파일 경로를 그대로 보낼 수 없다.
  *   photos 모듈의 Presigned URL 흐름처럼 확정되면 교체)
  */
-class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+class SyncWorker(
+    context: Context,
+    params: WorkerParameters,
+) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val db = AppDatabase.getInstance(applicationContext)
         val deviceState = db.deviceStateDao().get() ?: return Result.failure()
