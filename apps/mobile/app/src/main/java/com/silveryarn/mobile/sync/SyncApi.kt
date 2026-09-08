@@ -81,7 +81,8 @@ data class SyncUploadAccepted(
 @JsonClass(generateAdapter = true)
 data class SyncSessionStatusResponse(
     @Json(name = "session_id") val sessionId: String,
-    val status: String, // success | failed | retrying
+    // success | failed | retrying
+    val status: String,
     @Json(name = "retry_count") val retryCount: Int,
 )
 

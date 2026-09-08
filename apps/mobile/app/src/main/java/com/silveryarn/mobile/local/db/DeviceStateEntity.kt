@@ -13,7 +13,8 @@ data class DeviceStateEntity(
     // POST /devices 등록 응답의 서버 devices.id — mobile-schema.md v0.4 신규(sync/SyncWorker
     // 참조: 이 값 없이는 어떤 동기화 호출도 자기 device_id를 못 보냄).
     @ColumnInfo(name = "device_id") val deviceId: String?,
-    @ColumnInfo(name = "install_mode") val installMode: String, // "kiosk" | "normal"
+    // "kiosk" | "normal"
+    @ColumnInfo(name = "install_mode") val installMode: String,
     // 로컬 전용, 서버 미전송(decisions.md #22)
     @ColumnInfo(name = "registered_wifi_ssid") val registeredWifiSsid: String?,
     @ColumnInfo(name = "slm_model_version") val slmModelVersion: String?,

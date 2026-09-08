@@ -9,11 +9,15 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "schedule_cache")
 data class ScheduleCacheEntity(
     @PrimaryKey val id: String,
-    val kind: String, // "appointment" | "medication"
+    // "appointment" | "medication"
+    val kind: String,
     val description: String?,
     val location: String?,
-    @ColumnInfo(name = "due_at") val dueAt: Long, // epoch ms
-    val status: String, // pending|confirmed|missed|declined
+    // epoch ms
+    @ColumnInfo(name = "due_at") val dueAt: Long,
+    // pending|confirmed|missed|declined
+    val status: String,
     @ColumnInfo(name = "remind_count") val remindCount: Int,
-    val origin: String, // "server" | "local" — 로컬 생성분은 동기화 전까지 "local"
+    // "server" | "local" — 로컬 생성분은 동기화 전까지 "local"
+    val origin: String,
 )

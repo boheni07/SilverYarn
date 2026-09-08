@@ -36,12 +36,15 @@ class SyncWorker(
             val audioPath = conversation.audioPath ?: continue // 이미 업로드돼 정리된 행은 건너뜀
             runCatching {
                 RetrofitClient.syncApi.uploadSession(
-                    deviceToken = "", // TODO: 위 클래스 docstring 참조 — 아직 실 토큰 발급 경로가 없음
+                    // TODO: 위 클래스 docstring 참조 — 아직 실 토큰 발급 경로가 없음
+                    deviceToken = "",
                     body =
                         SyncUploadRequest(
                             deviceId = deviceId,
-                            checksum = "", // TODO: 위 클래스 docstring 참조
-                            rawAudioRef = audioPath, // TODO: 위 클래스 docstring 참조
+                            // TODO: 위 클래스 docstring 참조
+                            checksum = "",
+                            // TODO: 위 클래스 docstring 참조
+                            rawAudioRef = audioPath,
                             transcriptOnDevice = conversation.userQuery,
                             mode = conversation.mode,
                             deviceSessionId = conversation.sessionId,
