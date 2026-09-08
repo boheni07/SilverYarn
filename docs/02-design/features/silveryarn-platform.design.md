@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.7 (apps/admin 스캐폴딩 중 TS 인터페이스 필드 보강)
+> **Version**: 0.8 (전체 사용자 목록/기기별 동기화 이력 조회 엔드포인트 추가)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -518,6 +518,7 @@ interface Publication {         // v1.1 신규
 |--------|------|-------------|------|
 | POST | /api/v1/sync/upload | 원본 음성+1차 전사+신규 사진 업로드 — **202 Accepted, 비동기 처리** ([sync-contract.md §2](../sync-contract.md#2-비동기-처리-계약-be-b1)) | Device Token |
 | GET | /api/v1/sync/sessions/{sessionId} | 업로드 작업 상태 조회 (신규, [sync-contract.md §2.2](../sync-contract.md#22-작업-상태-조회-신규-엔드포인트)) | Device Token |
+| GET | /api/v1/sync/sessions?deviceId={deviceId} | 기기 하나의 동기화 이력 조회 — apps/admin 동기화 모니터링 화면용(신규, 0.7). 위 항목(기기 자신의 폴링용, Device Token)과 인가모델이 달라 별도 엔드포인트로 분리 | Admin |
 | GET | /api/v1/sync/download?since={syncVersion} | 최신 자서전·RAG 스냅샷·사진·질문목록 다운로드 — `since` 지정 시 증분만 반환 ([sync-contract.md §5](../sync-contract.md#5-증분-다운로드-be-b4)) | Device Token |
 | GET | /api/v1/users/{userId}/chapters | 챕터 목록/본문 조회 | 2FA + Role |
 | POST | /api/v1/chapters/{id}/review | 감수 승인/반려 (`chapter_revisions` 생성) | 2FA + Role(family) |
@@ -531,6 +532,7 @@ interface Publication {         // v1.1 신규
 | POST | /api/v1/invitations | 가족 구성원 초대 | 2FA + Role(family) |
 | POST | /api/v1/users/{userId}/publications | 인쇄/출판 요청 | 2FA + Role |
 | GET | /api/v1/users/{userId}/devices | 기기 사양·설치모드 조회 (관리자, 조회 전용) — *(v0.6: `/devices/{userId}` → 소유자 중첩 규칙에 맞게 정정, M-8)* | Admin |
+| GET | /api/v1/users?page={page}&pageSize={pageSize} | 전체 사용자 목록 조회, 페이지네이션(신규, 0.7) — F-3 예외(사전에 소유자를 특정할 수 없는 전역 조회) | Admin |
 | GET | /api/v1/users/{userId}/questions | 회고 질문 큐 조회 (신규, L-12) | 2FA + Role |
 | GET | /api/v1/users/{userId}/schedule-items | 일정/복약 목록 조회 (신규, L-12) | 2FA + Role |
 | GET | /api/v1/users/{userId}/consent-logs | 동의 이력 조회 (신규, L-12) | 2FA + Role |
@@ -748,3 +750,4 @@ silveryarn/
 | 0.5 | 2026-09-07 | 2차 design-validator 검증 반영 — ConversationChunk/Device 등 TS 인터페이스에 schema.md v1.3 신규 컬럼 동기화(session_id/turn_id/mode/assistantResponse, slmModelVersion/promptPackVersion), 누락 필드 보강(bodyTextSnapshot/qualityFlag/retryCount/expiresAt), Neo4j를 §9.1 Infrastructure 레이어에 추가, 교차참조 오류 정정(§2.9→workflow-diagrams §7, §2.4→§2.8, §4.2→§4.3), 6개 마이크로서비스 첫 커밋 금지 경고를 §11에 직접 명시, erd.md 링크 추가 | NUBiz AX Initiative |
 | 0.6 | 2026-09-07 | 3차 design-validator 검증 반영 — H-3: [sync-contract.md](../sync-contract.md) 신규 작성 및 §4.2/§6.1에서 링크(비동기 업로드 202+job_id, 엔티티별 충돌정책으로 Server-Wins 전면적용 폐기, Presigned URL 사진업로드, 증분 다운로드), 429/413 에러코드 추가. M-8: `GET /devices/{userId}`를 소유자 중첩 규칙에 맞게 `/users/{userId}/devices`로 정정 + 예외 규칙 명시. L-12: questions/schedule-items/consent-logs 엔드포인트 추가. L-5: §2.11의 §2.8 오참조를 workflow-diagrams §7로 정정. L-11: Chapter.createdAt/updatedAt, Photo.uploadedAt, ScheduleItem.nextRemindAt/respondedAt 필드 보강 | NUBiz AX Initiative |
 | 0.7 | 2026-09-08 | Do 단계 — apps/admin 스캐폴딩 중 실제 구현(core_service)이 이미 앞서 있던 필드 2건을 TS 인터페이스에 보강(SoR 원칙 2: 코드 존재 시 코드 우선). Device.aiTops/lastSyncAt, SyncSession.startedAt/finishedAt 추가 | NUBiz AX Initiative |
+| 0.8 | 2026-09-08 | apps/admin 동기화 모니터링용 `GET /sync/sessions?deviceId=`(§4.3)와 전체 사용자 목록용 `GET /users?page=&pageSize=`(§4.3, F-3 예외) 신규 엔드포인트를 API 표에 반영 — 둘 다 Admin 전용 조회 엔드포인트로, 기존 Device Token 인증 엔드포인트와 인가모델을 분리했다 | NUBiz AX Initiative |

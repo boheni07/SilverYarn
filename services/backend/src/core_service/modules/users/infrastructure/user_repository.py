@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, date, datetime
 
-from sqlalchemy import Date, DateTime, String
+from sqlalchemy import Date, DateTime, String, func, select
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
@@ -42,6 +42,22 @@ class UserRepository:
     async def get_by_id(self, user_id: uuid.UUID) -> User | None:
         model = await self._session.get(UserModel, user_id)
         return model.to_domain() if model else None
+
+    async def list_all(self, offset: int, limit: int) -> tuple[list[User], int]:
+        """apps/admin "전체 사용자 목록" 화면용 — design.md §4.1 표준 페이지네이션 봉투를
+        실제로 쓰는 첫 엔드포인트다(PaginatedResponse가 이전엔 정의만 되고 미사용).
+        정렬 기준은 name이 아니라 created_at DESC(최근 가입자가 먼저 보이는 게 운영에
+        더 유용) — users 테이블에 이 정렬을 위한 별도 인덱스는 없지만(schema.md §6),
+        전체 사용자 수 자체가 온프레미스 배포 특성상 크지 않을 것으로 보고 지금은
+        Seq Scan을 감수한다. 실사용 규모가 커지면 idx_users_created_at 추가 검토.
+        """
+        count_result = await self._session.execute(select(func.count()).select_from(UserModel))
+        total = count_result.scalar_one()
+
+        stmt = select(UserModel).order_by(UserModel.created_at.desc()).offset(offset).limit(limit)
+        result = await self._session.execute(stmt)
+        users = [model.to_domain() for model in result.scalars()]
+        return users, total
 
     async def create(self, name: str, birth_date: date | None) -> User:
         model = UserModel(
