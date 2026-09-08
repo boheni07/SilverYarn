@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, select
+from sqlalchemy import DateTime, ForeignKey, Integer, String, func, select
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,17 +53,32 @@ class SyncSessionRepository:
         model = await self._session.get(SyncSessionModel, session_id)
         return model.to_domain() if model else None
 
-    async def list_by_device(self, device_id: uuid.UUID, limit: int = 50) -> list[SyncSession]:
-        """apps/admin 동기화 모니터링 화면용 — idx_sync_device(device_id, started_at DESC)를
-        그대로 쓰는 조회라 별도 인덱스가 필요 없다(schema.md §6)."""
-        stmt = (
-            select(SyncSessionModel)
-            .where(SyncSessionModel.device_id == device_id)
-            .order_by(SyncSessionModel.started_at.desc())
-            .limit(limit)
-        )
-        result = await self._session.execute(stmt)
-        return [model.to_domain() for model in result.scalars()]
+    async def list_all(
+        self,
+        offset: int,
+        limit: int,
+        device_id: uuid.UUID | None = None,
+        status: SyncStatus | None = None,
+    ) -> tuple[list[SyncSession], int]:
+        """apps/admin 동기화 모니터링 화면(기기별 조회·전체 기기 통합 모니터링)의 공통
+        조회 경로 — device_id를 주면 기존 idx_sync_device(device_id, started_at DESC)를,
+        생략하면(전체 기기 통합 모니터링) idx_sync_started_at(started_at DESC, schema.md
+        v1.5 신규)을 쓴다. status 필터는 운영자가 "지금 실패/재시도중인 것만" 훑어보는
+        용도 — UserRepository.list_all()과 동일한 페이지네이션 계약.
+        """
+        count_stmt = select(func.count()).select_from(SyncSessionModel)
+        list_stmt = select(SyncSessionModel).order_by(SyncSessionModel.started_at.desc())
+        if device_id is not None:
+            count_stmt = count_stmt.where(SyncSessionModel.device_id == device_id)
+            list_stmt = list_stmt.where(SyncSessionModel.device_id == device_id)
+        if status is not None:
+            count_stmt = count_stmt.where(SyncSessionModel.status == status.value)
+            list_stmt = list_stmt.where(SyncSessionModel.status == status.value)
+
+        total = (await self._session.execute(count_stmt)).scalar_one()
+        result = await self._session.execute(list_stmt.offset(offset).limit(limit))
+        sessions = [model.to_domain() for model in result.scalars()]
+        return sessions, total
 
     async def create(self, device_id: uuid.UUID, direction: SyncDirection, checksum: str) -> SyncSession:
         model = SyncSessionModel(

@@ -21,8 +21,9 @@ from core_service.core.queue import get_arq_pool
 from core_service.modules.devices.application.device_service import DeviceService
 from core_service.modules.devices.deps import get_device_service
 from core_service.modules.sync.application.sync_service import SyncService
+from core_service.modules.sync.domain.sync_session import SyncStatus
 from core_service.modules.sync.infrastructure.sync_repository import SyncSessionRepository
-from core_service.shared.schemas import DataResponse
+from core_service.shared.schemas import DataResponse, PaginatedResponse, Pagination
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 
@@ -115,21 +116,27 @@ async def get_session_status(
     )
 
 
-@router.get("/sessions", response_model=DataResponse[list[SyncSessionResponse]])
+@router.get("/sessions", response_model=PaginatedResponse[SyncSessionResponse])
 async def list_sessions(
-    device_id: uuid.UUID,
+    page: int = 1,
+    page_size: int = 20,
+    device_id: uuid.UUID | None = None,
+    status: SyncStatus | None = None,
     service: SyncService = Depends(_service),
     # Admin — TODO: role 체크 강화 (devices.py list_user_devices와 동일 패턴)
     _ctx: AuthContext = Depends(require_auth),
-) -> DataResponse[list[SyncSessionResponse]]:
-    """apps/admin 동기화 모니터링 화면 — 기기 하나의 최근 동기화 이력을 조회한다.
+) -> PaginatedResponse[SyncSessionResponse]:
+    """apps/admin 동기화 모니터링 화면 — 공통 조회 경로.
 
-    위 /sessions/{session_id}(기기 자신의 폴링용, Device Token 인증)와는 별개의
-    관리자 조회 경로다. "전체 기기 통합 모니터링"은 아직 없다 — 기기 단위 조회만
-    지원(apps/admin/README.md "아직 안 된 것" 참조).
+    `device_id`를 주면 기기 하나의 이력(devices → sync-monitor 화면), 생략하면
+    "전체 기기 통합 모니터링"(신규, 2026-09-08)이 된다. `status`로 성공/실패/재시도중만
+    골라볼 수 있다. 위 /sessions/{session_id}(기기 자신의 폴링용, Device Token 인증)와는
+    별개의 관리자 조회 경로다.
     """
-    sessions = await service.list_sessions_for_device(device_id)
-    return DataResponse(
+    sessions, total = await service.list_sessions(
+        page=page, page_size=page_size, device_id=device_id, status=status
+    )
+    return PaginatedResponse(
         data=[
             SyncSessionResponse(
                 id=s.id,
@@ -141,7 +148,8 @@ async def list_sessions(
                 finished_at=s.finished_at,
             )
             for s in sessions
-        ]
+        ],
+        pagination=Pagination(page=page, page_size=page_size, total=total),
     )
 
 

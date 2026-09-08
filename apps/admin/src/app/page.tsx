@@ -38,6 +38,11 @@ export default function HomePage() {
         <Link href="/users">
           <Button className="w-full">사용자 목록 보기</Button>
         </Link>
+        <Link href="/sync-monitor" className="mt-3 block">
+          <Button variant="secondary" className="w-full">
+            전체 기기 통합 모니터링
+          </Button>
+        </Link>
 
         <div className="my-5 flex items-center gap-3 text-caption text-ink-faint">
           <span className="h-px flex-1 bg-border" />

@@ -11,7 +11,7 @@ import uuid
 from arq.connections import ArqRedis
 
 from core_service.core.errors import ApiError
-from core_service.modules.sync.domain.sync_session import SyncDirection, SyncSession
+from core_service.modules.sync.domain.sync_session import SyncDirection, SyncSession, SyncStatus
 from core_service.modules.sync.infrastructure.sync_repository import SyncSessionRepository
 
 
@@ -56,8 +56,20 @@ class SyncService:
             raise ApiError("NOT_FOUND", f"동기화 세션({session_id})을 찾을 수 없습니다.")
         return session
 
-    async def list_sessions_for_device(self, device_id: uuid.UUID) -> list[SyncSession]:
-        """apps/admin 동기화 모니터링(devices/{deviceId}/sync-sessions) — 관리자가 기기
-        단위로 최근 동기화 이력을 훑어보는 용도. GET /sync/sessions/{id}(기기 자신의
-        폴링용, Device Token 인증)와는 별개의 어드민 조회 경로다."""
-        return await self._repo.list_by_device(device_id)
+    async def list_sessions(
+        self,
+        page: int,
+        page_size: int,
+        device_id: uuid.UUID | None = None,
+        status: SyncStatus | None = None,
+    ) -> tuple[list[SyncSession], int]:
+        """apps/admin 동기화 모니터링 화면의 공통 조회 — device_id를 주면 기기 하나의
+        이력(기존 devices/{id} 상세 화면), 생략하면 "전체 기기 통합 모니터링"(신규).
+        GET /sync/sessions/{id}(기기 자신의 폴링용, Device Token 인증)와는 별개의
+        어드민 조회 경로다. page 검증은 UserService.list_users()와 동일."""
+        if page < 1:
+            raise ApiError("VALIDATION_ERROR", "page는 1 이상이어야 합니다.")
+        if not (1 <= page_size <= 100):
+            raise ApiError("VALIDATION_ERROR", "page_size는 1~100 사이여야 합니다.")
+        offset = (page - 1) * page_size
+        return await self._repo.list_all(offset=offset, limit=page_size, device_id=device_id, status=status)

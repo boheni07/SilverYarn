@@ -48,6 +48,12 @@ npm run build
   → 실 사용자 4명(테스트 3 + 기존 1)이 최신 가입순으로 렌더링 → **사용자 카드를 실제로
   클릭**해 `/devices?userId=...`로 이동, 그 사용자의 기기 목록까지 확인 — 홈 → 사용자
   목록 → 기기 관리로 이어지는 전체 진입 경로를 클릭만으로 완주했다.
+- (같은 날 또 후속) 기기 2대에 동기화 이력 4건(성공 2·실패 1·재시도중 1)을 심어 두고
+  홈에서 **"전체 기기 통합 모니터링" 링크를 실제로 클릭**해 `/sync-monitor`(deviceId
+  없음)로 이동 → 두 기기의 세션 4건 모두 최신순으로 렌더링 → **"실패" 필터 링크를
+  실제로 클릭**해 1건으로 좁혀지는 것 확인 → **개별 세션의 "기기 XXXXXXXX" 링크를
+  실제로 클릭**해 그 기기 단독 이력(2건)으로 드릴다운 — 전체 모니터링 ↔ 기기별
+  모니터링이 같은 화면·같은 백엔드 엔드포인트로 왕복되는 것까지 클릭으로 확인했다.
 
 ## 스캐폴딩 중 발견한 것 — 관리자 조회용 백엔드 엔드포인트 신설
 
@@ -61,10 +67,20 @@ CLAUDE.md가 인가모델을 착수 전 5대 법적 리스크 중 하나로 명�
   `list_user_devices`와 동일한 "Admin — TODO: role 체크 강화" 패턴) — 기기 하나의
   최근 동기화 이력을 관리자가 조회.
 - 기존 `GET /sync/sessions/{id}`(Device Token 인증, 기기 자신의 폴링용)는 그대로 뒀다.
-- `SyncSessionRepository.list_by_device()`는 `idx_sync_device(device_id, started_at DESC)`
-  인덱스를 그대로 활용(schema.md §6) — 별도 인덱스 불필요.
-- `services/backend/tests/modules/sync/test_sync_service.py` 신규(5 테스트) — 이전엔
+- `services/backend/tests/modules/sync/test_sync_service.py` 신규 — 이전엔
   `SyncService` 유닛 테스트가 전혀 없었다(업로드 파이프라인 테스트만 존재).
+
+### `GET /sync/sessions`를 페이지네이션+"전체 기기 통합 모니터링"으로 확장 (2026-09-08)
+
+`device_id`를 **선택**으로 바꿨다 — 주면 기존처럼 기기 하나, 생략하면 전체 기기의
+동기화 이력을 최신순으로 아우른다(둘 다 같은 엔드포인트, 응답도 이제 `PaginatedResponse`).
+`status` 쿼리 파라미터로 성공/실패/재시도중만 골라볼 수도 있다. `SyncSessionRepository`의
+`list_by_device()`/`list_all()` 두 메서드를 `list_all(offset, limit, device_id=None,
+status=None)` 하나로 합쳤다 — 기기 필터가 있으면 기존 `idx_sync_device(device_id,
+started_at DESC)`를, 없으면(전체 통합 모니터링) `idx_sync_started_at(started_at DESC)`
+**신규 인덱스**(schema.md v1.5, `migrations/versions/0001_initial_schema.py`에 추가하고
+이미 적용된 로컬 DB에는 `CREATE INDEX`를 직접 실행해 맞춰 뒀다)를 쓴다 — device_id가
+선두 컬럼인 기존 인덱스로는 기기 무관 정렬을 못 타기 때문.
 
 ### `GET /users` 전체 사용자 목록 엔드포인트 추가 (2026-09-08)
 
@@ -87,11 +103,21 @@ Seq Scan을 감수한다(사용자 수 자체가 온프레미스 배포 특성�
 `UserResponse`에는 있었지만 design.md §3.1엔 누락돼 있던 걸 함께 발견·보강했다
 (Device/SyncSession과 같은 패턴, apps/web의 타입 사본도 함께 갱신).
 
+### `(admin)/sync-monitor` 전체 기기 통합 모니터링으로 확장 (2026-09-08)
+
+같은 화면·같은 라우트(`/sync-monitor`)가 URL의 `deviceId` 유무로 두 모드를 겸한다 —
+있으면 기존 "이 기기의 이력"(devices 화면에서 진입), 없으면 "전체 기기 통합
+모니터링"(신규, 홈의 2차 CTA로 진입). 상태 필터(전체/성공/실패/재시도중) 배지형 링크,
+페이지 넘김을 추가했고, 전체 모드에서는 각 세션 행에 기기 ID(줄임 표시)를 보여주고
+클릭하면 그 기기 단독 이력으로 드릴다운한다. `services/sync.ts`의 `listDeviceSyncSessions`
+(기기 필수)를 `listSyncSessions`(device_id/status 모두 선택)로 일반화했다.
+
 ## 아직 안 된 것 (의도적 범위 제한)
 
 - **실제 로그인 없음** — apps/web과 동일 이유(Keycloak 붙기 전 임시 진입점).
-- **"전체 기기 통합 모니터링"이 없음** — 기기를 하나씩 알아야 동기화 이력을 볼 수 있다.
-  "여러 기기를 한 화면에서 훑어보기"는 페이지네이션·필터 UI가 더 필요해 후속 작업.
+- **전체 기기 통합 모니터링에 기기 표시명이 안 보임** — 세션 행에 `deviceId`(UUID
+  앞 8자)만 보이고 `displayId`("MB-1042" 같은)는 안 보인다. 기기 표시명을 붙이려면
+  백엔드에서 device를 조인하거나 프론트에서 N+1 조회를 해야 해서 이번 범위에서 뺐다.
 - **사용자 목록에 검색/필터 없음** — `/users`는 페이지 넘김만 있고 이름 검색은 없다.
   사용자 수가 많아지면 필요해질 기능.
 - `apps/web`과 동일하게 인증·PII 암호화·RBAC는 전부 스텁 상태(`core/auth.py`).

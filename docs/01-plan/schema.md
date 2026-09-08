@@ -4,7 +4,7 @@
 
 **Project**: 은빛실타래 (SilverYarn)
 **Date**: 2026-09-07
-**Version**: 1.4 (3차 design-validator 검증 H-1 반영 — PII 암호화 대상 목록에 assistant_response 추가)
+**Version**: 1.5 (Do 단계 — apps/admin 전체 기기 통합 모니터링용 idx_sync_started_at 인덱스 추가)
 **Source**: Design 문서 §3 Data Model 초안 + UI/UX 화면설계서 필드 단위 대조 결과 반영
 **용어 정의**: [glossary.md](./glossary.md) 참조
 
@@ -15,6 +15,8 @@
 > **v1.3 변경 요약** (2차 design-validator 검증 반영, 2026-09-07): ① `conversation_chunks`에 `session_id`·`turn_id`·`mode`·`assistant_response` 4컬럼 추가 — AI 응답 텍스트가 서버에 영구 미보존되던 공백 해소, 온디바이스 `conversations` 테이블과 완전 매핑([decisions.md #34](./decisions/silveryarn-platform.decisions.md)). ② `devices`에 `slm_model_version`·`prompt_pack_version` 추가 — 키오스크 잠금 단말의 원격 프롬프트팩 갱신 추적([decisions.md #35](./decisions/silveryarn-platform.decisions.md)). ③ `users.primary_device_id` FK에 `ON DELETE SET NULL` 명시.
 >
 > **v1.4 변경 요약** (3차 design-validator 검증 H-1 반영, 2026-09-07): decisions.md #34에서 `assistant_response`를 PII 암호화 대상으로 이미 확정했으나 §5 PII 컬럼 목록에는 반영되지 않았던 누락을 정정 — 목록에 `assistant_response` 추가.
+>
+> **v1.5 변경 요약** (Do 단계, 2026-09-08): apps/admin "전체 기기 통합 모니터링" 화면용 `idx_sync_started_at ON sync_sessions(started_at DESC)` 인덱스 신규 — 기기로 필터하지 않는 전역 정렬 쿼리는 기존 `idx_sync_device(device_id, started_at DESC)`를 못 쓰기 때문(선두 컬럼 불일치).
 
 ---
 
@@ -644,6 +646,7 @@ CREATE INDEX idx_photos_user_recall ON photos(user_id, recall_status);
 CREATE INDEX idx_chunks_user ON conversation_chunks(user_id);
 CREATE INDEX idx_schedule_user_due ON schedule_items(user_id, due_at);
 CREATE INDEX idx_sync_device ON sync_sessions(device_id, started_at DESC);
+CREATE INDEX idx_sync_started_at ON sync_sessions(started_at DESC);  -- v1.5 신규 — 전체 기기 통합 모니터링(기기로 필터 없이 전역 정렬)용
 CREATE INDEX idx_emotion_scores_user_date ON emotion_scores(user_id, recorded_date DESC);
 CREATE INDEX idx_devices_display_id ON devices(display_id);
 ```

@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.9 (apps/admin 사용자 목록 화면 반영, User.createdAt/updatedAt 보강)
+> **Version**: 0.10 (apps/admin 전체 기기 통합 모니터링 반영)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -520,7 +520,7 @@ interface Publication {         // v1.1 신규
 |--------|------|-------------|------|
 | POST | /api/v1/sync/upload | 원본 음성+1차 전사+신규 사진 업로드 — **202 Accepted, 비동기 처리** ([sync-contract.md §2](../sync-contract.md#2-비동기-처리-계약-be-b1)) | Device Token |
 | GET | /api/v1/sync/sessions/{sessionId} | 업로드 작업 상태 조회 (신규, [sync-contract.md §2.2](../sync-contract.md#22-작업-상태-조회-신규-엔드포인트)) | Device Token |
-| GET | /api/v1/sync/sessions?deviceId={deviceId} | 기기 하나의 동기화 이력 조회 — apps/admin 동기화 모니터링 화면용(신규, 0.7). 위 항목(기기 자신의 폴링용, Device Token)과 인가모델이 달라 별도 엔드포인트로 분리 | Admin |
+| GET | /api/v1/sync/sessions?deviceId={deviceId}&status={status}&page={page}&pageSize={pageSize} | 동기화 이력 조회, 페이지네이션 — apps/admin 동기화 모니터링 화면용(신규 0.7, deviceId 선택·페이지네이션·status 필터로 확장 0.10). deviceId를 생략하면 전체 기기 통합 모니터링. 위 항목(기기 자신의 폴링용, Device Token)과 인가모델이 달라 별도 엔드포인트로 분리 | Admin |
 | GET | /api/v1/sync/download?since={syncVersion} | 최신 자서전·RAG 스냅샷·사진·질문목록 다운로드 — `since` 지정 시 증분만 반환 ([sync-contract.md §5](../sync-contract.md#5-증분-다운로드-be-b4)) | Device Token |
 | GET | /api/v1/users/{userId}/chapters | 챕터 목록/본문 조회 | 2FA + Role |
 | POST | /api/v1/chapters/{id}/review | 감수 승인/반려 (`chapter_revisions` 생성) | 2FA + Role(family) |
@@ -754,3 +754,4 @@ silveryarn/
 | 0.7 | 2026-09-08 | Do 단계 — apps/admin 스캐폴딩 중 실제 구현(core_service)이 이미 앞서 있던 필드 2건을 TS 인터페이스에 보강(SoR 원칙 2: 코드 존재 시 코드 우선). Device.aiTops/lastSyncAt, SyncSession.startedAt/finishedAt 추가 | NUBiz AX Initiative |
 | 0.8 | 2026-09-08 | apps/admin 동기화 모니터링용 `GET /sync/sessions?deviceId=`(§4.3)와 전체 사용자 목록용 `GET /users?page=&pageSize=`(§4.3, F-3 예외) 신규 엔드포인트를 API 표에 반영 — 둘 다 Admin 전용 조회 엔드포인트로, 기존 Device Token 인증 엔드포인트와 인가모델을 분리했다 | NUBiz AX Initiative |
 | 0.9 | 2026-09-08 | apps/admin `(admin)/users` 사용자 목록 화면(신규) — `GET /users`를 실제로 쓰는 첫 화면. User.createdAt/updatedAt이 실제 UserResponse에는 있었지만 §3.1 TS 인터페이스에 누락돼 있던 걸 발견·보강(SoR 원칙 2, Device/SyncSession과 동일 패턴) | NUBiz AX Initiative |
+| 0.10 | 2026-09-08 | `GET /sync/sessions`를 페이지네이션+"전체 기기 통합 모니터링"으로 확장 — `deviceId`가 선택이 됐고(생략 시 전체 기기), `status` 필터·페이지네이션 추가(§4.2). `(admin)/sync-monitor`가 같은 라우트로 기기별/전체 두 모드를 겸함. `idx_sync_started_at` 인덱스 신규(schema.md v1.5) — 기기 무관 전역 정렬은 기존 `idx_sync_device`(device_id 선두 컬럼)로 못 타기 때문 | NUBiz AX Initiative |

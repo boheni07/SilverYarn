@@ -280,6 +280,11 @@ _UPGRADE_STATEMENTS: list[str] = [
     "CREATE INDEX idx_chunks_user ON conversation_chunks(user_id);",
     "CREATE INDEX idx_schedule_user_due ON schedule_items(user_id, due_at);",
     "CREATE INDEX idx_sync_device ON sync_sessions(device_id, started_at DESC);",
+    # apps/admin 전체 기기 통합 모니터링(신규, 2026-09-08) — 기기 하나로 필터하지 않고
+    # 전체 sync_sessions를 started_at DESC로 훑는 쿼리 전용. idx_sync_device는 device_id
+    # 선두 컬럼이라 이 정렬에는 못 쓰인다. users 목록과 달리 sync_sessions는 Wi-Fi 배치
+    # 동기화마다 계속 쌓이는 고성장 테이블이라 Seq Scan을 감수하지 않기로 했다.
+    "CREATE INDEX idx_sync_started_at ON sync_sessions(started_at DESC);",
     "CREATE INDEX idx_emotion_scores_user_date ON emotion_scores(user_id, recorded_date DESC);",
     "CREATE INDEX idx_devices_display_id ON devices(display_id);",
 ]

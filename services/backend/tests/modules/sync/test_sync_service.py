@@ -1,8 +1,11 @@
 """SyncService 유닛 테스트 — 페이크 Repository로 DB 없이 Application 계층 검증.
 
-핵심 검증 대상: apps/admin 동기화 모니터링 화면이 쓰는 list_sessions_for_device()가
-device_id로 정확히 필터링하고 started_at 내림차순(최신 우선)을 지키는지 — Repository의
-idx_sync_device(device_id, started_at DESC) 인덱스 활용을 전제로 한 정렬 계약이다.
+핵심 검증 대상: apps/admin 동기화 모니터링 화면이 쓰는 list_sessions()가
+- device_id를 주면 기기 하나로 정확히 필터링하고
+- device_id를 생략하면(전체 기기 통합 모니터링, 신규) 모든 기기를 아우르고
+- status를 주면 그 상태만 골라내고
+- 항상 started_at 내림차순(최신 우선)을 지키는지 — Repository의 idx_sync_device /
+  idx_sync_started_at(schema.md v1.5) 인덱스 활용을 전제로 한 정렬 계약이다.
 """
 
 import uuid
@@ -47,9 +50,21 @@ class FakeSyncSessionRepository:
             session.finished_at = datetime.now(UTC)
         return session
 
-    async def list_by_device(self, device_id: uuid.UUID, limit: int = 50) -> list[SyncSession]:
-        sessions = [s for s in self.by_id.values() if s.device_id == device_id]
-        return sorted(sessions, key=lambda s: s.started_at, reverse=True)[:limit]
+    async def list_all(
+        self,
+        offset: int,
+        limit: int,
+        device_id: uuid.UUID | None = None,
+        status: SyncStatus | None = None,
+    ) -> tuple[list[SyncSession], int]:
+        sessions = list(self.by_id.values())
+        if device_id is not None:
+            sessions = [s for s in sessions if s.device_id == device_id]
+        if status is not None:
+            sessions = [s for s in sessions if s.status == status]
+        sessions.sort(key=lambda s: s.started_at, reverse=True)
+        total = len(sessions)
+        return sessions[offset : offset + limit], total
 
 
 @pytest.fixture
@@ -79,7 +94,9 @@ async def _add_session(
     return session
 
 
-class TestListSessionsForDevice:
+class TestListSessionsByDevice:
+    """device_id 지정 — 기존 devices → sync-monitor 화면(기기 하나)."""
+
     async def test_필터링_다른_기기_세션은_제외(
         self, service: SyncService, repo: FakeSyncSessionRepository
     ) -> None:
@@ -89,8 +106,9 @@ class TestListSessionsForDevice:
         await _add_session(repo, device_a, now, SyncStatus.SUCCESS)
         await _add_session(repo, device_b, now, SyncStatus.SUCCESS)
 
-        result = await service.list_sessions_for_device(device_a)
+        result, total = await service.list_sessions(page=1, page_size=20, device_id=device_a)
 
+        assert total == 1
         assert len(result) == 1
         assert result[0].device_id == device_a
 
@@ -100,13 +118,64 @@ class TestListSessionsForDevice:
         older = await _add_session(repo, device_id, now - timedelta(hours=1), SyncStatus.SUCCESS)
         newer = await _add_session(repo, device_id, now, SyncStatus.FAILED)
 
-        result = await service.list_sessions_for_device(device_id)
+        result, _ = await service.list_sessions(page=1, page_size=20, device_id=device_id)
 
         assert [s.id for s in result] == [newer.id, older.id]
 
     async def test_세션_없는_기기는_빈_목록(self, service: SyncService) -> None:
-        result = await service.list_sessions_for_device(uuid.uuid4())
+        result, total = await service.list_sessions(page=1, page_size=20, device_id=uuid.uuid4())
         assert result == []
+        assert total == 0
+
+
+class TestListAllSessions:
+    """device_id 생략 — "전체 기기 통합 모니터링"(신규)."""
+
+    async def test_모든_기기의_세션을_아우른다(
+        self, service: SyncService, repo: FakeSyncSessionRepository
+    ) -> None:
+        now = datetime.now(UTC)
+        await _add_session(repo, uuid.uuid4(), now, SyncStatus.SUCCESS)
+        await _add_session(repo, uuid.uuid4(), now, SyncStatus.FAILED)
+        await _add_session(repo, uuid.uuid4(), now, SyncStatus.RETRYING)
+
+        result, total = await service.list_sessions(page=1, page_size=20)
+
+        assert total == 3
+        assert len(result) == 3
+
+    async def test_status_필터(self, service: SyncService, repo: FakeSyncSessionRepository) -> None:
+        now = datetime.now(UTC)
+        await _add_session(repo, uuid.uuid4(), now, SyncStatus.SUCCESS)
+        failed = await _add_session(repo, uuid.uuid4(), now, SyncStatus.FAILED)
+        await _add_session(repo, uuid.uuid4(), now, SyncStatus.RETRYING)
+
+        result, total = await service.list_sessions(page=1, page_size=20, status=SyncStatus.FAILED)
+
+        assert total == 1
+        assert result == [failed]
+
+    async def test_페이지네이션_경계(self, service: SyncService, repo: FakeSyncSessionRepository) -> None:
+        now = datetime.now(UTC)
+        for i in range(5):
+            await _add_session(repo, uuid.uuid4(), now - timedelta(minutes=i), SyncStatus.SUCCESS)
+
+        page1, total = await service.list_sessions(page=1, page_size=2)
+        page2, _ = await service.list_sessions(page=2, page_size=2)
+
+        assert total == 5
+        assert len(page1) == 2
+        assert {s.id for s in page1}.isdisjoint({s.id for s in page2})
+
+    async def test_page가_0_이하면_VALIDATION_ERROR(self, service: SyncService) -> None:
+        with pytest.raises(ApiError) as exc_info:
+            await service.list_sessions(page=0, page_size=20)
+        assert exc_info.value.code == "VALIDATION_ERROR"
+
+    async def test_page_size가_범위_밖이면_VALIDATION_ERROR(self, service: SyncService) -> None:
+        with pytest.raises(ApiError) as exc_info:
+            await service.list_sessions(page=1, page_size=101)
+        assert exc_info.value.code == "VALIDATION_ERROR"
 
 
 class TestGetSessionStatus:
