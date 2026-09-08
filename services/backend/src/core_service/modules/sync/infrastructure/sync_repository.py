@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String, select
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,6 +52,18 @@ class SyncSessionRepository:
     async def get_by_id(self, session_id: uuid.UUID) -> SyncSession | None:
         model = await self._session.get(SyncSessionModel, session_id)
         return model.to_domain() if model else None
+
+    async def list_by_device(self, device_id: uuid.UUID, limit: int = 50) -> list[SyncSession]:
+        """apps/admin 동기화 모니터링 화면용 — idx_sync_device(device_id, started_at DESC)를
+        그대로 쓰는 조회라 별도 인덱스가 필요 없다(schema.md §6)."""
+        stmt = (
+            select(SyncSessionModel)
+            .where(SyncSessionModel.device_id == device_id)
+            .order_by(SyncSessionModel.started_at.desc())
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return [model.to_domain() for model in result.scalars()]
 
     async def create(self, device_id: uuid.UUID, direction: SyncDirection, checksum: str) -> SyncSession:
         model = SyncSessionModel(

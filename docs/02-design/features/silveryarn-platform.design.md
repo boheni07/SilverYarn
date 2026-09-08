@@ -8,9 +8,9 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.6 (3차 design-validator 검증 반영)
+> **Version**: 0.7 (apps/admin 스캐폴딩 중 TS 인터페이스 필드 보강)
 > **Author**: NUBiz AX(AI Transformation) Initiative
-> **Date**: 2026-09-07
+> **Date**: 2026-09-08
 > **Status**: Draft
 > **Planning Doc**: [silveryarn-platform.plan.md](../../01-plan/features/silveryarn-platform.plan.md)
 
@@ -308,9 +308,11 @@ interface Device {
   ramGb: number;
   androidVersion: string;
   installMode: "kiosk" | "normal";
+  aiTops?: number;             // v0.7 신규 — schema.md §5 ai_tops(NPU 성능) 누락 보강, apps/admin 스캐폴딩 중 발견
   slmModelVersion?: string;    // v1.3 신규 — 2차 검증 M-3
   promptPackVersion?: string;  // v1.3 신규
   installedAt: string;
+  lastSyncAt?: string;         // v0.7 신규 — 실제 devices 응답(core_service)에 이미 있던 필드 보강
 }
 
 interface Chapter {
@@ -425,6 +427,8 @@ interface SyncSession {
   status: "success" | "failed" | "retrying";
   checksum: string;
   retryCount: number;          // 2차 검증 L-12 반영
+  startedAt: string;           // v0.7 신규 — schema.md started_at 누락 보강, apps/admin 스캐폴딩 중 발견
+  finishedAt?: string;         // v0.7 신규 — schema.md finished_at 누락 보강
 }
 
 interface ConsentLog {
@@ -743,3 +747,4 @@ silveryarn/
 | 0.4 | 2026-09-06 | 사용자 제안 "저사양 실시간 대화 프로세스" 보고서 반영 — §2.12 신설(8단계 파이프라인, 메모리 예산 목표치), 로컬 RAG를 FTS5 단독(Phase 1 기본, decisions #32)으로 확정해 §2.3/§9.1의 "경량 VectorDB" 표현 정정, mobile-schema.md 신규 연계 | NUBiz AX Initiative (사용자 제안 반영) |
 | 0.5 | 2026-09-07 | 2차 design-validator 검증 반영 — ConversationChunk/Device 등 TS 인터페이스에 schema.md v1.3 신규 컬럼 동기화(session_id/turn_id/mode/assistantResponse, slmModelVersion/promptPackVersion), 누락 필드 보강(bodyTextSnapshot/qualityFlag/retryCount/expiresAt), Neo4j를 §9.1 Infrastructure 레이어에 추가, 교차참조 오류 정정(§2.9→workflow-diagrams §7, §2.4→§2.8, §4.2→§4.3), 6개 마이크로서비스 첫 커밋 금지 경고를 §11에 직접 명시, erd.md 링크 추가 | NUBiz AX Initiative |
 | 0.6 | 2026-09-07 | 3차 design-validator 검증 반영 — H-3: [sync-contract.md](../sync-contract.md) 신규 작성 및 §4.2/§6.1에서 링크(비동기 업로드 202+job_id, 엔티티별 충돌정책으로 Server-Wins 전면적용 폐기, Presigned URL 사진업로드, 증분 다운로드), 429/413 에러코드 추가. M-8: `GET /devices/{userId}`를 소유자 중첩 규칙에 맞게 `/users/{userId}/devices`로 정정 + 예외 규칙 명시. L-12: questions/schedule-items/consent-logs 엔드포인트 추가. L-5: §2.11의 §2.8 오참조를 workflow-diagrams §7로 정정. L-11: Chapter.createdAt/updatedAt, Photo.uploadedAt, ScheduleItem.nextRemindAt/respondedAt 필드 보강 | NUBiz AX Initiative |
+| 0.7 | 2026-09-08 | Do 단계 — apps/admin 스캐폴딩 중 실제 구현(core_service)이 이미 앞서 있던 필드 2건을 TS 인터페이스에 보강(SoR 원칙 2: 코드 존재 시 코드 우선). Device.aiTops/lastSyncAt, SyncSession.startedAt/finishedAt 추가 | NUBiz AX Initiative |

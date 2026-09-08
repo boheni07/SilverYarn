@@ -1,0 +1,45 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files — 루트 .gitignore(#43~45)/apps/web과 동일 원칙: 값이 든 파일만 제외.
+# .env.example은 Next.js가 이 디렉터리에서 직접 읽는 유일한 템플릿이라 커밋 대상
+# (create-next-app 기본 ".env*"는 이걸 같이 막아버려서 정정했다 — apps/web README 참조).
+.env
+.env.local
+.env.*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

@@ -55,3 +55,9 @@ class SyncService:
         if session is None:
             raise ApiError("NOT_FOUND", f"동기화 세션({session_id})을 찾을 수 없습니다.")
         return session
+
+    async def list_sessions_for_device(self, device_id: uuid.UUID) -> list[SyncSession]:
+        """apps/admin 동기화 모니터링(devices/{deviceId}/sync-sessions) — 관리자가 기기
+        단위로 최근 동기화 이력을 훑어보는 용도. GET /sync/sessions/{id}(기기 자신의
+        폴링용, Device Token 인증)와는 별개의 어드민 조회 경로다."""
+        return await self._repo.list_by_device(device_id)

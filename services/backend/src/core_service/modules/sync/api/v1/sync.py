@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core_service.core.auth import require_device_token
+from core_service.core.auth import AuthContext, require_auth, require_device_token
 from core_service.core.db import get_db
 from core_service.core.queue import get_arq_pool
 from core_service.modules.devices.application.device_service import DeviceService
@@ -45,6 +45,19 @@ class SyncUploadAccepted(BaseModel):
 
 class SyncSessionStatusResponse(BaseModel):
     session_id: uuid.UUID
+    status: str
+    retry_count: int
+    started_at: datetime
+    finished_at: datetime | None
+
+
+class SyncSessionResponse(BaseModel):
+    """apps/admin 동기화 모니터링용 목록 응답 — 위 SyncSessionStatusResponse(기기 자신의
+    폴링용)와 달리 device_id/direction까지 보여준다."""
+
+    id: uuid.UUID
+    device_id: uuid.UUID
+    direction: str
     status: str
     retry_count: int
     started_at: datetime
@@ -99,6 +112,36 @@ async def get_session_status(
             started_at=session.started_at,
             finished_at=session.finished_at,
         )
+    )
+
+
+@router.get("/sessions", response_model=DataResponse[list[SyncSessionResponse]])
+async def list_sessions(
+    device_id: uuid.UUID,
+    service: SyncService = Depends(_service),
+    # Admin — TODO: role 체크 강화 (devices.py list_user_devices와 동일 패턴)
+    _ctx: AuthContext = Depends(require_auth),
+) -> DataResponse[list[SyncSessionResponse]]:
+    """apps/admin 동기화 모니터링 화면 — 기기 하나의 최근 동기화 이력을 조회한다.
+
+    위 /sessions/{session_id}(기기 자신의 폴링용, Device Token 인증)와는 별개의
+    관리자 조회 경로다. "전체 기기 통합 모니터링"은 아직 없다 — 기기 단위 조회만
+    지원(apps/admin/README.md "아직 안 된 것" 참조).
+    """
+    sessions = await service.list_sessions_for_device(device_id)
+    return DataResponse(
+        data=[
+            SyncSessionResponse(
+                id=s.id,
+                device_id=s.device_id,
+                direction=s.direction.value,
+                status=s.status.value,
+                retry_count=s.retry_count,
+                started_at=s.started_at,
+                finished_at=s.finished_at,
+            )
+            for s in sessions
+        ]
     )
 
 
