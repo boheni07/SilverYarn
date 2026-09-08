@@ -5,8 +5,9 @@ Next.js(App Router) + TypeScript + Tailwind CSS v4. apps/web과 같은 스택·�
 
 ## 왜 이런 구조인가
 
-- `(admin)/` 라우트 그룹 하나만 쓴다 — structure.md §5 화면 인벤토리가 지정한
-  `sync-monitor/`, `devices/` 두 화면.
+- `(admin)/` 라우트 그룹을 쓴다 — structure.md §5 화면 인벤토리가 지정한
+  `sync-monitor/`, `devices/`, 그리고 실질적 진입점인 `users/`(§5 표에는 없지만
+  본문에 언급된 "사용자 관리"에 해당, 아래 참조).
 - apps/web과 완전히 동일한 계층 규율(`lib/api`→`services`→`app`/`components`/`features`,
   ESLint `import/no-restricted-paths`)과 디자인 토큰(`globals.css`)을 쓴다.
   `packages/design-tokens/`(structure.md v1.3 제안) 같은 공유 패키지는 아직
@@ -43,6 +44,10 @@ npm run build
 - `/devices?userId=...` — 실 API에서 기기 목록(설치모드 배지 포함) 렌더링
 - 기기 카드 **링크를 실제로 클릭**해 `/sync-monitor?deviceId=...`로 정상 이동
 - `/sync-monitor?deviceId=...` — 실 동기화 이력 3건(성공/실패/재시도중)을 최신순으로 렌더링
+- (같은 날 후속) `/` 홈에서 **"사용자 목록 보기" 링크를 실제로 클릭**해 `/users`로 이동
+  → 실 사용자 4명(테스트 3 + 기존 1)이 최신 가입순으로 렌더링 → **사용자 카드를 실제로
+  클릭**해 `/devices?userId=...`로 이동, 그 사용자의 기기 목록까지 확인 — 홈 → 사용자
+  목록 → 기기 관리로 이어지는 전체 진입 경로를 클릭만으로 완주했다.
 
 ## 스캐폴딩 중 발견한 것 — 관리자 조회용 백엔드 엔드포인트 신설
 
@@ -72,18 +77,21 @@ Seq Scan을 감수한다(사용자 수 자체가 온프레미스 배포 특성�
 실사용 규모가 커지면 재검토). `tests/modules/users/test_user_service.py`에 페이지네이션
 경계값(page<1, page_size 범위 밖, 빈 목록)까지 포함해 5 테스트 추가.
 
-apps/admin 프론트엔드는 아직 이 엔드포인트를 안 쓴다 — 아래 "아직 안 된 것"의 첫 항목
-그대로, 사용자 검색/목록 **화면**은 별도 작업이다(엔드포인트만 우선 요청받아 추가).
+### `(admin)/users` 사용자 목록 화면 추가 (2026-09-08)
+
+위 엔드포인트를 실제로 쓰는 화면 — `GET /users`가 반환하는 `{ data, pagination }` 봉투
+전체가 필요해 `lib/api/client.ts`에 `apiClient.getPaginated()`를 새로 추가했다(기존
+`get()`은 `data`만 반환하고 `pagination`은 버렸다). 이 화면이 이제 apps/admin의
+실질적 진입점 — 홈(`/`)의 1차 CTA가 됐고, ID를 직접 입력하는 기존 폼은 "ID를 이미
+아는 경우"용 보조 수단으로 내려갔다. `User` 타입에 `createdAt`/`updatedAt`이 실제
+`UserResponse`에는 있었지만 design.md §3.1엔 누락돼 있던 걸 함께 발견·보강했다
+(Device/SyncSession과 같은 패턴, apps/web의 타입 사본도 함께 갱신).
 
 ## 아직 안 된 것 (의도적 범위 제한)
 
 - **실제 로그인 없음** — apps/web과 동일 이유(Keycloak 붙기 전 임시 진입점).
-- **"전체 사용자 목록" 화면이 없음** — `GET /users`(list) 엔드포인트는 이제 있지만
-  (바로 위 항목), apps/admin에 이걸 쓰는 화면은 아직 없다. 지금은 여전히 관리자가
-  사용자 ID를 직접 입력해야 기기 관리 화면에 들어간다 — 검색/목록 UI는 후속 작업.
 - **"전체 기기 통합 모니터링"이 없음** — 기기를 하나씩 알아야 동기화 이력을 볼 수 있다.
   "여러 기기를 한 화면에서 훑어보기"는 페이지네이션·필터 UI가 더 필요해 후속 작업.
-- **사용자 관리 화면 없음** — structure.md §5 화면 인벤토리 표에는 `sync-monitor`/`devices`
-  두 개만 명시돼 있다(본문 설명엔 "사용자 관리"도 언급되지만 표에 경로가 없음). 목록
-  엔드포인트는 이제 있으니(위 "전체 사용자 목록" 항목) 화면만 만들면 되는 상태.
+- **사용자 목록에 검색/필터 없음** — `/users`는 페이지 넘김만 있고 이름 검색은 없다.
+  사용자 수가 많아지면 필요해질 기능.
 - `apps/web`과 동일하게 인증·PII 암호화·RBAC는 전부 스텁 상태(`core/auth.py`).

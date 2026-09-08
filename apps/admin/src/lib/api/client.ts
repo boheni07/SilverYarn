@@ -23,9 +23,15 @@ export class ApiError extends Error {
   }
 }
 
+export interface Pagination {
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
 interface ApiEnvelope<T> {
   data?: T;
-  pagination?: { page: number; pageSize: number; total: number };
+  pagination?: { page: number; page_size: number; total: number };
   error?: { code: string; message: string; details?: Record<string, unknown> };
 }
 
@@ -38,7 +44,7 @@ interface RequestOptions {
   deviceToken?: string;
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function fetchEnvelope(path: string, options: RequestOptions): Promise<ApiEnvelope<unknown>> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (options.authToken) headers["Authorization"] = `Bearer ${options.authToken}`;
   if (options.deviceToken) headers["X-Device-Token"] = options.deviceToken;
@@ -58,12 +64,31 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     throw new ApiError(err.code, err.message, err.details ?? {}, response.status);
   }
 
+  return json;
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const json = await fetchEnvelope(path, options);
   return keysToCamel<T>(json.data as never);
+}
+
+/** { data, pagination } 봉투 전체가 필요한 목록 조회용 — 지금은 GET /users만 이 모양을
+ * 실제로 반환한다(design.md §4.1 PaginatedResponse). */
+async function requestPaginated<T>(
+  path: string,
+  options: Omit<RequestOptions, "method" | "body"> = {},
+): Promise<{ data: T[]; pagination: Pagination }> {
+  const json = await fetchEnvelope(path, { ...options, method: "GET" });
+  return {
+    data: keysToCamel<T[]>(json.data as never),
+    pagination: keysToCamel<Pagination>(json.pagination as never),
+  };
 }
 
 export const apiClient = {
   get: <T>(path: string, options?: Omit<RequestOptions, "method" | "body">) =>
     request<T>(path, { ...options, method: "GET" }),
+  getPaginated: requestPaginated,
   post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
     request<T>(path, { ...options, method: "POST", body }),
   put: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
