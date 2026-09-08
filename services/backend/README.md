@@ -6,9 +6,9 @@
 
 `docs/01-plan/structure.md §2`가 SoR이다. 요약하면:
 
-- 도메인 모듈(`modules/{users,devices,author,care,schedule,sync,family_members,invitations,photos}/`)은 각자 api/application/domain/infrastructure 4계층을 갖는다.
-- 모듈은 서로의 `infrastructure/`를 직접 import하지 않는다 — 다른 모듈의 서비스가 필요하면 그 모듈의 `deps.py`(공개 조합 지점)만 거친다. 이 경계가 지켜지면 나중에 특정 모듈(예: GPU 부하가 큰 rag-core)만 별도 서비스로 분리할 때 코드 이동만으로 끝난다. `photos`의 `list_sessions` 라우터가 `devices/deps.py`(`get_device_service`)만 거쳐 기기 표시명을 조합하는 게 이 원칙의 실제 사례다.
-- 9개 논리 모듈(`users`/`devices`/`author`/`family_members`/`invitations`/`care`/`schedule`/`sync`/`photos`) 전부 4계층 참조 구현 완료(2026-09-08 `photos` 완성으로 마지막 모듈 채움). `sync`의 STT/LLM/Embedding/Qdrant/Neo4j 클라이언트(`core/clients/`)는 실제 온프레미스 서비스가 아직 없어 **REST 계약을 추정해 작성**했다 — 인프라 배포 후 클라이언트 파일만 교체하면 되도록 인터페이스를 좁게 유지했다. `core/clients/storage_client.py`(MinIO)는 반대로 실제 서비스가 로컬에 떠 있고 SDK도 확정돼 있어 추정이 아니다.
+- 도메인 모듈(`modules/{users,devices,author,care,schedule,sync,family_members,invitations,photos,photo_requests}/`)은 각자 api/application/domain/infrastructure 4계층을 갖는다.
+- 모듈은 서로의 `infrastructure/`를 직접 import하지 않는다 — 다른 모듈의 서비스가 필요하면 그 모듈의 `deps.py`(공개 조합 지점)만 거친다. 이 경계가 지켜지면 나중에 특정 모듈(예: GPU 부하가 큰 rag-core)만 별도 서비스로 분리할 때 코드 이동만으로 끝난다. `sync`의 `list_sessions` 라우터가 `devices/deps.py`(`get_device_service`)만 거쳐 기기 표시명을 조합하는 것, `photos`의 `complete_upload` 라우터가 `photo_requests/deps.py`(`get_photo_request_service`)만 거쳐 대기 중인 사진 요청을 자동 충족 처리하는 것이 이 원칙의 실제 사례다.
+- 10개 논리 모듈(`users`/`devices`/`author`/`family_members`/`invitations`/`care`/`schedule`/`sync`/`photos`/`photo_requests`) 전부 4계층 참조 구현 완료(2026-09-08 `photo_requests` 완성으로 마지막 모듈 채움). `sync`의 STT/LLM/Embedding/Qdrant/Neo4j 클라이언트(`core/clients/`)는 실제 온프레미스 서비스가 아직 없어 **REST 계약을 추정해 작성**했다 — 인프라 배포 후 클라이언트 파일만 교체하면 되도록 인터페이스를 좁게 유지했다. `core/clients/storage_client.py`(MinIO)는 반대로 실제 서비스가 로컬에 떠 있고 SDK도 확정돼 있어 추정이 아니다.
 - **모든 모듈 ORM 모델은 `core/model_registry.py` 하나만 import하면 등록된다** — 개별 진입점(main.py/worker.py/migrations/env.py)마다 모델 import 목록을 따로 유지하다 worker.py에서 실제로 하나(`UserModel`)를 빠뜨려 FK 해석 오류가 난 적이 있어(실제 DB 검증 중 발견) 이렇게 통일했다.
 
 ## 로컬 개발 준비
@@ -58,6 +58,18 @@ sync-contract.md §4 3단계 흐름을 실제 MinIO 컨테이너로 확인했다
 `content_type`(400)·미인증(401)·Device Token으로도 통과되는지(200, either/or
 인가)까지 curl로 검증.
 
+### `photo_requests` 모듈 신규 — photos와의 자동 충족 연동까지 실제 검증 (2026-09-08)
+
+DB 테이블은 첫 마이그레이션부터 있었지만 코드가 전혀 없던 마지막 모듈. `POST
+/photo-requests`(생성) + `GET /users/{userId}/photo-requests`(목록, 스캐폴딩
+시점 추가) + `POST /photo-requests/{id}/dismiss`(닫기, 스캐폴딩 시점 추가)를
+구현하고, 충족(`fulfilled`)은 `photos`의 `POST /photos/{id}/complete`가
+`photo_requests/deps.py`를 거쳐 자동 처리하도록 연결했다(schema.md §3.7
+`fulfilled_at`이 이미 전제하던 흐름). 실제 요청을 만들고 → 실 MinIO에 사진을
+올리고 → complete 콜백을 호출한 뒤 → 그 요청이 정말로 `fulfilled`로 바뀌는
+것까지 curl로 확인했다(같은 사용자의 다른 pending 요청은 그대로 두는지, 이미
+dismissed된 요청은 안 건드리는지도 함께).
+
 ## 아직 안 된 것 (의도적 범위 제한)
 
 - **온프레미스 AI 인프라 실물 연동 검증**: `core/clients/`(STT/Embedding/LLM)는 실제 서비스가 없는 상태에서 REST 계약을 추정해 작성했다 — 실 서비스 배포 후 계약이 다르면 이 파일들만 교체. Qdrant/Neo4j 클라이언트는 실제 컨테이너로 검증 완료(단, Qdrant는 embed 단계가 항상 실패해 실제로 upsert까지는 못 가봄 — EmbeddingClient 실 서비스 필요)
@@ -65,7 +77,7 @@ sync-contract.md §4 3단계 흐름을 실제 MinIO 컨테이너로 확인했다
 - `sync` 모듈의 `GET /sync/download` — 여전히 빈 스냅샷 골격(chapter_updates 등 실제 조회 미구현)
 - `photos` orphan cleanup 배치 — sync-contract.md §4가 명시한 "24시간 지나도 `pending_upload`면 정리"가 아직 없어, 3단계 콜백이 영영 안 오면 그 행이 영구히 `pending_upload`로 남는다
 - AI 자동 인라인 사진 삽입 제안(`photos.placement_status=proposed` → 챕터 본문 편입) — author 모듈이 담당할 몫으로 아직 미구현
-- `photo_requests`(가족→당사자 사진 추가 요청) — DB 테이블은 있지만 별개 모듈이라 아직 스캐폴딩 전
+- `photo_requests`의 사진↔요청 1:1 매핑 — 두 테이블 사이에 연결 FK가 없어 "이 사용자가 사진을 올렸다"를 대기 중인 모든 요청에 대한 응답으로 해석해 일괄 충족 처리한다(정밀한 매핑이 필요해지면 photos에 fulfilled_request_id 같은 컬럼 추가 검토)
 - PII 컬럼(schema.md §5) 암호화 — pgcrypto vs 애플리케이션 레벨 결정 대기
 - Keycloak 실제 토큰 검증 — 현재 `core/auth.py`는 자리만 있고 미검증 스텁
 - 오디오 업로드 자체(Presigned URL 또는 multipart) — `POST /sync/upload`가 지금은 `raw_audio_ref` 문자열을 클라이언트가 직접 주는 것으로 단순화돼 있음

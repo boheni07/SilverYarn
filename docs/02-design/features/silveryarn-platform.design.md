@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.12 (전체 사용자 목록에 이름 검색 반영)
+> **Version**: 0.13 (photo_requests 모듈 완성 반영)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -528,6 +528,8 @@ interface Publication {         // v1.1 신규
 | POST | /api/v1/photos/upload-url | 사진 업로드용 Presigned URL 발급 (신규, [sync-contract.md §4](../sync-contract.md#4-사진-업로드--presigned-url-흐름-be-b2)) | 2FA + Role(family) 또는 Device Token |
 | POST | /api/v1/photos/{id}/complete | 사진 업로드 완료 확인 (신규) | 2FA + Role(family) 또는 Device Token |
 | POST | /api/v1/photo-requests | 가족→당사자 사진 추가 요청 | 2FA + Role(family) |
+| GET | /api/v1/users/{userId}/photo-requests | 사진 추가 요청 목록 조회(신규 0.13, 스캐폴딩 시점 추가 — invitations 모듈과 동일 이유: 만들기만 하고 볼 방법이 없으면 WU3→WF3 루프가 끝나지 않음) | 2FA + Role |
+| POST | /api/v1/photo-requests/{id}/dismiss | 사진 추가 요청 닫기(신규 0.13) — 충족(fulfilled)은 이 엔드포인트가 아니라 POST /photos/{id}/complete가 자동 처리 | 2FA + Role |
 | GET | /api/v1/users/{userId}/emotion-scores | 일별 정서 점수 추이 조회 | 2FA + Role |
 | GET | /api/v1/users/{userId}/emotion-alerts | 정서 알림 이력 | 2FA + Role |
 | PUT | /api/v1/family-members/{id}/notification-settings | 알림 수신 채널·항목 설정 | 2FA + Role(family) |
@@ -757,3 +759,4 @@ silveryarn/
 | 0.10 | 2026-09-08 | `GET /sync/sessions`를 페이지네이션+"전체 기기 통합 모니터링"으로 확장 — `deviceId`가 선택이 됐고(생략 시 전체 기기), `status` 필터·페이지네이션 추가(§4.2). `(admin)/sync-monitor`가 같은 라우트로 기기별/전체 두 모드를 겸함. `idx_sync_started_at` 인덱스 신규(schema.md v1.5) — 기기 무관 전역 정렬은 기존 `idx_sync_device`(device_id 선두 컬럼)로 못 타기 때문 | NUBiz AX Initiative |
 | 0.11 | 2026-09-08 | `GET /sync/sessions` 응답에 `deviceDisplayId` 추가(§4.2) — devices 모듈의 신규 `DeviceService.get_display_ids()`(IN 쿼리 일괄 조회)를 라우터에서 조합, sync 모듈이 devices 테이블을 직접 조인하지 않는 원칙(structure.md §2)은 유지. SyncSession 엔티티(§3.1) 자체 컬럼이 아니라 이 응답에서만 붙는 필드임을 명시 | NUBiz AX Initiative |
 | 0.12 | 2026-09-08 | `GET /users`에 `name` 이름 검색 파라미터 추가(§4.2, ILIKE 부분일치) — apps/admin `(admin)/users` 화면에 검색창 신설. care 모듈의 conversation_chunks ILIKE 검색과 달리 "실제 하이브리드 서치로 교체 예정" TODO 없음(단순 이름 문자열 매칭이라 ILIKE가 최종 구현) | NUBiz AX Initiative |
+| 0.13 | 2026-09-08 | `photo_requests` 모듈 완성 — §4.2에 `GET /users/{userId}/photo-requests`·`POST /photo-requests/{id}/dismiss` 신규(스캐폴딩 시점 추가, invitations 모듈과 동일 사유). 충족(fulfilled)은 별도 엔드포인트 없이 `POST /photos/{id}/complete`가 devices/deps.py 패턴으로 photo_requests 모듈을 호출해 자동 처리 — schema.md §3.7 `fulfilled_at`("사진 업로드로 충족된 시각")이 이미 전제하던 흐름 | NUBiz AX Initiative |

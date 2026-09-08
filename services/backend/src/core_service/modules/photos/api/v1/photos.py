@@ -19,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core_service.core.auth import AuthContext, require_auth, require_auth_or_device_token
 from core_service.core.clients.storage_client import StorageClient
 from core_service.core.db import get_db
+from core_service.modules.photo_requests.application.photo_request_service import PhotoRequestService
+from core_service.modules.photo_requests.deps import get_photo_request_service
 from core_service.modules.photos.application.photo_service import PhotoService
 from core_service.modules.photos.domain.photo import UploaderType
 from core_service.modules.photos.infrastructure.photo_repository import PhotoRepository
@@ -93,11 +95,20 @@ async def request_upload_url(
 async def complete_upload(
     photo_id: uuid.UUID,
     service: PhotoService = Depends(_service),
+    photo_request_service: PhotoRequestService = Depends(get_photo_request_service),
     _ctx: AuthContext | str = Depends(require_auth_or_device_token),
 ) -> DataResponse[PhotoCompleteResponse]:
     """sync-contract.md §4 3단계 — 클라이언트가 MinIO에 직접 PUT을 마친 뒤 보내는
-    확인 콜백. 멱등하다(이미 uploaded여도 성공)."""
+    확인 콜백. 멱등하다(이미 uploaded여도 성공).
+
+    photo_requests 모듈을 deps.py로만 호출해 이 사용자의 대기 중인 사진 요청을
+    전부 충족(fulfilled) 처리한다 — schema.md §3.7 `fulfilled_at`이 "사진 업로드로
+    충족된 시각"이라고 이미 명시한 흐름이다. 어느 사진이 어느 요청에 대한 응답인지
+    연결하는 FK가 없어 1:1 매핑은 못 하고, "이 사용자가 사진을 올렸다"를 대기 중인
+    모든 요청에 대한 응답으로 해석한다(photo_request_service.py 참조).
+    """
     photo = await service.complete_upload(photo_id)
+    await photo_request_service.fulfill_pending_for_user(photo.user_id)
     return DataResponse(data=PhotoCompleteResponse(photo_id=photo.id, status=photo.status.value))
 
 
