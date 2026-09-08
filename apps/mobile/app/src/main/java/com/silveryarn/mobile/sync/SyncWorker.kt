@@ -105,7 +105,8 @@ class SyncWorker(
                         linkedChapterId = question.linkedChapterId,
                         text = question.text,
                         type = question.type,
-                        answered = false, // 서버가 이미 미답변만 골라 보낸다(question_repository.py)
+                        // 서버가 이미 미답변만 골라 보낸다(question_repository.py)
+                        answered = false,
                         priority = index,
                     )
                 },
@@ -117,9 +118,11 @@ class SyncWorker(
                         id = item.id,
                         kind = item.kind,
                         description = item.description,
-                        location = null, // 서버 응답엔 없음(design.md §4.3 예시에도 없음)
+                        // 서버 응답엔 없음(design.md §4.3 예시에도 없음)
+                        location = null,
                         dueAt = Instant.parse(item.dueAt).toEpochMilli(),
-                        status = "pending", // 서버가 이미 pending만 골라 보낸다(schedule_item_repository.py)
+                        // 서버가 이미 pending만 골라 보낸다(schedule_item_repository.py)
+                        status = "pending",
                         remindCount = 0,
                         origin = "server",
                     ),
