@@ -1,7 +1,7 @@
 """FamilyMemberService 유닛 테스트 — 페이크 Repository로 DB 없이 Application 계층 검증."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -30,7 +30,7 @@ class FakeFamilyMemberRepository:
             name=name,
             contact=contact,
             two_factor_enabled=False,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
         )
         self._store[member.id] = member
         return member

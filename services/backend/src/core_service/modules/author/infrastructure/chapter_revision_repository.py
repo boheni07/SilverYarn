@@ -6,7 +6,7 @@ ChapterService.review_chapter()를 거치는 것이며, 작가 엔진 초안 생
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, Text, select
 from sqlalchemy import Enum as SAEnum
@@ -78,7 +78,7 @@ class ChapterRevisionRepository:
             reviewer_id=reviewer_id,
             review_comment=review_comment,
             action=action.value,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
         )
         self._session.add(model)
         await self._session.flush()

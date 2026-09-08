@@ -8,7 +8,7 @@ Presigned URL로 MinIO에 먼저 올린 뒤(sync-contract.md §4와 유사한 �
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from arq.connections import ArqRedis
 from fastapi import APIRouter, Depends, Response
@@ -113,7 +113,7 @@ async def download(
     """
     return {
         "data": {
-            "sync_version": f"sync_{datetime.now():%Y%m%d_%H%M%S}",
+            "sync_version": f"sync_{datetime.now(UTC):%Y%m%d_%H%M%S}",
             "chapter_updates": [],
             "priority_questions": [],
             "schedule_items": [],

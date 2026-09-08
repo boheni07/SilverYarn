@@ -1,7 +1,7 @@
 """Invitation 도메인 엔티티 — schema.md §5 `invitations` 테이블 매핑."""
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import UUID
 
@@ -30,7 +30,7 @@ class Invitation:
     expires_at: datetime
 
     def is_expired(self, now: datetime | None = None) -> bool:
-        return (now or datetime.now()) >= self.expires_at
+        return (now or datetime.now(UTC)) >= self.expires_at
 
     def ensure_acceptable(self, now: datetime | None = None) -> None:
         """비즈니스 규칙: pending 상태 + 만료 전이어야 수락 가능."""

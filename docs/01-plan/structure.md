@@ -2,7 +2,7 @@
 
 > Phase 2 Deliverable — 모노레포 전체 구조 (Design 문서 §11.1을 실행 가능한 수준으로 구체화)
 
-**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-08 · **Version**: 1.10
+**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-08 · **Version**: 1.11
 
 ---
 
@@ -28,7 +28,7 @@ silveryarn/
 │       │   ├── core/                # config·db·logging·표준 에러 포맷(design.md §4.1)·auth·queue(arq pool)
 │       │   │   └── clients/           # STT/Embedding/LLM(vLLM)/Qdrant/Neo4j 클라이언트 (횡단 관심사)
 │       │   ├── modules/             # 도메인 모듈 — 상세는 §2. 8개 논리 모듈 전부 구현 완료
-│       │   │   └── users/ devices/ author/ family_members/ invitations/ care/ schedule/ sync/
+│       │   │   └── users/ devices/ author/ family_members/ invitations/ care/ schedule/ sync/ photos/
 │       │   └── shared/              # 모듈 간 공유 커널 — domain_enums.py(공유 enum), schemas.py(공통 응답 포맷)
 │       └── tests/
 ├── packages/                   # 서버 서비스 간 공유 코드 (Python 패키지) + 크로스플랫폼 자산 — 아직 스캐폴딩 전
@@ -73,11 +73,19 @@ services/backend/src/core_service/
 >
 > **모듈 간 재사용**: 다른 모듈의 Application 서비스가 필요하면(예: `author`가 챕터 감수자 검증에 `family_members`를 씀) 그 모듈 루트의 `deps.py`(공개 조합 지점, FastAPI `Depends` 프로바이더)만 import한다. `family_members/deps.py`가 최초 사례 — 다른 모듈도 교차 참조가 생기면 동일 패턴을 따른다.
 >
-> **Phase 1 구현 범위**: `users`·`devices`·`author`(chapters/chapter_revisions)·`family_members`·`invitations`·`care`(conversation_chunks)·`schedule`(schedule_items)·`sync` 8개 논리 모듈 전부 4계층(또는 그에 준하는) 구현 완료. `care`는 `conversation_chunks`만 구현했다 — `emotion_alerts`/`emotion_scores`는 Phase 1 피처플래그 OFF(decisions.md #25)라 의도적으로 제외했고, 검색은 실제 Qdrant 하이브리드 서치(design.md §2.4) 전까지 임시 DB ILIKE로 대체돼 있다(코드에 TODO 명시). `schedule`은 chapters/conversation_chunks와 달리 POST 생성을 공개로 노출한다 — AI 파이프라인 산출물이 아니라 가족·당사자가 직접 입력하는 리소스이기 때문이다.
+> **Phase 1 구현 범위**: `users`·`devices`·`author`(chapters/chapter_revisions)·`family_members`·`invitations`·`care`(conversation_chunks)·`schedule`(schedule_items)·`sync` 8개 논리 모듈은 4계층(또는 그에 준하는) 구현 완료. `photos`는 ORM 모델만 있는 골격(§2 실제 DB 검증 각주 참조) — 총 9개 모듈이 존재한다. `care`는 `conversation_chunks`만 구현했다 — `emotion_alerts`/`emotion_scores`는 Phase 1 피처플래그 OFF(decisions.md #25)라 의도적으로 제외했고, 검색은 실제 Qdrant 하이브리드 서치(design.md §2.4) 전까지 임시 DB ILIKE로 대체돼 있다(코드에 TODO 명시). `schedule`은 chapters/conversation_chunks와 달리 POST 생성을 공개로 노출한다 — AI 파이프라인 산출물이 아니라 가족·당사자가 직접 입력하는 리소스이기 때문이다.
 >
 > **sync 모듈의 파이프라인 오케스트레이션**: `SyncService`(접수+arq enqueue)와 `UploadPipelineService`(worker.py가 실행하는 실제 파이프라인 — STT 재전사→지식추출→임베딩/그래프 적재→챕터 갱신)로 분리했다. 각 외부 시스템 호출은 `core/clients/`(STT/Embedding/LLM/Qdrant/Neo4j, 횡단 관심사라 `core/`에 위치 — `core/db.py`와 동일 원칙)를 거치며, 실제 서비스가 없는 상태에서 REST 계약을 추정해 작성했다. 파이프라인은 각 단계를 best-effort로 감싸 부분 실패해도 계속 진행하고, `conversation_chunks` 적재 자체가 실패할 때만 `sync_sessions.status=failed`로 남긴다. `author`/`care`/`devices` 모듈에도 `deps.py`(공개 조합 지점)를 추가해 sync가 이들을 교차 참조할 수 있게 했다 — `family_members/deps.py`에서 시작한 패턴의 확장.
 >
 > **실제 커밋 버그 발견·수정**: `core/db.py`의 `get_db()`가 `session.commit()`을 호출하지 않아 — `flush()`만으로는 트랜잭션이 커밋되지 않으므로 — 지금까지 구현한 모든 쓰기 엔드포인트가 실제 Postgres에서는 아무것도 영속화하지 못하는 상태였다. 전부 페이크 Repository로 단위테스트해왔던 탓에 발견이 늦었다 — sync 파이프라인 구현 중 실제 트랜잭션 경계를 따라가다 확인하고 수정했다.
+>
+> **실제 DB/Redis/Qdrant/Neo4j를 붙인 엔드투엔드 검증(2026-09-08)에서 추가로 발견·수정한 버그 3건** — 전부 페이크 기반 단위테스트만으로는 드러나지 않았던 것들이다:
+> 1. **ORM 모델 미등록으로 인한 FK 해석 실패**: `worker.py`가 자신이 직접 쓰는 Repository의 모델만 import해 `UserModel` 등이 Base.metadata에 등록되지 않았고, `conversation_chunks.user_id`(FK)를 flush하는 순간 `NoReferencedTableError`가 났다. `core/model_registry.py`를 신설해 모든 진입점(main.py/worker.py/migrations/env.py)이 이 파일 하나만 import하도록 통일 — 개별 import 목록의 중복 유지를 제거했다.
+> 2. **photos 모듈 부재로 인한 동일 오류**: `conversation_chunks.linked_photo_id`가 schema.md DDL상 `REFERENCES photos(id)`인데 `photos`를 매핑하는 ORM 모델이 전혀 없어 같은 오류가 재발했다 — `photos` 모듈을 도메인 엔티티+ORM 모델만 있는 골격으로 신규 스캐폴딩해 해소(application/api는 다음 스프린트). `linked_chunk_id`(양방향 FK, erd.md §1 의도적 비정규화 2)는 ORM에 `ForeignKey`로 선언하지 않았다 — 순환 의존 복잡도를 피하기 위함(이 프로젝트는 ORM `relationship()`을 쓰지 않아 실익이 없음).
+> 3. **세션 오염으로 실패 상태 기록이 2차 예외로 가려짐**: `conversation_chunks` flush 실패 후 같은(poisoned) 세션으로 `sync_sessions.status=failed`를 쓰려다 `PendingRollbackError`가 나 원래 원인이 로그에서 사라졌다. `UploadPipelineService`에서 상태 갱신 책임을 완전히 제거하고, `worker.py`가 **독립된 세션 + 즉시 커밋**으로 SUCCESS/FAILED를 기록하도록 재구성(`_update_sync_status()`).
+> 4. **naive/aware datetime 비교 오류**: 모든 Repository가 `datetime.now()`(naive)로 타임스탬프를 만들었는데, Postgres `TIMESTAMPTZ` 컬럼은 asyncpg를 통해 항상 tz-aware로 돌아온다 — `invitations.ensure_acceptable()`가 만료 여부를 비교하다 `TypeError: can't compare offset-naive and offset-aware datetimes`로 실패했다. `src/` 전역(12개 파일)에서 `datetime.now()` → `datetime.now(UTC)`로 일괄 정정, 테스트 페이크도 동일하게 맞췄다.
+>
+> 이 4건 모두 `docker compose up` → `alembic upgrade head` → 실제 `uvicorn`+`arq` 프로세스로 HTTP 요청을 보내는 실제 엔드투엔드 검증 중에만 드러났다 — users/devices/family_members/invitations/schedule/chapters(review 포함)/sync 업로드 파이프라인 전체가 실제 Postgres·Redis·Neo4j·Qdrant에 대해 정상 동작함을 확인했다(Qdrant/LLM/STT/Embedding처럼 실제 서비스가 없는 것만 계획대로 best-effort 폴백).
 >
 > **author 모듈**: workflow-diagrams.md §4/§7의 M-5 정정(감수 전 chapter_revisions 생성 금지)을 코드 레벨에서 그대로 구현했다 — `save_draft()`(§4용, 이제 UploadPipelineService가 호출)와 `review_chapter()`(§7용, chapter_revisions 생성은 여기서만)를 분리.
 >
@@ -191,3 +199,4 @@ Presentation ──→ Application ──→ Domain ←── Infrastructure
 | 1.8 | 2026-09-08 | `care` 모듈(conversation_chunks) 4계층 구현 완료 반영 — emotion_alerts/emotion_scores는 Phase 1 피처플래그 OFF(decisions.md #25)로 의도적 제외, 검색은 임시 ILIKE(실제는 Qdrant 하이브리드 서치 예정)임을 명시 | NUBiz AX Initiative |
 | 1.9 | 2026-09-08 | `schedule` 모듈(schedule_items) 4계층 구현 완료 반영 — 7개 논리 모듈(users/devices/author/family_members/invitations/care/schedule) 전부 구현 완료, `sync`만 골격 단계로 남음 | NUBiz AX Initiative |
 | 1.10 | 2026-09-08 | `sync` 모듈 파이프라인 오케스트레이션 구현 반영(UploadPipelineService, core/clients/, core/queue.py) — 8개 논리 모듈 전부 구현 완료. `get_db()` 커밋 누락 버그 발견·수정 기록, `deps.py` 패턴을 author/care/devices로 확장 | NUBiz AX Initiative |
+| 1.11 | 2026-09-08 | 실제 Postgres/Redis/Qdrant/Neo4j로 엔드투엔드 검증 — `photos` 모듈 신규 스캐폴딩(ORM 모델만, FK 해석 목적), `core/model_registry.py` 신설, `UploadPipelineService`/`worker.py` 세션 분리 재구성(`_update_sync_status`), 전역 naive datetime → `datetime.now(UTC)` 정정(12개 파일) 등 실제 인프라로만 드러나는 버그 4건 발견·수정 | NUBiz AX Initiative |

@@ -5,6 +5,7 @@
 
 from fastapi import FastAPI
 
+from core_service.core import model_registry  # noqa: F401  (Base.metadata에 전 테이블 등록)
 from core_service.core.config import get_settings
 from core_service.core.errors import register_error_handlers
 from core_service.core.logging import configure_logging

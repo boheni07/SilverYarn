@@ -8,29 +8,12 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+# 모든 모듈의 ORM 모델을 한 곳에서 import — Base.metadata에 전 테이블을 등록한다.
+# 개별 진입점마다 모델 import 목록을 따로 유지하다 worker.py에서 실제로 하나를
+# 빠뜨려 FK 해석 오류가 난 적이 있다(core/model_registry.py 문서 참조).
+from core_service.core import model_registry  # noqa: F401
 from core_service.core.config import get_settings
 from core_service.core.db import Base
-
-# 각 모듈의 ORM 모델을 import해야 Base.metadata에 테이블이 등록된다.
-from core_service.modules.author.infrastructure.chapter_repository import ChapterModel  # noqa: F401
-from core_service.modules.author.infrastructure.chapter_revision_repository import (  # noqa: F401
-    ChapterRevisionModel,
-)
-from core_service.modules.care.infrastructure.conversation_chunk_repository import (  # noqa: F401
-    ConversationChunkModel,
-)
-from core_service.modules.devices.infrastructure.device_repository import DeviceModel  # noqa: F401
-from core_service.modules.family_members.infrastructure.family_member_repository import (  # noqa: F401
-    FamilyMemberModel,
-)
-from core_service.modules.invitations.infrastructure.invitation_repository import (  # noqa: F401
-    InvitationModel,
-)
-from core_service.modules.schedule.infrastructure.schedule_item_repository import (  # noqa: F401
-    ScheduleItemModel,
-)
-from core_service.modules.sync.infrastructure.sync_repository import SyncSessionModel  # noqa: F401
-from core_service.modules.users.infrastructure.user_repository import UserModel  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

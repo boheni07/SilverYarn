@@ -5,7 +5,7 @@
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -47,7 +47,7 @@ class FakeChapterRepository:
             existing.period = period
             existing.body_text = body_text
             existing.version += 1
-            existing.updated_at = datetime.now()
+            existing.updated_at = datetime.now(UTC)
             return existing
         chapter = Chapter(
             id=uuid.uuid4(),
@@ -58,7 +58,7 @@ class FakeChapterRepository:
             body_text=body_text,
             status=ChapterStatus.DRAFT,
             version=1,
-            updated_at=datetime.now(),
+            updated_at=datetime.now(UTC),
         )
         self.by_id[chapter.id] = chapter
         return chapter
@@ -70,7 +70,7 @@ class FakeChapterRepository:
         chapter.status = status
         if bump_version:
             chapter.version += 1
-        chapter.updated_at = datetime.now()
+        chapter.updated_at = datetime.now(UTC)
         return chapter
 
 
@@ -98,7 +98,7 @@ class FakeChapterRevisionRepository:
             reviewer_id=reviewer_id,
             review_comment=review_comment,
             action=action,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
         )
         self.revisions.append(revision)
         return revision

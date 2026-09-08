@@ -1,7 +1,7 @@
 """invitations 테이블 SQLAlchemy 매핑 + Repository — schema.md §5 DDL과 1:1."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, ForeignKey, String, select
 from sqlalchemy import Enum as SAEnum
@@ -90,7 +90,7 @@ class InvitationRepository:
             role=role.value,
             token=token,
             status=InvitationStatus.PENDING.value,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
             expires_at=expires_at,
         )
         self._session.add(model)

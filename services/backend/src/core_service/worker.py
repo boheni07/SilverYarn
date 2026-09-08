@@ -5,6 +5,12 @@
 FastAPI 프로세스와 달리 요청 스코프의 `Depends(get_db)`가 없으므로, 잡 함수 안에서
 직접 세션을 열고 커밋/롤백까지 책임진다(core/db.py의 get_db() 주석 참조 — 커밋을
 빼먹으면 아무것도 저장되지 않는다).
+
+⚠️ **sync_sessions 상태 갱신은 별도의 독립 세션을 쓴다**: 실제 DB로 엔드투엔드
+테스트하다가, 파이프라인 세션이 flush 실패로 poisoned(PendingRollbackError) 된
+뒤 같은 세션으로 상태를 failed로 쓰려다 2차 예외가 나 원인이 가려지는 문제를
+발견했다. `_update_sync_status()`가 매번 새 세션을 열어 즉시 커밋하므로, 파이프라인
+쪽 트랜잭션이 어떻게 되든 상태 기록은 항상 남는다.
 """
 
 import logging
@@ -13,6 +19,7 @@ from typing import Any
 
 from arq.connections import RedisSettings
 
+from core_service.core import model_registry  # noqa: F401  (Base.metadata에 전 테이블 등록)
 from core_service.core.clients.embedding_client import EmbeddingClient
 from core_service.core.clients.graph_client import GraphClient
 from core_service.core.clients.llm_client import LLMClient
@@ -36,10 +43,25 @@ from core_service.modules.sync.application.upload_pipeline_service import (
     UploadPipelineInput,
     UploadPipelineService,
 )
+from core_service.modules.sync.domain.sync_session import SyncStatus
 from core_service.modules.sync.infrastructure.sync_repository import SyncSessionRepository
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
+
+
+async def _update_sync_status(session_id: uuid.UUID, status: SyncStatus) -> None:
+    """독립 세션 + 즉시 커밋 — 파이프라인 세션의 성공/실패와 무관하게 항상 남는다."""
+    session_factory = get_session_factory()
+    async with session_factory() as status_session:
+        try:
+            await SyncSessionRepository(status_session).update_status(session_id, status)
+            await status_session.commit()
+        except Exception:
+            logger.exception(
+                "sync_sessions 상태 갱신 자체가 실패 — session_id=%s, status=%s", session_id, status
+            )
+            await status_session.rollback()
 
 
 async def process_upload(
@@ -58,11 +80,11 @@ async def process_upload(
     직렬화 편의를 위해 문자열로 받아 여기서 다시 파싱).
     """
     _ = ctx
+    sync_session_id = uuid.UUID(session_id)
     session_factory = get_session_factory()
     async with session_factory() as db_session:
         try:
             pipeline = UploadPipelineService(
-                sync_repo=SyncSessionRepository(db_session),
                 chunk_service=ConversationChunkService(ConversationChunkRepository(db_session)),
                 chapter_service=ChapterService(
                     ChapterRepository(db_session), ChapterRevisionRepository(db_session)
@@ -75,7 +97,7 @@ async def process_upload(
             )
             await pipeline.run(
                 UploadPipelineInput(
-                    sync_session_id=uuid.UUID(session_id),
+                    sync_session_id=sync_session_id,
                     user_id=uuid.UUID(user_id),
                     raw_audio_ref=raw_audio_ref,
                     transcript_on_device=transcript_on_device,
@@ -88,7 +110,10 @@ async def process_upload(
         except Exception:
             logger.exception("process_upload 잡 실패 — session_id=%s", session_id)
             await db_session.rollback()
+            await _update_sync_status(sync_session_id, SyncStatus.FAILED)
             raise
+        else:
+            await _update_sync_status(sync_session_id, SyncStatus.SUCCESS)
 
 
 class WorkerSettings:

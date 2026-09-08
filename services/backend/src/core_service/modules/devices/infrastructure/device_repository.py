@@ -1,7 +1,7 @@
 """devices 테이블 SQLAlchemy 매핑 + Repository — schema.md §5 DDL과 1:1."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import DateTime, ForeignKey, Numeric, String, select
@@ -83,7 +83,7 @@ class DeviceRepository:
             ai_tops=None,
             slm_model_version=None,
             prompt_pack_version=None,
-            installed_at=datetime.now(),
+            installed_at=datetime.now(UTC),
             last_sync_at=None,
         )
         self._session.add(model)

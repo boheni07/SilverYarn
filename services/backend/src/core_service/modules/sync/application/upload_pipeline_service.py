@@ -5,13 +5,16 @@
 **Best-effort 원칙**: STT 재전사·지식추출(LLM)·임베딩(Qdrant)·그래프 적재(Neo4j)는
 전부 아직 존재하지 않는 온프레미스 인프라를 향한 호출이다. 이 서비스는 각 단계를
 개별적으로 try/except로 감싸 실패해도 다음 단계로 진행한다 — 최소한 온디바이스
-전사 그대로 `conversation_chunks`에는 적재되도록 보장한다. sync_sessions.status가
-`failed`가 되는 경우는 청크 적재 자체(DB 쓰기)가 실패했을 때뿐이다.
+전사 그대로 `conversation_chunks`에는 적재되도록 보장한다. `conversation_chunks`
+적재 자체(DB 쓰기)가 실패하면 예외를 그대로 던진다.
 
-**챕터 자동 귀속은 단순화돼 있다**: `PERIOD_TO_CHAPTER_NO`처럼 인생 시기 4개를
-고정 챕터 번호에 매핑한다 — 실제로는 같은 시기 안에서도 여러 챕터로 나뉠 수
-있어야 하므로(예: "유년기 - 고향", "유년기 - 학교") 이 매핑은 Phase 1 최소
-구현이며 다음 스프린트에서 재설계가 필요하다.
+**sync_sessions 상태 갱신은 이 서비스의 책임이 아니다**: 실제 DB로 엔드투엔드
+테스트하다가, 청크 적재 flush 실패로 세션이 "poisoned"(SQLAlchemy 용어로
+PendingRollbackError 상태)된 뒤 같은 세션으로 `sync_sessions.status=failed`를
+쓰려다 2차 예외가 나 원래 오류를 가려버리는 문제를 발견했다. 해결책은 상태
+갱신을 **별도의 독립 세션/트랜잭션**으로 분리하는 것 — 그 책임은 worker.py가
+진다(worker.py의 `_update_sync_status` 참조). 이 서비스는 파이프라인 실행에만
+집중하고 성공/실패 여부는 예외 유무로만 알린다.
 """
 
 import logging
@@ -29,8 +32,6 @@ from core_service.modules.care.application.conversation_chunk_service import (
     ConversationChunkService,
 )
 from core_service.modules.care.domain.conversation_chunk import ConversationChunk, ConversationMode
-from core_service.modules.sync.domain.sync_session import SyncStatus
-from core_service.modules.sync.infrastructure.sync_repository import SyncSessionRepository
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,6 @@ class UploadPipelineInput:
 class UploadPipelineService:
     def __init__(
         self,
-        sync_repo: SyncSessionRepository,
         chunk_service: ConversationChunkService,
         chapter_service: ChapterService,
         stt_client: STTClient,
@@ -77,7 +77,6 @@ class UploadPipelineService:
         vectordb_client: VectorDBClient,
         graph_client: GraphClient,
     ):
-        self._sync_repo = sync_repo
         self._chunks = chunk_service
         self._chapters = chapter_service
         self._stt = stt_client
@@ -87,33 +86,25 @@ class UploadPipelineService:
         self._graph = graph_client
 
     async def run(self, data: UploadPipelineInput) -> ConversationChunk:
-        """전체 파이프라인 1회 실행. 청크 적재 자체가 실패하면 예외를 다시 던지고
-        sync_sessions를 failed로 남긴다 — 그 외 단계 실패는 로그만 남기고 계속한다.
+        """전체 파이프라인 1회 실행. `conversation_chunks` 적재 자체가 실패하면
+        예외를 그대로 던진다 — 세션/트랜잭션 처리는 호출자(worker.py) 책임이다.
         """
         transcript_server = await self._safe_transcribe(data.raw_audio_ref, data.transcript_on_device)
         knowledge = await self._safe_extract_knowledge(transcript_server)
 
-        try:
-            chunk = await self._chunks.record_chunk(
-                user_id=data.user_id,
-                raw_audio_ref=data.raw_audio_ref,
-                transcript_on_device=data.transcript_on_device,
-                transcript_server=transcript_server,
-                mode=data.mode,
-                session_id=data.device_session_id,
-                turn_id=data.turn_id,
-                meta_period=knowledge.get("period"),
-                meta_people=knowledge.get("people"),
-                meta_place=knowledge.get("place"),
-                meta_emotion=knowledge.get("emotion"),
-            )
-        except Exception:
-            logger.exception(
-                "conversation_chunk 적재 실패 — session_id=%s (치명적, 파이프라인 중단)",
-                data.sync_session_id,
-            )
-            await self._sync_repo.update_status(data.sync_session_id, SyncStatus.FAILED)
-            raise
+        chunk = await self._chunks.record_chunk(
+            user_id=data.user_id,
+            raw_audio_ref=data.raw_audio_ref,
+            transcript_on_device=data.transcript_on_device,
+            transcript_server=transcript_server,
+            mode=data.mode,
+            session_id=data.device_session_id,
+            turn_id=data.turn_id,
+            meta_period=knowledge.get("period"),
+            meta_people=knowledge.get("people"),
+            meta_place=knowledge.get("place"),
+            meta_emotion=knowledge.get("emotion"),
+        )
 
         embedding_id = await self._safe_embed_and_upsert(chunk, transcript_server)
         graph_node_ref = await self._safe_upsert_graph(chunk, knowledge)
@@ -123,7 +114,6 @@ class UploadPipelineService:
         transcript_for_chapter = transcript_server or data.transcript_on_device
         await self._safe_update_chapter(data.user_id, knowledge, transcript_for_chapter)
 
-        await self._sync_repo.update_status(data.sync_session_id, SyncStatus.SUCCESS)
         return chunk
 
     # --- best-effort 단계들: 실패해도 파이프라인을 막지 않는다 ---

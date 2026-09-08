@@ -1,7 +1,7 @@
 """ConversationChunkService 유닛 테스트 — 페이크 Repository로 DB 없이 Application 계층 검증."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -68,7 +68,7 @@ class FakeConversationChunkRepository:
             turn_id=turn_id,
             mode=mode,
             assistant_response=assistant_response,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
         )
         self._store[chunk.id] = chunk
         return chunk

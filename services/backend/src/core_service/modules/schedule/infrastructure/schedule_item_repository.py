@@ -1,7 +1,7 @@
 """schedule_items 테이블 SQLAlchemy 매핑 + Repository — schema.md §5 DDL과 1:1."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, ForeignKey, SmallInteger, String, select
 from sqlalchemy import Enum as SAEnum
@@ -113,7 +113,7 @@ class ScheduleItemRepository:
             raise LookupError(f"schedule_item {schedule_item_id} not found")
         model.status = status.value
         model.decline_reason = decline_reason
-        model.responded_at = datetime.now()
+        model.responded_at = datetime.now(UTC)
         await self._session.flush()
         return model.to_domain()
 

@@ -9,7 +9,7 @@ root인 api 레이어 책임, structure.md §2 "모듈 간 재사용" 참조). �
 
 import secrets
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from core_service.core.errors import ApiError
 from core_service.modules.invitations.domain.invitation import (
@@ -37,7 +37,7 @@ class InvitationService:
         if not contact or len(contact) > 100:
             raise ApiError("VALIDATION_ERROR", "contact는 1~100자여야 합니다.")
         token = secrets.token_urlsafe(32)
-        expires_at = datetime.now() + timedelta(days=DEFAULT_EXPIRY_DAYS)
+        expires_at = datetime.now(UTC) + timedelta(days=DEFAULT_EXPIRY_DAYS)
         return await self._repo.create(
             user_id=user_id,
             invited_by=invited_by,

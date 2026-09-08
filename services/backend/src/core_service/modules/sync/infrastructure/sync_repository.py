@@ -1,7 +1,7 @@
 """sync_sessions 테이블 SQLAlchemy 매핑 + Repository — schema.md §5 DDL과 1:1."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy import Enum as SAEnum
@@ -61,7 +61,7 @@ class SyncSessionRepository:
             status=SyncStatus.RETRYING.value,  # 잡 큐 등록 직후 상태 — worker가 처리 후 갱신
             checksum=checksum,
             retry_count=0,
-            started_at=datetime.now(),
+            started_at=datetime.now(UTC),
             finished_at=None,
         )
         self._session.add(model)
@@ -81,6 +81,6 @@ class SyncSessionRepository:
         if increment_retry:
             model.retry_count += 1
         if status in (SyncStatus.SUCCESS, SyncStatus.FAILED):
-            model.finished_at = datetime.now()
+            model.finished_at = datetime.now(UTC)
         await self._session.flush()
         return model.to_domain()

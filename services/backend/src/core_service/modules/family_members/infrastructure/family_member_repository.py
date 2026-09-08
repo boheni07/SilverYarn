@@ -1,7 +1,7 @@
 """family_members 테이블 SQLAlchemy 매핑 + Repository — schema.md §5 DDL과 1:1."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, select
 from sqlalchemy import Enum as SAEnum
@@ -71,7 +71,7 @@ class FamilyMemberRepository:
             name=name,
             contact=contact,
             two_factor_enabled=False,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
         )
         self._session.add(model)
         await self._session.flush()

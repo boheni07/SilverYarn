@@ -7,7 +7,7 @@ Append-Only 엔티티다(sync-contract.md §3 — 충돌정책 표에서도 "충
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import ARRAY, DateTime, ForeignKey, Integer, String, Text, select
@@ -150,7 +150,7 @@ class ConversationChunkRepository:
             turn_id=turn_id,
             mode=mode.value if mode else None,
             assistant_response=assistant_response,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
         )
         self._session.add(model)
         await self._session.flush()

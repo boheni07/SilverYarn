@@ -1,7 +1,7 @@
 """ScheduleItemService 유닛 테스트 — 페이크 Repository로 DB 없이 Application 계층 검증."""
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -56,7 +56,7 @@ class FakeScheduleItemRepository:
         item = self._store[schedule_item_id]
         item.status = status
         item.decline_reason = decline_reason
-        item.responded_at = datetime.now()
+        item.responded_at = datetime.now(UTC)
         return item
 
     async def schedule_next_reminder(
@@ -77,7 +77,7 @@ async def test_create_schedule_item_succeeds(service: ScheduleItemService) -> No
     item = await service.create_schedule_item(
         user_id=uuid.uuid4(),
         kind=ScheduleKind.MEDICATION,
-        due_at=datetime.now() + timedelta(hours=1),
+        due_at=datetime.now(UTC) + timedelta(hours=1),
         description="혈압약",
     )
     assert item.status == ScheduleStatus.PENDING
@@ -89,7 +89,7 @@ async def test_create_schedule_item_rejects_long_description(service: ScheduleIt
         await service.create_schedule_item(
             user_id=uuid.uuid4(),
             kind=ScheduleKind.APPOINTMENT,
-            due_at=datetime.now(),
+            due_at=datetime.now(UTC),
             description="x" * 301,
         )
     assert exc_info.value.code == "VALIDATION_ERROR"
@@ -97,7 +97,7 @@ async def test_create_schedule_item_rejects_long_description(service: ScheduleIt
 
 async def test_respond_confirmed_succeeds(service: ScheduleItemService) -> None:
     item = await service.create_schedule_item(
-        user_id=uuid.uuid4(), kind=ScheduleKind.APPOINTMENT, due_at=datetime.now()
+        user_id=uuid.uuid4(), kind=ScheduleKind.APPOINTMENT, due_at=datetime.now(UTC)
     )
     result = await service.respond(item.id, ScheduleStatus.CONFIRMED)
     assert result.status == ScheduleStatus.CONFIRMED
@@ -106,7 +106,7 @@ async def test_respond_confirmed_succeeds(service: ScheduleItemService) -> None:
 
 async def test_respond_declined_without_reason_rejected(service: ScheduleItemService) -> None:
     item = await service.create_schedule_item(
-        user_id=uuid.uuid4(), kind=ScheduleKind.APPOINTMENT, due_at=datetime.now()
+        user_id=uuid.uuid4(), kind=ScheduleKind.APPOINTMENT, due_at=datetime.now(UTC)
     )
     with pytest.raises(ApiError) as exc_info:
         await service.respond(item.id, ScheduleStatus.DECLINED)
@@ -115,7 +115,7 @@ async def test_respond_declined_without_reason_rejected(service: ScheduleItemSer
 
 async def test_respond_declined_with_reason_succeeds(service: ScheduleItemService) -> None:
     item = await service.create_schedule_item(
-        user_id=uuid.uuid4(), kind=ScheduleKind.APPOINTMENT, due_at=datetime.now()
+        user_id=uuid.uuid4(), kind=ScheduleKind.APPOINTMENT, due_at=datetime.now(UTC)
     )
     result = await service.respond(item.id, ScheduleStatus.DECLINED, decline_reason="몸이 안 좋아서")
     assert result.status == ScheduleStatus.DECLINED
@@ -124,7 +124,7 @@ async def test_respond_declined_with_reason_succeeds(service: ScheduleItemServic
 
 async def test_respond_with_pending_status_rejected(service: ScheduleItemService) -> None:
     item = await service.create_schedule_item(
-        user_id=uuid.uuid4(), kind=ScheduleKind.APPOINTMENT, due_at=datetime.now()
+        user_id=uuid.uuid4(), kind=ScheduleKind.APPOINTMENT, due_at=datetime.now(UTC)
     )
     with pytest.raises(ApiError) as exc_info:
         await service.respond(item.id, ScheduleStatus.PENDING)
@@ -133,7 +133,7 @@ async def test_respond_with_pending_status_rejected(service: ScheduleItemService
 
 async def test_respond_already_responded_raises_conflict(service: ScheduleItemService) -> None:
     item = await service.create_schedule_item(
-        user_id=uuid.uuid4(), kind=ScheduleKind.APPOINTMENT, due_at=datetime.now()
+        user_id=uuid.uuid4(), kind=ScheduleKind.APPOINTMENT, due_at=datetime.now(UTC)
     )
     await service.respond(item.id, ScheduleStatus.CONFIRMED)
     with pytest.raises(ApiError) as exc_info:
@@ -143,9 +143,9 @@ async def test_respond_already_responded_raises_conflict(service: ScheduleItemSe
 
 async def test_schedule_next_reminder_increments_count(service: ScheduleItemService) -> None:
     item = await service.create_schedule_item(
-        user_id=uuid.uuid4(), kind=ScheduleKind.MEDICATION, due_at=datetime.now()
+        user_id=uuid.uuid4(), kind=ScheduleKind.MEDICATION, due_at=datetime.now(UTC)
     )
-    next_time = datetime.now() + timedelta(minutes=30)
+    next_time = datetime.now(UTC) + timedelta(minutes=30)
     result = await service.schedule_next_reminder(item.id, next_time)
     assert result.remind_count == 1
     assert result.next_remind_at == next_time
@@ -160,8 +160,12 @@ async def test_get_schedule_item_not_found(service: ScheduleItemService) -> None
 async def test_list_schedule_items_filters_by_user(service: ScheduleItemService) -> None:
     user_id = uuid.uuid4()
     other_id = uuid.uuid4()
-    await service.create_schedule_item(user_id=user_id, kind=ScheduleKind.MEDICATION, due_at=datetime.now())
-    await service.create_schedule_item(user_id=other_id, kind=ScheduleKind.MEDICATION, due_at=datetime.now())
+    await service.create_schedule_item(
+        user_id=user_id, kind=ScheduleKind.MEDICATION, due_at=datetime.now(UTC)
+    )
+    await service.create_schedule_item(
+        user_id=other_id, kind=ScheduleKind.MEDICATION, due_at=datetime.now(UTC)
+    )
     items = await service.list_schedule_items_for_user(user_id)
     assert len(items) == 1
     assert items[0].user_id == user_id

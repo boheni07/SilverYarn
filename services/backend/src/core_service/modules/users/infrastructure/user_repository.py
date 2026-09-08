@@ -1,7 +1,7 @@
 """users 테이블 SQLAlchemy 매핑 + Repository — schema.md §5 DDL과 1:1."""
 
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import Date, DateTime, String
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
@@ -49,8 +49,8 @@ class UserRepository:
             name=name,
             birth_date=birth_date,
             primary_device_id=None,
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
         self._session.add(model)
         await self._session.flush()
@@ -61,5 +61,5 @@ class UserRepository:
         if model is None:
             raise LookupError(f"user {user_id} not found")
         model.primary_device_id = device_id
-        model.updated_at = datetime.now()
+        model.updated_at = datetime.now(UTC)
         await self._session.flush()

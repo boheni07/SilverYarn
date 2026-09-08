@@ -1,7 +1,7 @@
 """InvitationService 유닛 테스트 — 페이크 Repository로 DB 없이 Application 계층 검증."""
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -41,7 +41,7 @@ class FakeInvitationRepository:
             role=role,
             token=token,
             status=InvitationStatus.PENDING,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
             expires_at=expires_at,
         )
         self._store[invitation.id] = invitation
@@ -69,7 +69,7 @@ async def test_create_invitation_generates_pending_with_token(service: Invitatio
     )
     assert invitation.status == InvitationStatus.PENDING
     assert len(invitation.token) > 20
-    assert invitation.expires_at > datetime.now()
+    assert invitation.expires_at > datetime.now(UTC)
 
 
 async def test_create_invitation_rejects_empty_contact(service: InvitationService) -> None:
@@ -112,7 +112,7 @@ async def test_validate_and_consume_marks_expired_lazily(
     )
     # 이미 만료된 것처럼 시간 조작 (실제로는 DEFAULT_EXPIRY_DAYS 경과)
     stored = await repo.get_by_id(invitation.id)
-    stored.expires_at = datetime.now() - timedelta(seconds=1)
+    stored.expires_at = datetime.now(UTC) - timedelta(seconds=1)
 
     with pytest.raises(ApiError) as exc_info:
         await service.validate_and_consume(invitation.token)

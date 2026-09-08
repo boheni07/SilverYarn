@@ -1,7 +1,7 @@
 """chapters 테이블 SQLAlchemy 매핑 + Repository — schema.md §5 DDL과 1:1."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, SmallInteger, String, Text, select
 from sqlalchemy import Enum as SAEnum
@@ -93,7 +93,7 @@ class ChapterRepository:
             model.period = period.value
             model.body_text = body_text
             model.version += 1
-            model.updated_at = datetime.now()
+            model.updated_at = datetime.now(UTC)
         else:
             model = ChapterModel(
                 id=uuid.uuid4(),
@@ -104,7 +104,7 @@ class ChapterRepository:
                 body_text=body_text,
                 status=ChapterStatus.DRAFT.value,
                 version=1,
-                updated_at=datetime.now(),
+                updated_at=datetime.now(UTC),
             )
             self._session.add(model)
         await self._session.flush()
@@ -119,6 +119,6 @@ class ChapterRepository:
         model.status = status.value
         if bump_version:
             model.version += 1
-        model.updated_at = datetime.now()
+        model.updated_at = datetime.now(UTC)
         await self._session.flush()
         return model.to_domain()

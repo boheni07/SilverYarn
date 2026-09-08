@@ -1,7 +1,7 @@
 """UserService 유닛 테스트 — 실 DB 없이 Repository를 페이크로 대체(Domain/Application 계층 테스트)."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -23,8 +23,8 @@ class FakeUserRepository:
             name=name,
             birth_date=birth_date,
             primary_device_id=None,
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
         self._store[user.id] = user
         return user
