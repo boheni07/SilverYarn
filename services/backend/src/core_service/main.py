@@ -19,6 +19,7 @@ from core_service.modules.family_members.api.v1.family_members import (
     router as family_members_router,
 )
 from core_service.modules.invitations.api.v1.invitations import router as invitations_router
+from core_service.modules.photos.api.v1.photos import router as photos_router
 from core_service.modules.schedule.api.v1.schedule_items import router as schedule_items_router
 from core_service.modules.sync.api.v1.sync import router as sync_router
 from core_service.modules.users.api.v1.users import router as users_router
@@ -48,6 +49,7 @@ app.include_router(family_members_router, prefix=settings.api_prefix)
 app.include_router(invitations_router, prefix=settings.api_prefix)
 app.include_router(conversation_chunks_router, prefix=settings.api_prefix)
 app.include_router(schedule_items_router, prefix=settings.api_prefix)
+app.include_router(photos_router, prefix=settings.api_prefix)
 
 
 @app.get("/health")

@@ -95,6 +95,9 @@ _UPGRADE_STATEMENTS: list[str] = [
     );
     """,
     "CREATE TYPE uploader_type AS ENUM ('family', 'self');",
+    # photos 모듈 완성(2026-09-08) — sync-contract.md §4 Presigned URL 흐름이 이미
+    # 전제하던 상태값인데 schema.md §3.6에 빠져 있던 걸 발견해 추가(schema.md v1.6).
+    "CREATE TYPE photo_upload_status AS ENUM ('pending_upload', 'uploaded');",
     "CREATE TYPE recall_status AS ENUM ('pending', 'completed');",
     "CREATE TYPE placement_status AS ENUM ('proposed', 'confirmed');",
     "CREATE TYPE quality_flag AS ENUM ('ok', 'blurry', 'inappropriate', 'unreviewed');",
@@ -103,6 +106,7 @@ _UPGRADE_STATEMENTS: list[str] = [
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       uploader_type uploader_type NOT NULL,
+      status photo_upload_status NOT NULL DEFAULT 'pending_upload',
       storage_ref VARCHAR(500) NOT NULL,
       caption VARCHAR(300),
       year_tag SMALLINT,
@@ -319,6 +323,7 @@ _DOWNGRADE_STATEMENTS: list[str] = [
     "DROP TYPE IF EXISTS quality_flag;",
     "DROP TYPE IF EXISTS placement_status;",
     "DROP TYPE IF EXISTS recall_status;",
+    "DROP TYPE IF EXISTS photo_upload_status;",
     "DROP TYPE IF EXISTS uploader_type;",
     "DROP TABLE IF EXISTS chapter_revisions;",
     "DROP TYPE IF EXISTS revision_action;",

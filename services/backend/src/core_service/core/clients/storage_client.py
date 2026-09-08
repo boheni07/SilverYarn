@@ -1,0 +1,45 @@
+"""MinIO(S3 호환) Object Storage 클라이언트 — sync-contract.md §4 "사진 업로드 —
+Presigned URL 흐름"의 서버측.
+
+이 디렉터리의 다른 클라이언트(STT/Embedding/LLM)와 달리 MinIO는 실제로
+로컬 docker-compose에 떠 있고(infra/docker-compose.yml) SDK 계약도 추정이 아니다
+— Qdrant/Neo4j와 같은 부류(실 SDK 확정)로 취급한다.
+
+⚠️ `presigned_put_object()`는 로컬 HMAC 서명 계산만 하고 네트워크 호출을 하지
+않는다(minio-py 구현) — async 핸들러에서 그대로 불러도 이벤트 루프를 막지 않는다.
+반면 `bucket_exists`/`make_bucket`은 실제 HTTP 요청이라 `asyncio.to_thread`로
+감쌌다.
+"""
+
+import asyncio
+from datetime import timedelta
+
+from minio import Minio
+
+from core_service.core.config import get_settings
+
+
+class StorageClient:
+    def __init__(self) -> None:
+        settings = get_settings()
+        self._client = Minio(
+            settings.storage_endpoint,
+            access_key=settings.storage_access_key,
+            secret_key=settings.storage_secret_key,
+            secure=settings.storage_secure,
+        )
+        self._bucket = settings.storage_bucket_photos
+
+    async def ensure_bucket(self) -> None:
+        """버킷이 없으면 만든다 — 매 업로드 요청마다 부를 필요는 없지만(네트워크 호출),
+        지금은 별도 앱 startup 훅이 없어 PhotoService가 최초 요청 시점에 호출한다."""
+
+        def _ensure() -> None:
+            if not self._client.bucket_exists(self._bucket):
+                self._client.make_bucket(self._bucket)
+
+        await asyncio.to_thread(_ensure)
+
+    def presigned_put_url(self, object_name: str, expires: timedelta = timedelta(minutes=15)) -> str:
+        """sync-contract.md §4 1단계 응답의 `upload_url` — 15분 만료 문서 스펙 그대로."""
+        return self._client.presigned_put_object(self._bucket, object_name, expires=expires)

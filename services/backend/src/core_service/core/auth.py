@@ -39,3 +39,18 @@ async def require_device_token(x_device_token: str | None = Header(default=None)
     if not x_device_token:
         raise ApiError("UNAUTHORIZED", "기기 토큰이 필요합니다.")
     return x_device_token
+
+
+async def require_auth_or_device_token(
+    authorization: str | None = Header(default=None),
+    x_device_token: str | None = Header(default=None),
+) -> AuthContext | str:
+    """ "2FA + Role(family) 또는 Device Token" 인가(design.md §4.2 photos/upload-url,
+    photos/{id}/complete) — 가족이 웹콘솔에서 사진을 올릴 수도, 어르신 모바일 기기가
+    회고 중 촬영한 사진을 직접 올릴 수도 있어 둘 중 하나만 있으면 통과시킨다.
+    """
+    if authorization:
+        return await require_auth(authorization)
+    if x_device_token:
+        return await require_device_token(x_device_token)
+    raise ApiError("UNAUTHORIZED", "인증 토큰 또는 기기 토큰이 필요합니다.")

@@ -4,7 +4,7 @@
 
 **Project**: 은빛실타래 (SilverYarn)
 **Date**: 2026-09-07
-**Version**: 1.5 (Do 단계 — apps/admin 전체 기기 통합 모니터링용 idx_sync_started_at 인덱스 추가)
+**Version**: 1.6 (Do 단계 — photos 모듈 완성, status 컬럼 신규)
 **Source**: Design 문서 §3 Data Model 초안 + UI/UX 화면설계서 필드 단위 대조 결과 반영
 **용어 정의**: [glossary.md](./glossary.md) 참조
 
@@ -17,6 +17,8 @@
 > **v1.4 변경 요약** (3차 design-validator 검증 H-1 반영, 2026-09-07): decisions.md #34에서 `assistant_response`를 PII 암호화 대상으로 이미 확정했으나 §5 PII 컬럼 목록에는 반영되지 않았던 누락을 정정 — 목록에 `assistant_response` 추가.
 >
 > **v1.5 변경 요약** (Do 단계, 2026-09-08): apps/admin "전체 기기 통합 모니터링" 화면용 `idx_sync_started_at ON sync_sessions(started_at DESC)` 인덱스 신규 — 기기로 필터하지 않는 전역 정렬 쿼리는 기존 `idx_sync_device(device_id, started_at DESC)`를 못 쓰기 때문(선두 컬럼 불일치).
+>
+> **v1.6 변경 요약** (Do 단계 — photos 모듈 완성, 2026-09-08): `photos`에 `status` 컬럼 신규(`pending_upload`/`uploaded`, 기본값 `pending_upload`) — [sync-contract.md §4](../02-design/sync-contract.md#4-사진-업로드--presigned-url-흐름-be-b2)의 "3단계 확인 콜백이 없으면 `photos` 행은 `status=pending_upload`로 남고" 문장이 이미 전제하고 있던 컬럼인데 §3.6 속성 표에는 빠져 있던 걸 실제 구현 중 발견 — 문서가 이미 확정해 둔 흐름을 코드로 옮기며 정정했다.
 
 ---
 
@@ -156,6 +158,7 @@
 | id | UUID | Y | PK |
 | user_id | UUID | Y | FK → users.id |
 | uploader_type | enum(`family`,`self`) | Y | 업로더 유형 |
+| status | enum(`pending_upload`,`uploaded`) | Y | *v1.6 신규* — Presigned URL 발급 직후 `pending_upload`, `POST /photos/{id}/complete` 확인 콜백 후 `uploaded`(기본값 `pending_upload`, sync-contract.md §4) |
 | storage_ref | varchar(500) | Y | MinIO Object Storage 경로 |
 | caption | varchar(300) | N | 사진 설명 — *v1.1 신규, WF3/WU2 화면 요구 반영* |
 | year_tag | smallint | N | 예상 챕터 매핑용 연도 태그 |
@@ -473,6 +476,7 @@ CREATE TABLE chapter_revisions (
 );
 
 CREATE TYPE uploader_type AS ENUM ('family', 'self');
+CREATE TYPE photo_upload_status AS ENUM ('pending_upload', 'uploaded');  -- v1.6 신규
 CREATE TYPE recall_status AS ENUM ('pending', 'completed');
 CREATE TYPE placement_status AS ENUM ('proposed', 'confirmed');
 CREATE TYPE quality_flag AS ENUM ('ok', 'blurry', 'inappropriate', 'unreviewed');
@@ -480,6 +484,7 @@ CREATE TABLE photos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   uploader_type uploader_type NOT NULL,
+  status photo_upload_status NOT NULL DEFAULT 'pending_upload',  -- v1.6 신규
   storage_ref VARCHAR(500) NOT NULL,
   caption VARCHAR(300),
   year_tag SMALLINT,

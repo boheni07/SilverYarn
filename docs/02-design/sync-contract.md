@@ -2,7 +2,7 @@
 
 > Phase 4 보강 산출물 — 3차 design-validator 검증 H-3, CTO Enterprise B1/백엔드 BE-B1/BE-B2/BE-B4 반영. `workflow-diagrams.md` §3(시퀀스)·§17(충돌 플로우차트)·§20(미결 영향)에서 각주로 예고된 계약 산출물의 본문이다.
 
-**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-07 · **Version**: 0.1
+**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-08 · **Version**: 0.2
 
 > 이 문서는 `docs/02-design/features/silveryarn-platform.design.md` §4(API Specification)를 동기화 도메인에 한해 상세화한다. 충돌하면 design.md가 아니라 **이 문서가 동기화 관련 SoR**이며, design.md §4.2/§6.1은 이 문서의 요약만 담는다(design.md v0.6에서 갱신 예정).
 
@@ -90,7 +90,16 @@ Auth: Device Token
 ```
 1) POST /api/v1/photos/upload-url
    Auth: 2FA + Role(family) 또는 Device Token
-   Request: { "content_type": "image/jpeg", "file_size": 482913 }
+   Request: {
+     "user_id": "...-uuid",       // 이 사진이 속할 어르신 계정 — v0.2에서 보강.
+                                    // POST /devices 등 이 프로젝트 다른 엔드포인트와
+                                    // 동일하게 소유자 ID를 요청 본문에 명시한다
+                                    // (photos.user_id NOT NULL이라 서버가 반드시
+                                    // 알아야 하는데 원래 예시엔 빠져 있었다)
+     "uploader_type": "family",   // "family" | "self" — v0.2에서 보강
+     "content_type": "image/jpeg",
+     "file_size": 482913
+   }
    Response 200:
    {
      "data": {
@@ -149,3 +158,4 @@ design.md §4.1의 표준 에러 코드에 아래 2종을 추가한다 (L-12):
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 0.1 | 2026-09-07 | 3차 design-validator 검증 H-3 반영 — 신규 작성. 비동기 업로드 계약(§2), 엔티티별 충돌정책(§3, Server-Wins 전면적용 폐기), Presigned URL 업로드(§4), 증분 다운로드(§5), 에러코드 추가(§6) | NUBiz AX Initiative |
+| 0.2 | 2026-09-08 | photos 모듈 실제 구현 중 발견 — §4 1단계 요청 예시에 `user_id`/`uploader_type` 보강(photos.user_id NOT NULL이라 서버가 반드시 알아야 하는데 원래 예시엔 빠져 있었음, schema.md v1.6과 함께) | NUBiz AX Initiative |
