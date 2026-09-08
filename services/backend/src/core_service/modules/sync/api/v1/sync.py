@@ -54,10 +54,13 @@ class SyncSessionStatusResponse(BaseModel):
 
 class SyncSessionResponse(BaseModel):
     """apps/admin 동기화 모니터링용 목록 응답 — 위 SyncSessionStatusResponse(기기 자신의
-    폴링용)와 달리 device_id/direction까지 보여준다."""
+    폴링용)와 달리 device_id/direction까지 보여준다. device_display_id는 sync 모듈이
+    devices 테이블을 직접 조인하지 않고(deps.py를 통한 애플리케이션 레벨 조합) 라우터에서
+    채워 넣는다 — 기기가 삭제됐다면(흔치 않지만 FK CASCADE로 가능) null."""
 
     id: uuid.UUID
     device_id: uuid.UUID
+    device_display_id: str | None = None
     direction: str
     status: str
     retry_count: int
@@ -123,6 +126,7 @@ async def list_sessions(
     device_id: uuid.UUID | None = None,
     status: SyncStatus | None = None,
     service: SyncService = Depends(_service),
+    device_service: DeviceService = Depends(get_device_service),
     # Admin — TODO: role 체크 강화 (devices.py list_user_devices와 동일 패턴)
     _ctx: AuthContext = Depends(require_auth),
 ) -> PaginatedResponse[SyncSessionResponse]:
@@ -132,15 +136,22 @@ async def list_sessions(
     "전체 기기 통합 모니터링"(신규, 2026-09-08)이 된다. `status`로 성공/실패/재시도중만
     골라볼 수 있다. 위 /sessions/{session_id}(기기 자신의 폴링용, Device Token 인증)와는
     별개의 관리자 조회 경로다.
+
+    device_display_id는 이 페이지에 등장하는 기기 ID들만 모아 devices 모듈에
+    한 번의 IN 쿼리로 물어본다(N+1 아님) — sync 모듈이 devices 테이블을 직접
+    조인하지 않는다는 원칙(structure.md §2)을 지키면서도 매 세션마다 개별
+    조회하지 않도록.
     """
     sessions, total = await service.list_sessions(
         page=page, page_size=page_size, device_id=device_id, status=status
     )
+    display_ids = await device_service.get_display_ids([s.device_id for s in sessions])
     return PaginatedResponse(
         data=[
             SyncSessionResponse(
                 id=s.id,
                 device_id=s.device_id,
+                device_display_id=display_ids.get(s.device_id),
                 direction=s.direction.value,
                 status=s.status.value,
                 retry_count=s.retry_count,

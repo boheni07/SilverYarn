@@ -15,6 +15,12 @@ class DeviceService:
     async def list_devices_for_user(self, user_id: uuid.UUID) -> list[Device]:
         return await self._repo.list_by_user(user_id)
 
+    async def get_display_ids(self, device_ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
+        """apps/admin 전체 기기 통합 모니터링 화면용 — device_id → display_id 매핑.
+        조회 후 삭제된 기기가 섞여 있어도(FK CASCADE라 흔치 않지만) 예외 없이 빠진다."""
+        devices = await self._repo.list_by_ids(device_ids)
+        return {device.id: device.display_id for device in devices}
+
     async def get_device(self, device_id: uuid.UUID) -> Device:
         device = await self._repo.get_by_id(device_id)
         if device is None:

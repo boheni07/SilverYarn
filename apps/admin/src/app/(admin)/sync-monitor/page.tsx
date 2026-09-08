@@ -116,7 +116,7 @@ export default async function SyncMonitorPage({ searchParams }: SyncMonitorPageP
                       <>
                         {" · "}
                         <Link href={`/sync-monitor?deviceId=${session.deviceId}`} className="underline">
-                          기기 {session.deviceId.slice(0, 8)}
+                          {session.deviceDisplayId ?? `기기 ${session.deviceId.slice(0, 8)}`}
                         </Link>
                       </>
                     )}

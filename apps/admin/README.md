@@ -54,6 +54,10 @@ npm run build
   실제로 클릭**해 1건으로 좁혀지는 것 확인 → **개별 세션의 "기기 XXXXXXXX" 링크를
   실제로 클릭**해 그 기기 단독 이력(2건)으로 드릴다운 — 전체 모니터링 ↔ 기기별
   모니터링이 같은 화면·같은 백엔드 엔드포인트로 왕복되는 것까지 클릭으로 확인했다.
+- (같은 날 또 후속) `MB-3001`/`MB-3002` 표시명을 가진 기기 2대에 동기화 이력을 심고
+  `/sync-monitor`(전체 모드)를 열어 세션 행에 **UUID 대신 `MB-3001`/`MB-3002`가
+  실제로 렌더링**되는 것 확인 — curl로 `GET /sync/sessions` 응답의 `device_display_id`
+  필드가 정확한 값을 담고 있는 것도 먼저 확인했다.
 
 ## 스캐폴딩 중 발견한 것 — 관리자 조회용 백엔드 엔드포인트 신설
 
@@ -112,12 +116,21 @@ Seq Scan을 감수한다(사용자 수 자체가 온프레미스 배포 특성�
 클릭하면 그 기기 단독 이력으로 드릴다운한다. `services/sync.ts`의 `listDeviceSyncSessions`
 (기기 필수)를 `listSyncSessions`(device_id/status 모두 선택)로 일반화했다.
 
+### 전체 기기 통합 모니터링에 기기 표시명(displayId) 노출 (2026-09-08)
+
+세션 행이 `deviceId`(UUID 앞 8자) 대신 `MB-1042` 같은 표시명을 보여준다. sync 모듈은
+devices 테이블을 직접 조인하지 않는다는 원칙(structure.md §2)을 지키면서 N+1도
+피하려고, `DeviceRepository.list_by_ids()`(IN 쿼리 한 번) + `DeviceService.get_display_ids()`
+를 신설해 `sync/api/v1/sync.py`의 `list_sessions` 라우터가 devices 모듈을
+`deps.py`(`get_device_service`, 이미 upload 엔드포인트가 쓰던 것)로만 호출한다 —
+그 페이지에 실제로 등장하는 (많아야 page_size개) 기기 ID들만 한 번에 조회한다.
+`SyncSessionResponse.device_display_id`는 기기가 삭제됐으면(FK CASCADE) `null` —
+프론트는 그 경우 기존 UUID 줄임 표시로 자연스럽게 폴백한다.
+`tests/modules/devices/test_device_service.py` 신규(3 테스트).
+
 ## 아직 안 된 것 (의도적 범위 제한)
 
 - **실제 로그인 없음** — apps/web과 동일 이유(Keycloak 붙기 전 임시 진입점).
-- **전체 기기 통합 모니터링에 기기 표시명이 안 보임** — 세션 행에 `deviceId`(UUID
-  앞 8자)만 보이고 `displayId`("MB-1042" 같은)는 안 보인다. 기기 표시명을 붙이려면
-  백엔드에서 device를 조인하거나 프론트에서 N+1 조회를 해야 해서 이번 범위에서 뺐다.
 - **사용자 목록에 검색/필터 없음** — `/users`는 페이지 넘김만 있고 이름 검색은 없다.
   사용자 수가 많아지면 필요해질 기능.
 - `apps/web`과 동일하게 인증·PII 암호화·RBAC는 전부 스텁 상태(`core/auth.py`).

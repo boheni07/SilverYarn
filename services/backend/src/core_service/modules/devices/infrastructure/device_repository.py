@@ -63,6 +63,18 @@ class DeviceRepository:
         result = await self._session.execute(select(DeviceModel).where(DeviceModel.user_id == user_id))
         return [m.to_domain() for m in result.scalars().all()]
 
+    async def list_by_ids(self, device_ids: list[uuid.UUID]) -> list[Device]:
+        """apps/admin 전체 기기 통합 모니터링 화면용 — 동기화 이력 페이지 하나에 등장하는
+        (많아야 page_size개, 보통 그보다 훨씬 적은) 기기 ID들의 display_id를 한 번의
+        IN 쿼리로 조회한다. sync 모듈은 devices 테이블을 직접 조인하지 않는다
+        (structure.md §2 — 모듈은 서로의 infrastructure/를 직접 import하지 않고
+        deps.py 공개 조합 지점만 거친다); 대신 이 메서드를 devices/deps.py를 통해 호출한다.
+        """
+        if not device_ids:
+            return []
+        result = await self._session.execute(select(DeviceModel).where(DeviceModel.id.in_(device_ids)))
+        return [m.to_domain() for m in result.scalars().all()]
+
     async def create(
         self,
         display_id: str,

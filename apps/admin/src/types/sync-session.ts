@@ -6,6 +6,11 @@ export type SyncStatus = "success" | "failed" | "retrying";
 export interface SyncSession {
   id: string;
   deviceId: string;
+  /** DB 컬럼이 아니라 GET /sync/sessions 응답에서만 채워지는 조인 결과 —
+   * sync 모듈이 devices 테이블을 직접 조인하지 않고 라우터에서 devices 모듈의
+   * DeviceService.get_display_ids()를 호출해 붙인다(2026-09-08). 기기가
+   * 삭제됐으면 undefined. */
+  deviceDisplayId?: string;
   direction: SyncDirection;
   status: SyncStatus;
   checksum: string;
