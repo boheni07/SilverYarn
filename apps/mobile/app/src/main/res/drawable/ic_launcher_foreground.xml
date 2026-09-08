@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 실 로고(BI가이드) 교체 전 placeholder — 실타래를 연상시키는 단순 원형. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#F4F2EE"
+        android:pathData="M54,27a27,27 0,1 0,0.1 0z" />
+    <path
+        android:fillColor="#155C6B"
+        android:pathData="M54,39a15,15 0,1 0,0.1 0z" />
+</vector>

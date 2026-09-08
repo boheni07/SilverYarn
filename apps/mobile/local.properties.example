@@ -1,0 +1,10 @@
+# apps/mobile 전용 로컬 설정 — CONVENTIONS.md §4.1 "모바일(Kotlin) 시크릿 관리".
+# 모바일은 .env 대신 이 파일(Git 제외)로 빌드 타임 상수를 주입한다. 실제 파일명은
+# `local.properties`로 저장한다(Android 표준 관례 — sdk.dir도 이 파일에 들어간다).
+#
+# sdk.dir은 Android Studio가 최초 프로젝트 열람 시 자동으로 채워 준다 — 수동으로
+# 적을 필요 없음(환경마다 경로가 다르므로 예시에도 안 넣는다).
+
+# services/backend가 뜬 주소 — apps/web/admin의 NEXT_PUBLIC_API_URL과 동일한
+# 값을 쓴다(127.0.0.1 명시 이유는 apps/web/README.md의 IPv6/localhost 충돌 기록 참조).
+API_BASE_URL=http://127.0.0.1:8000

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 서버 동기화(sync/), STT/LLM 온디바이스라 인터넷은 동기화 시에만 필요 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- 등록 Wi-Fi 접속 즉시 자동 트리거(decisions.md 확정 항목) 판단용 -->
+
+    <!-- 구술 녹음(작가/말벗돌봄 모드), VAD·STT 파이프라인 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- WorkManager 배치 동기화가 재부팅 후에도 예약대로 동작하게 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application
+        android:name=".SilverYarnApplication"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- decisions.md #6 — Device Owner Mode(COSU) 키오스크 잠금의 진입점.
+             zero-touch/QR 프로비저닝 자체(재활용 단말 공장초기화 후 최초 설정 시
+             자동 등록)는 실기기 배포 인프라가 있어야 검증 가능해 이 스캐폴딩
+             범위 밖이다 — 리시버·정책 선언까지만 둔다. -->
+        <receiver
+            android:name=".installmode.SilverYarnDeviceAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin_policies" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>

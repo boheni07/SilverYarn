@@ -4,7 +4,7 @@
 >
 > **Project**: 은빛실타래 (SilverYarn)
 > **Date**: 2026-09-07
-> **Version**: 0.3 (3차 design-validator 검증 반영 — L-7/L-8)
+> **Version**: 0.4 (apps/mobile 스캐폴딩 — device_state.device_id 신규)
 > **Status**: Draft — Do 단계에서 Room Entity로 구현 시 최종 확정
 
 > 서버 `schema.md`가 SoR(전체 마스터 데이터)이며, 본 문서는 온디바이스가 오프라인 동작을 위해 로컬에 보관하는 **서브셋**을 정의한다. 컬럼명은 서버와의 동기화 페이로드 매핑을 쉽게 하기 위해 서버 필드명을 최대한 따른다.
@@ -103,6 +103,7 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 
 | Column | Type | Description |
 |---|---|---|
+| device_id | TEXT NULL | 서버 `devices.id`(UUID) — `POST /devices` 등록 응답을 그대로 저장. `POST /sync/upload` 등 이후 모든 동기화 호출이 이 값을 device_id로 보낸다. *(v0.4 신규 — Room Entity 구현 중 발견: 이 값을 저장할 컬럼이 없으면 등록 이후 어떤 동기화 요청도 자신의 device_id를 알 수 없다는 걸 뒤늦게 발견)* |
 | install_mode | TEXT | `kiosk` \| `normal` — 설치 시 고정, 서버 `devices.install_mode`와 동기화(조회용) |
 | registered_wifi_ssid | TEXT NULL | **로컬 전용, 서버 미전송** ([decisions.md #22](./decisions/silveryarn-platform.decisions.md)) |
 | slm_model_version | TEXT NULL | 탑재된 온디바이스 SLM 버전 — 서버 `devices.slm_model_version`과 동기화(schema.md v1.3), 프롬프트팩 정의는 [design.md §2.11 4단계](../02-design/features/silveryarn-platform.design.md)(Compaction Engine) 참조 *(v0.3: "design.md §2.10"은 에이전트 페르소나 정의 절이라 오참조였던 것을 정정, L-7)* |
@@ -136,3 +137,4 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 | 0.1 | 2026-09-06 | 사용자 제안 반영 초안 — `autobiography_fts` 등 6개 로컬 테이블 정의 | NUBiz AX Initiative |
 | 0.2 | 2026-09-07 | 2차 design-validator 검증 반영 — `autobiography_fts` 컬럼명을 sync 페이로드와 정렬(M-2), `conversations` 4컬럼의 서버 매핑 완료 명시(H-2) | NUBiz AX Initiative |
 | 0.3 | 2026-09-07 | 3차 design-validator 검증 반영 — L-7: §2.6 "§9.3"/"design.md §2.10" 문서명 없는·부정확한 인용을 decisions.md #5/design.md §2.11로 정정. L-8: `response_latency_ms`의 서버 미대응 문제를 sync-contract.md §3(Device-Only, conversation_chunks 메타 병합)으로 해소 | NUBiz AX Initiative |
+| 0.4 | 2026-09-08 | Do 단계 — apps/mobile 스캐폴딩(Room Entity 구현) 중 발견: `device_state`에 `device_id`를 저장할 컬럼이 없어 등록(`POST /devices`) 이후 어떤 동기화 호출도 자기 device_id를 알 수 없었다. §2.6에 `device_id` 컬럼 신규 — 이 문서 서두가 "Room Entity로 구현 시 최종 확정" 상태라고 명시해 둔 대로 실제 구현 중 확정한 항목 | NUBiz AX Initiative |

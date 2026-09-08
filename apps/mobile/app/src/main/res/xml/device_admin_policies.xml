@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- decisions.md #6 Device Owner Mode(COSU)가 요구하는 최소 정책 선언.
+     실제 잠금 강제(lockTask 화이트리스트 등)는 installmode/InstallModeResolver가
+     kiosk 판정을 내린 뒤 DevicePolicyManager로 런타임에 설정한다 — 이 파일은
+     "이 앱이 기기 관리자가 될 수 있다"는 정적 선언일 뿐이다. -->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies>
+        <limit-password />
+        <watch-login />
+        <force-lock />
+        <wipe-data />
+    </uses-policies>
+</device-admin>
