@@ -1,6 +1,12 @@
 # 로컬 개발용 인프라 — structure.md §1, CONVENTIONS.md §4 접두사와 매핑
 # 온프레미스 실 배포(K8s/베어메탈)는 infra/k8s/(아직 스캐폴딩 전, infra-architect 상담 대기)와 별개.
 # 프로덕션 시크릿은 이 파일에 두지 않는다 — 아래 값은 로컬 개발 전용 기본값이다.
+#
+# ⚠️ 호스트 포트는 이 개발 머신에서 Docker에 열 수 있는 범위(9670-9680, 11개)로
+# 고정한다 — 표준 기본 포트(5432 등)를 쓰지 않는다. 컨테이너 내부 포트는 각
+# 이미지 기본값 그대로이며, 호스트 쪽만 재매핑했다. .env.example/.env.local의
+# DB_PORT/REDIS_PORT/VECTORDB_PORT/GRAPH_URI/STORAGE_ENDPOINT와 반드시 짝을
+# 맞춰야 한다(services/backend/core/config.py 기본값도 동일하게 갱신했음).
 
 services:
   postgres:
@@ -10,7 +16,7 @@ services:
       POSTGRES_USER: silveryarn
       POSTGRES_PASSWORD: silveryarn_local_dev
     ports:
-      - "5432:5432"
+      - "9670:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -23,7 +29,7 @@ services:
     # arq 잡 큐 (sync-contract.md §2 비동기 처리 계약)
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "9671:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -34,7 +40,7 @@ services:
     # VECTORDB_ — 하이브리드 서치(BM25+Dense), decisions.md #28
     image: qdrant/qdrant:v1.12.1
     ports:
-      - "6333:6333"
+      - "9672:6333"
     volumes:
       - qdrant_data:/qdrant/storage
 
@@ -44,8 +50,8 @@ services:
     environment:
       NEO4J_AUTH: neo4j/silveryarn_local_dev
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "9673:7474"
+      - "9674:7687"
     volumes:
       - neo4j_data:/data
 
@@ -57,8 +63,8 @@ services:
       MINIO_ROOT_USER: silveryarn
       MINIO_ROOT_PASSWORD: silveryarn_local_dev
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9675:9000"
+      - "9676:9001"
     volumes:
       - minio_data:/data
 

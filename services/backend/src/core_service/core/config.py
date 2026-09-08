@@ -26,14 +26,16 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # --- DB_ (PostgreSQL) ---
+    # 포트 기본값은 표준(5432 등)이 아니라 이 개발 머신에서 Docker에 열 수 있는
+    # 범위(9670-9680)에 맞춘 infra/docker-compose.yml 매핑과 짝을 이룬다.
     db_host: str = Field(default="localhost", alias="DB_HOST")
-    db_port: int = Field(default=5432, alias="DB_PORT")
+    db_port: int = Field(default=9670, alias="DB_PORT")
     db_name: str = Field(default="silveryarn", alias="DB_NAME")
     db_user: str = Field(default="silveryarn", alias="DB_USER")
     db_password: str = Field(default="", alias="DB_PASSWORD")
 
     # --- STORAGE_ (MinIO) ---
-    storage_endpoint: str = Field(default="localhost:9000", alias="STORAGE_ENDPOINT")
+    storage_endpoint: str = Field(default="localhost:9675", alias="STORAGE_ENDPOINT")
     storage_access_key: str = Field(default="", alias="STORAGE_ACCESS_KEY")
     storage_secret_key: str = Field(default="", alias="STORAGE_SECRET_KEY")
     storage_bucket_photos: str = Field(default="silveryarn-photos", alias="STORAGE_BUCKET_PHOTOS")
@@ -41,11 +43,11 @@ class Settings(BaseSettings):
 
     # --- VECTORDB_ (Qdrant) ---
     vectordb_host: str = Field(default="localhost", alias="VECTORDB_HOST")
-    vectordb_port: int = Field(default=6333, alias="VECTORDB_PORT")
+    vectordb_port: int = Field(default=9672, alias="VECTORDB_PORT")
     vectordb_api_key: str | None = Field(default=None, alias="VECTORDB_API_KEY")
 
     # --- GRAPH_ (Neo4j) ---
-    graph_uri: str = Field(default="bolt://localhost:7687", alias="GRAPH_URI")
+    graph_uri: str = Field(default="bolt://localhost:9674", alias="GRAPH_URI")
     graph_user: str = Field(default="neo4j", alias="GRAPH_USER")
     graph_password: str = Field(default="", alias="GRAPH_PASSWORD")
 
@@ -70,7 +72,7 @@ class Settings(BaseSettings):
 
     # --- Worker (arq, sync-contract.md §2) ---
     redis_host: str = Field(default="localhost", alias="REDIS_HOST")
-    redis_port: int = Field(default=6379, alias="REDIS_PORT")
+    redis_port: int = Field(default=9671, alias="REDIS_PORT")
 
     # --- CORS (apps/web 브라우저 요청 허용) ---
     # ⚠️ Server Component의 fetch는 Node 프로세스에서 실행돼 CORS 대상이 아니지만,
