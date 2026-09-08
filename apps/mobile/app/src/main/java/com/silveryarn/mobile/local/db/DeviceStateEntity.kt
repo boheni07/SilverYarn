@@ -20,4 +20,8 @@ data class DeviceStateEntity(
     @ColumnInfo(name = "slm_model_version") val slmModelVersion: String?,
     @ColumnInfo(name = "prompt_pack_version") val promptPackVersion: String?,
     @ColumnInfo(name = "last_sync_at") val lastSyncAt: Long?,
+    // GET /sync/download 응답의 sync_version을 그대로 저장해 다음 since로 되돌려
+    // 보내는 불투명 커서(mobile-schema.md v0.5, sync-contract.md §5) — last_sync_at
+    // (epoch ms)만으로는 서버 발급 형식을 재구성할 수 없어 별도로 둔다.
+    @ColumnInfo(name = "last_sync_version") val lastSyncVersion: String?,
 )

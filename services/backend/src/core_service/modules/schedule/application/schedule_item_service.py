@@ -27,6 +27,10 @@ class ScheduleItemService:
     async def list_schedule_items_for_user(self, user_id: uuid.UUID) -> list[ScheduleItem]:
         return await self._repo.list_by_user(user_id)
 
+    async def list_pending_schedule_items_for_user(self, user_id: uuid.UUID) -> list[ScheduleItem]:
+        """GET /sync/download가 쓰는 조회 — sync-contract.md §5."""
+        return await self._repo.list_pending_by_user(user_id)
+
     async def create_schedule_item(
         self,
         user_id: uuid.UUID,

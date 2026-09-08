@@ -48,6 +48,12 @@ AGP 빌드에 필요한 Android SDK는 없다). 그래서:
   1:1로 맞췄다 — apps/web/admin의 `lib/api/client.ts`와 같은 목적이지만,
   Moshi는 전역 snake_case 변환기가 없어 필드마다 `@Json(name=)`을 명시하는
   Kotlin 관용 방식을 썼다(RetrofitClient.kt 주석 참조).
+- `sync/SyncWorker`는 업로드(대기 중인 대화)뿐 아니라 `GET /sync/download`도
+  실제로 호출해 응답을 로컬 캐시 3곳에 반영한다(2026-09-08, 백엔드 `GET
+  /sync/download` 실제 구현과 짝) — chapter_updates→`AutobiographyFtsStore.upsert()`
+  (FTS5), priority_questions→`QuestionCacheDao.upsertAll()`, schedule_items→
+  `ScheduleCacheDao.upsert()`. 응답의 `sync_version`을 `DeviceStateEntity.lastSyncVersion`
+  (mobile-schema.md v0.5 신규)에 저장해 다음 호출의 `since`로 되돌려 보낸다.
 
 ## 스캐폴딩 중 발견한 문서 갭 — mobile-schema.md 정정
 
@@ -56,6 +62,12 @@ AGP 빌드에 필요한 Android SDK는 없다). 그래서:
 그 값을 저장할 곳이 스키마에 없으면 등록 직후부터 막힌다. mobile-schema.md
 서두가 "Room Entity로 구현 시 최종 확정" 상태라고 명시해 둔 그대로, 이번
 구현 중 `device_id` 컬럼을 추가했다(v0.4).
+
+`GET /sync/download` 실제 연동(SyncWorker) 구현 중 두 번째 갭 발견: 기존
+`last_sync_at`(epoch ms)만으로는 서버가 다음 호출의 `since`로 요구하는
+`sync_version` 문자열(서버 발급 형식, 클라이언트는 몰라도 됨)을 재구성할 수
+없었다 — 받은 값을 그대로 저장해 뒀다 되돌려주는 `last_sync_version` 컬럼을
+추가했다(v0.5).
 
 ## 로컬 개발 준비 (Android Studio 필요)
 
@@ -73,8 +85,9 @@ cp local.properties.example local.properties
 
 - **로컬(Android Studio) 실행·디버깅 검증** — CI(`ktlint`/`test`/`assembleDebug`)는
   그린이지만, 실제 에뮬레이터/실기기에서 앱을 띄워 본 적은 없다. 위 "환경 제약" 참조.
-- **Wi-Fi 등록·자동 동기화 트리거** — `sync/SyncWorker`는 실행 단위(대기 중인
-  대화 업로드)만 정의, 등록 SSID 접속 감지→enqueue 로직은 없음.
+- **Wi-Fi 등록·자동 동기화 트리거** — `sync/SyncWorker`는 실행 단위(대화 업로드
+  + 다운로드 반영)만 정의, 등록 SSID 접속 감지→enqueue 로직은 없음(수동/주기
+  실행 트리거만 있으면 워커 자체는 동작).
 - **Device Token 발급·저장** — erd.md §11 `device_credentials`가 결정 대기 상태라
   `core/auth.py`의 `require_device_token`도 서버 쪽까지 같이 스텁이다.
 - **원본 음성 업로드 계약** — `POST /sync/upload`가 아직 `raw_audio_ref`를 문자열로
@@ -82,6 +95,9 @@ cp local.properties.example local.properties
   URL 등)가 확정되면 `SyncWorker`를 다시 손봐야 한다.
 - **STT/SLM 엔진 실 구현** — 인터페이스만 있고, 실기기 벤치마크(decisions.md #27)
   결과가 나와야 구현체를 고를 수 있다.
+- **온디바이스 FTS5 요약 품질** — `autobiography_fts.summary`는 서버 Compaction
+  Engine(design.md §2.11) 미구현으로 AI 요약이 아니라 `body_text` 원문이 그대로
+  들어온다(`keywords`는 항상 빈 배열) — BM25 검색 자체는 되지만 "요약"은 아직 아니다.
 - **Device Owner Mode 실제 프로비저닝** — 리시버·정책 XML 선언까지만, zero-touch/QR
   자동 등록은 실기기·MDM 인프라가 있어야 검증 가능.
 - **정서 모니터링(emotion) 관련 UI** — Phase 1 피처플래그 OFF(decisions.md #25).

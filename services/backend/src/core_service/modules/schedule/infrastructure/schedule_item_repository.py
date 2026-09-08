@@ -75,6 +75,24 @@ class ScheduleItemRepository:
         )
         return [m.to_domain() for m in result.scalars().all()]
 
+    async def list_pending_by_user(self, user_id: uuid.UUID) -> list[ScheduleItem]:
+        """GET /sync/download의 schedule_items 소스.
+
+        schedule_items에도 questions와 마찬가지로 updated_at 워터마크가 없다
+        (schema.md §3.10) — 대신 "아직 응답 안 한(pending) 항목 전부"를 매번
+        돌려준다. 이미 확정/누락/거절 처리된 항목은 자연히 이 목록에서 빠지므로
+        `since` 파라미터 없이도 그 자체로 멱등적인 diff 역할을 한다(모바일
+        ScheduleCacheDao는 Upsert라 같은 pending 항목을 다시 받아도 무해).
+        """
+        result = await self._session.execute(
+            select(ScheduleItemModel)
+            .where(
+                ScheduleItemModel.user_id == user_id, ScheduleItemModel.status == ScheduleStatus.PENDING.value
+            )
+            .order_by(ScheduleItemModel.due_at)
+        )
+        return [m.to_domain() for m in result.scalars().all()]
+
     async def create(
         self,
         user_id: uuid.UUID,

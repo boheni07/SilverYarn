@@ -63,6 +63,18 @@ class ChapterRepository:
         )
         return [m.to_domain() for m in result.scalars().all()]
 
+    async def list_updated_since(self, user_id: uuid.UUID, since: datetime | None = None) -> list[Chapter]:
+        """GET /sync/download의 chapter_updates 소스 — sync-contract.md §5가 명시한
+        "updated_at 기준 워터마크" 원칙 그대로. `since` 미지정 시 사용자의 전체 챕터
+        (최초 동기화 스냅샷)를 돌려준다."""
+        conditions = [ChapterModel.user_id == user_id]
+        if since is not None:
+            conditions.append(ChapterModel.updated_at > since)
+        result = await self._session.execute(
+            select(ChapterModel).where(*conditions).order_by(ChapterModel.updated_at)
+        )
+        return [m.to_domain() for m in result.scalars().all()]
+
     async def get_by_user_and_no(self, user_id: uuid.UUID, chapter_no: int) -> Chapter | None:
         result = await self._session.execute(
             select(ChapterModel).where(ChapterModel.user_id == user_id, ChapterModel.chapter_no == chapter_no)

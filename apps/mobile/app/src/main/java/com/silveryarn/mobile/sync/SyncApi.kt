@@ -35,10 +35,15 @@ interface SyncApi {
         @Path("sessionId") sessionId: String,
     ): ApiEnvelope<SyncSessionStatusResponse>
 
-    /** GET /sync/download — sync-contract.md §5, 증분 다운로드. */
+    /** GET /sync/download — sync-contract.md §5, 증분 다운로드.
+     *
+     * device_id는 필수 쿼리 파라미터(sync-contract.md v0.3 신규) — Device Token
+     * 자체가 아직 특정 기기를 검증 못 하는 스텁이라 서버가 호출 주체를 알 방법이
+     * 이것뿐이다. */
     @GET("sync/download")
     suspend fun download(
         @Header("X-Device-Token") deviceToken: String,
+        @Query("device_id") deviceId: String,
         @Query("since") since: String? = null,
     ): SyncDownloadResponse
 }
@@ -87,8 +92,9 @@ data class SyncSessionStatusResponse(
 )
 
 /** GET /sync/download는 design.md §4.1 봉투를 안 쓰고 { "data": {...} }를 바로 감싸는
- * 대신 sync.py가 자체적으로 dict를 반환한다(core_service/modules/sync/api/v1/sync.py
- * download() 참조) — 그래서 이것만 ApiEnvelope가 아니라 직접 파싱한다. */
+ * 대신 sync.py가 DataResponse[SyncDownloadResponse](서버 쪽 이름이 같아 헷갈리지만
+ * core_service/modules/sync/api/v1/sync.py의 SyncDownloadResponse)로 반환한다 —
+ * 그래서 이것만 ApiEnvelope가 아니라 직접 파싱한다. */
 @JsonClass(generateAdapter = true)
 data class SyncDownloadResponse(
     val data: SyncDownloadPayload,
@@ -98,11 +104,8 @@ data class SyncDownloadResponse(
 data class SyncDownloadPayload(
     @Json(name = "sync_version") val syncVersion: String,
     @Json(name = "chapter_updates") val chapterUpdates: List<ChapterUpdate>,
-    // sync.py의 download()가 지금은 늘 빈 배열만 채워 보낸다(services/backend README
-    // "아직 안 된 것" — GET /sync/download가 여전히 빈 스냅샷 골격). 실제 페이로드
-    // 형태가 확정되면 List<Any>를 구체 타입으로 교체.
-    @Json(name = "priority_questions") val priorityQuestions: List<Any> = emptyList(),
-    @Json(name = "schedule_items") val scheduleItems: List<Any> = emptyList(),
+    @Json(name = "priority_questions") val priorityQuestions: List<PriorityQuestion> = emptyList(),
+    @Json(name = "schedule_items") val scheduleItems: List<ScheduleItemDownload> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -110,6 +113,26 @@ data class ChapterUpdate(
     @Json(name = "chapter_id") val chapterId: String,
     @Json(name = "chapter_no") val chapterNo: Int,
     val period: String,
+    // sync-contract.md §5 v0.3 — Compaction Engine(design.md §2.11) 미구현이라
+    // 서버가 body_text 원문을 그대로 보낸다(요약 아님). keywords는 항상 빈 배열.
     val summary: String,
-    val keywords: String,
+    val keywords: List<String> = emptyList(),
+)
+
+@JsonClass(generateAdapter = true)
+data class PriorityQuestion(
+    @Json(name = "question_id") val questionId: String,
+    @Json(name = "linked_chapter_id") val linkedChapterId: String?,
+    val text: String,
+    // "new_topic" | "follow_up"
+    val type: String,
+)
+
+@JsonClass(generateAdapter = true)
+data class ScheduleItemDownload(
+    val id: String,
+    // "appointment" | "medication"
+    val kind: String,
+    @Json(name = "due_at") val dueAt: String,
+    val description: String?,
 )

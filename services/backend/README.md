@@ -70,11 +70,31 @@ DB 테이블은 첫 마이그레이션부터 있었지만 코드가 전혀 없�
 것까지 curl로 확인했다(같은 사용자의 다른 pending 요청은 그대로 두는지, 이미
 dismissed된 요청은 안 건드리는지도 함께).
 
+### `GET /sync/download` 실제 구현 — 3개 모듈 조합, 실 DB로 증분 동작 검증 (2026-09-08)
+
+빈 스냅샷 골격뿐이던 엔드포인트를 실제 조회로 채웠다. author(`chapters`)·
+schedule(`schedule_items`)·신규 author(`questions` — schema.md §3.9 테이블은
+있었으나 코드가 없던 갭, photo_requests와 같은 패턴으로 발견해 도메인/리포지토리/
+서비스 채움) 3개 모듈을 sync 라우터가 각자의 `deps.py`로만 조합한다(구조 원칙
+유지). `since` 워터마크 방식이 엔티티마다 다름을 실제 구현하며 확정: chapters는
+`updated_at`, questions는 `updated_at` 컬럼이 없어 `created_at` 근사, schedule_items는
+`updated_at`도 워터마크 컬럼도 없어 매번 "pending 전체"를 반환(자체로 멱등적
+diff). 원문 계약엔 없던 `device_id` 필수 쿼리 파라미터를 추가로 발견해 넣었다
+(Device Token이 아직 특정 기기를 검증 못 하는 스텁이라 호출 주체 식별 수단이
+필요, sync-contract.md v0.3).
+
+실 Postgres로 검증: 사용자·기기 생성(API) → 챕터/질문/일정 직접 INSERT(DB) →
+`GET /sync/download`가 실제로 3개 항목을 다 돌려주는지 확인 → `since`를 이전
+응답의 `sync_version`으로 다시 호출해 이미 받은 챕터/질문은 안 오고 새로 추가한
+챕터만 오는지, 미응답 일정은 매번 다시 오는지까지 확인. `device_id` 누락(422)·
+존재하지 않는 기기(404)·Device Token 없음(401) 에러 경로도 curl로 확인.
+
 ## 아직 안 된 것 (의도적 범위 제한)
 
 - **온프레미스 AI 인프라 실물 연동 검증**: `core/clients/`(STT/Embedding/LLM)는 실제 서비스가 없는 상태에서 REST 계약을 추정해 작성했다 — 실 서비스 배포 후 계약이 다르면 이 파일들만 교체. Qdrant/Neo4j 클라이언트는 실제 컨테이너로 검증 완료(단, Qdrant는 embed 단계가 항상 실패해 실제로 upsert까지는 못 가봄 — EmbeddingClient 실 서비스 필요)
 - **챕터 자동 귀속 재설계**: `UploadPipelineService`의 `PERIOD_TO_CHAPTER_NO`가 인생 시기 4개를 고정 챕터 번호에 매핑하는 최소 구현이다 — 같은 시기 내 다중 챕터 분화 미지원
-- `sync` 모듈의 `GET /sync/download` — 여전히 빈 스냅샷 골격(chapter_updates 등 실제 조회 미구현)
+- **Compaction Engine(design.md §2.11) 미구현** — `GET /sync/download`의 `chapter_updates.summary`가 AI 요약이 아니라 `body_text` 원문 그대로, `keywords`는 항상 빈 배열이다. 온디바이스 FTS5 검색은 되지만 "요약"은 아직 아니다 — 실 요약 파이프라인이 생기면 sync.py의 해당 자리만 교체
+- 질문(`questions`) **자동 생성** 미구현 — author 모듈에 조회(`list_priority_questions_for_user`) 경로만 추가했다. 실제로 질문을 만드는 쪽(작가 엔진/온프레미스 LLM)은 아직 없어, 이 테이블에 아무도 안 넣으면 `priority_questions`는 계속 빈 배열
 - `photos` orphan cleanup 배치 — sync-contract.md §4가 명시한 "24시간 지나도 `pending_upload`면 정리"가 아직 없어, 3단계 콜백이 영영 안 오면 그 행이 영구히 `pending_upload`로 남는다
 - AI 자동 인라인 사진 삽입 제안(`photos.placement_status=proposed` → 챕터 본문 편입) — author 모듈이 담당할 몫으로 아직 미구현
 - `photo_requests`의 사진↔요청 1:1 매핑 — 두 테이블 사이에 연결 FK가 없어 "이 사용자가 사진을 올렸다"를 대기 중인 모든 요청에 대한 응답으로 해석해 일괄 충족 처리한다(정밀한 매핑이 필요해지면 photos에 fulfilled_request_id 같은 컬럼 추가 검토)

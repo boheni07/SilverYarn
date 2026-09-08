@@ -123,13 +123,18 @@ Auth: Device Token
 ## 5. 증분 다운로드 (BE-B4)
 
 ```
-GET /api/v1/sync/download?since={sync_version}
+GET /api/v1/sync/download?device_id={device_id}&since={sync_version}
 Auth: Device Token
 ```
 
+- `device_id`는 **필수**(v0.3 신규) — 원문엔 `since`만 있었으나 실제 구현 중 발견: Device Token 자체가 아직 특정 기기를 검증하지 못하는 스텁이라(core/auth.py) 호출 주체(어느 사용자 것을 내려줄지)를 식별할 방법이 없었다. `POST /sync/upload`가 body의 `device_id`로 device→user_id 신뢰 사슬을 쓰는 것과 동일한 이유로 쿼리 파라미터에 추가 — 서버가 이 `device_id`로 `devices` 테이블을 조회해 `user_id`를 얻는다.
 - `since` 미지정 시 전체 스냅샷(최초 동기화).
-- `since` 지정 시 해당 `sync_version` 이후 변경분만 반환 — design.md §4.3 예시의 `sync_version` 필드가 이 파라미터의 응답값과 대응.
-- 서버는 각 엔티티에 `updated_at` 기준 워터마크를 두고 `since` 이후 변경 행만 필터링(구체 구현은 Do 단계, 워터마크 컬럼은 schema.md 각 테이블 `updated_at` 재사용).
+- `since` 지정 시 해당 `sync_version` 이후 변경분만 반환 — design.md §4.3 예시의 `sync_version` 필드가 이 파라미터의 응답값과 대응. 서버가 발급한 `sync_version` 형식(`sync_YYYYMMDD_HHMMSS`)만 해석하며, 형식이 안 맞거나 없으면 전체 스냅샷으로 안전하게 폴백한다.
+- 서버는 엔티티별로 워터마크 방식이 다르다(v0.3 구현 중 확정):
+  - `chapter_updates`(chapters): 실제 `updated_at` 컬럼 기준 — 원문이 명시한 원칙 그대로.
+  - `priority_questions`(questions): `updated_at` 컬럼이 없어(schema.md §3.9 — 답변 여부만 바뀌는 단순 큐) `created_at`을 근사 워터마크로 쓴다. `since` 이후 새로 생긴 **미답변** 질문만 반환. design.md §4.3 예시엔 없지만 실제로는 `linked_chapter_id`도 함께 내려준다(questions_cache의 연대기 탭별 필터링, mobile-schema.md §2.3).
+  - `schedule_items`: 역시 `updated_at`이 없다(schema.md §3.10). `since`와 무관하게 **아직 응답 안 한(status=pending) 항목 전체**를 매번 반환 — 응답된 항목은 자연히 빠지므로 그 자체로 멱등적인 diff 역할을 한다.
+  - `chapter_updates`의 `summary`/`keywords`는 design.md §2.11 Compaction Engine(AI 요약 파이프라인)이 아직 없어 `body_text` 원문 / 빈 배열로 대체한다 — 실 파이프라인이 생기면 이 자리만 교체 예정.
 
 ---
 
@@ -159,3 +164,4 @@ design.md §4.1의 표준 에러 코드에 아래 2종을 추가한다 (L-12):
 |---------|------|---------|--------|
 | 0.1 | 2026-09-07 | 3차 design-validator 검증 H-3 반영 — 신규 작성. 비동기 업로드 계약(§2), 엔티티별 충돌정책(§3, Server-Wins 전면적용 폐기), Presigned URL 업로드(§4), 증분 다운로드(§5), 에러코드 추가(§6) | NUBiz AX Initiative |
 | 0.2 | 2026-09-08 | photos 모듈 실제 구현 중 발견 — §4 1단계 요청 예시에 `user_id`/`uploader_type` 보강(photos.user_id NOT NULL이라 서버가 반드시 알아야 하는데 원래 예시엔 빠져 있었음, schema.md v1.6과 함께) | NUBiz AX Initiative |
+| 0.3 | 2026-09-08 | `GET /sync/download` 실제 구현 중 발견 — §5에 `device_id` 필수 쿼리 파라미터 신규(호출 주체 식별 수단이 원문에 없었음), 엔티티별 워터마크 방식이 실제로는 다르다는 것을 명시(chapters=updated_at, questions=created_at 근사, schedule_items=pending 상태 전체), chapter_updates의 summary/keywords가 Compaction Engine 미구현으로 body_text 원문/빈 배열 대체임을 문서화 | NUBiz AX Initiative |

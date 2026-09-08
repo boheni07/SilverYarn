@@ -18,8 +18,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core_service.core.auth import AuthContext, require_auth, require_device_token
 from core_service.core.db import get_db
 from core_service.core.queue import get_arq_pool
+from core_service.modules.author.application.chapter_service import ChapterService
+from core_service.modules.author.application.question_service import QuestionService
+from core_service.modules.author.deps import get_chapter_service, get_question_service
 from core_service.modules.devices.application.device_service import DeviceService
 from core_service.modules.devices.deps import get_device_service
+from core_service.modules.schedule.application.schedule_item_service import ScheduleItemService
+from core_service.modules.schedule.deps import get_schedule_item_service
 from core_service.modules.sync.application.sync_service import SyncService
 from core_service.modules.sync.domain.sync_session import SyncStatus
 from core_service.modules.sync.infrastructure.sync_repository import SyncSessionRepository
@@ -66,6 +71,55 @@ class SyncSessionResponse(BaseModel):
     retry_count: int
     started_at: datetime
     finished_at: datetime | None
+
+
+class ChapterUpdateResponse(BaseModel):
+    chapter_id: uuid.UUID
+    chapter_no: int
+    period: str
+    summary: str
+    keywords: list[str]
+
+
+class PriorityQuestionResponse(BaseModel):
+    question_id: uuid.UUID
+    linked_chapter_id: uuid.UUID | None
+    text: str
+    type: str
+
+
+class ScheduleItemDownloadResponse(BaseModel):
+    id: uuid.UUID
+    kind: str
+    due_at: datetime
+    description: str | None
+
+
+class SyncDownloadResponse(BaseModel):
+    sync_version: str
+    chapter_updates: list[ChapterUpdateResponse]
+    priority_questions: list[PriorityQuestionResponse]
+    schedule_items: list[ScheduleItemDownloadResponse]
+
+
+_SYNC_VERSION_FORMAT = "sync_%Y%m%d_%H%M%S"
+
+
+def _new_sync_version() -> str:
+    return datetime.now(UTC).strftime(_SYNC_VERSION_FORMAT)
+
+
+def _parse_since(since: str | None) -> datetime | None:
+    """`since`는 이전 응답의 `sync_version`을 그대로 돌려받는 불투명 커서다
+    (sync-contract.md §5) — 이 서버가 발급하는 형식(`_SYNC_VERSION_FORMAT`)만
+    해석할 수 있으면 되고, 없거나 형식이 안 맞으면 전체 스냅샷으로 안전하게
+    폴백한다(데이터 유실보다는 중복이 낫다)."""
+    if not since:
+        return None
+    try:
+        return datetime.strptime(since, _SYNC_VERSION_FORMAT).replace(tzinfo=UTC)
+    except ValueError:
+        return None
 
 
 def _service(session: AsyncSession = Depends(get_db), pool: ArqRedis = Depends(get_arq_pool)) -> SyncService:
@@ -164,20 +218,62 @@ async def list_sessions(
     )
 
 
-@router.get("/download")
+@router.get("/download", response_model=DataResponse[SyncDownloadResponse])
 async def download(
+    device_id: uuid.UUID,
     since: str | None = None,
+    device_service: DeviceService = Depends(get_device_service),
+    chapter_service: ChapterService = Depends(get_chapter_service),
+    question_service: QuestionService = Depends(get_question_service),
+    schedule_service: ScheduleItemService = Depends(get_schedule_item_service),
     _device: str = Depends(require_device_token),
-) -> dict:
-    """sync-contract.md §5 — 증분 다운로드. 파이프라인 미구현이라 빈 스냅샷 골격만 반환.
+) -> DataResponse[SyncDownloadResponse]:
+    """sync-contract.md §5 — 증분 다운로드.
 
-    TODO: chapter_updates/priority_questions/schedule_items 실제 조회(design.md §4.3 예시 형식).
+    ⚠️ sync-contract.md §5 원문은 `since` 하나뿐이고 호출 주체(어느 사용자 것을
+    내려줄지)를 식별할 파라미터가 없었다 — POST /sync/upload가 body의 device_id로
+    device→user_id 신뢰사슬을 쓰는 것과 같은 이유(Device Token 자체는 아직 특정
+    기기를 검증하지 못하는 스텁, core/auth.py)로 `device_id` 쿼리 파라미터를
+    추가했다(sync-contract.md v0.3에 반영).
+
+    chapter_updates의 summary/keywords는 design.md §2.11 Compaction Engine(AI
+    요약 파이프라인, 이 세션 스코프 밖)이 아직 없어 body_text 원문/빈 배열로
+    대체한다 — 실 파이프라인이 생기면 이 자리만 교체.
     """
-    return {
-        "data": {
-            "sync_version": f"sync_{datetime.now(UTC):%Y%m%d_%H%M%S}",
-            "chapter_updates": [],
-            "priority_questions": [],
-            "schedule_items": [],
-        }
-    }
+    device = await device_service.get_device(device_id)
+    since_dt = _parse_since(since)
+
+    chapters = await chapter_service.list_chapter_updates_for_user(device.user_id, since_dt)
+    questions = await question_service.list_priority_questions_for_user(device.user_id, since_dt)
+    schedule_items = await schedule_service.list_pending_schedule_items_for_user(device.user_id)
+
+    return DataResponse(
+        data=SyncDownloadResponse(
+            sync_version=_new_sync_version(),
+            chapter_updates=[
+                ChapterUpdateResponse(
+                    chapter_id=c.id,
+                    chapter_no=c.chapter_no,
+                    period=c.period.value,
+                    summary=c.body_text,
+                    keywords=[],
+                )
+                for c in chapters
+            ],
+            priority_questions=[
+                PriorityQuestionResponse(
+                    question_id=q.id,
+                    linked_chapter_id=q.linked_chapter_id,
+                    text=q.text,
+                    type=q.type.value,
+                )
+                for q in questions
+            ],
+            schedule_items=[
+                ScheduleItemDownloadResponse(
+                    id=s.id, kind=s.kind.value, due_at=s.due_at, description=s.description
+                )
+                for s in schedule_items
+            ],
+        )
+    )

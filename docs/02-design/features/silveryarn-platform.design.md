@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.13 (photo_requests 모듈 완성 반영)
+> **Version**: 0.14 (GET /sync/download 실제 구현 반영)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -521,7 +521,7 @@ interface Publication {         // v1.1 신규
 | POST | /api/v1/sync/upload | 원본 음성+1차 전사+신규 사진 업로드 — **202 Accepted, 비동기 처리** ([sync-contract.md §2](../sync-contract.md#2-비동기-처리-계약-be-b1)) | Device Token |
 | GET | /api/v1/sync/sessions/{sessionId} | 업로드 작업 상태 조회 (신규, [sync-contract.md §2.2](../sync-contract.md#22-작업-상태-조회-신규-엔드포인트)) | Device Token |
 | GET | /api/v1/sync/sessions?deviceId={deviceId}&status={status}&page={page}&pageSize={pageSize} | 동기화 이력 조회, 페이지네이션 — apps/admin 동기화 모니터링 화면용(신규 0.7, deviceId 선택·페이지네이션·status 필터로 확장 0.10). deviceId를 생략하면 전체 기기 통합 모니터링. 응답 항목에 deviceDisplayId(0.11, devices 모듈에서 조합해 붙임 — SyncSession 엔티티 컬럼은 아님) 포함. 위 항목(기기 자신의 폴링용, Device Token)과 인가모델이 달라 별도 엔드포인트로 분리 | Admin |
-| GET | /api/v1/sync/download?since={syncVersion} | 최신 자서전·RAG 스냅샷·사진·질문목록 다운로드 — `since` 지정 시 증분만 반환 ([sync-contract.md §5](../sync-contract.md#5-증분-다운로드-be-b4)) | Device Token |
+| GET | /api/v1/sync/download?deviceId={deviceId}&since={syncVersion} | 최신 자서전·RAG 스냅샷·사진·질문목록 다운로드 — `since` 지정 시 증분만 반환. `deviceId`는 실제 구현 중 발견해 신규 추가한 필수 파라미터(0.14, [sync-contract.md §5](../sync-contract.md#5-증분-다운로드-be-b4)) | Device Token |
 | GET | /api/v1/users/{userId}/chapters | 챕터 목록/본문 조회 | 2FA + Role |
 | POST | /api/v1/chapters/{id}/review | 감수 승인/반려 (`chapter_revisions` 생성) | 2FA + Role(family) |
 | GET | /api/v1/users/{userId}/photos | 사진 목록 조회 | 2FA + Role |
@@ -562,7 +562,7 @@ interface Publication {         // v1.1 신규
       }
     ],
     "priority_questions": [
-      { "question_id": "q_...-uuid", "text": "인천 공장 계실 때 첫 월급 타서 사모님께 어떤 선물을 하셨는지 기억나세요?", "type": "follow_up" }
+      { "question_id": "q_...-uuid", "linked_chapter_id": "b3f1...-uuid", "text": "인천 공장 계실 때 첫 월급 타서 사모님께 어떤 선물을 하셨는지 기억나세요?", "type": "follow_up" }
     ],
     "schedule_items": [
       { "id": "s_...-uuid", "kind": "medication", "due_at": "2026-09-07T08:30:00+09:00", "description": "혈압약" }
@@ -760,3 +760,4 @@ silveryarn/
 | 0.11 | 2026-09-08 | `GET /sync/sessions` 응답에 `deviceDisplayId` 추가(§4.2) — devices 모듈의 신규 `DeviceService.get_display_ids()`(IN 쿼리 일괄 조회)를 라우터에서 조합, sync 모듈이 devices 테이블을 직접 조인하지 않는 원칙(structure.md §2)은 유지. SyncSession 엔티티(§3.1) 자체 컬럼이 아니라 이 응답에서만 붙는 필드임을 명시 | NUBiz AX Initiative |
 | 0.12 | 2026-09-08 | `GET /users`에 `name` 이름 검색 파라미터 추가(§4.2, ILIKE 부분일치) — apps/admin `(admin)/users` 화면에 검색창 신설. care 모듈의 conversation_chunks ILIKE 검색과 달리 "실제 하이브리드 서치로 교체 예정" TODO 없음(단순 이름 문자열 매칭이라 ILIKE가 최종 구현) | NUBiz AX Initiative |
 | 0.13 | 2026-09-08 | `photo_requests` 모듈 완성 — §4.2에 `GET /users/{userId}/photo-requests`·`POST /photo-requests/{id}/dismiss` 신규(스캐폴딩 시점 추가, invitations 모듈과 동일 사유). 충족(fulfilled)은 별도 엔드포인트 없이 `POST /photos/{id}/complete`가 devices/deps.py 패턴으로 photo_requests 모듈을 호출해 자동 처리 — schema.md §3.7 `fulfilled_at`("사진 업로드로 충족된 시각")이 이미 전제하던 흐름 | NUBiz AX Initiative |
+| 0.14 | 2026-09-08 | `GET /sync/download` 실제 구현(§4.2, sync-contract.md v0.3) — `deviceId` 필수 파라미터 신규(원문엔 없었으나 Device Token 스텁이라 호출 주체 식별 수단이 필요했음). author 모듈에 `questions` 도메인/리포지토리/서비스 신규(schema.md §3.9 테이블은 있었으나 코드가 없었던 갭, photo_requests와 동일 패턴), schedule 모듈에 `deps.py` 신규. chapter_updates의 summary/keywords는 §2.11 Compaction Engine 미구현으로 body_text 원문/빈 배열 대체. §4.3 예시에 `priority_questions.linked_chapter_id` 보강(questions 엔티티엔 있는 실 데이터인데 원래 예시에 빠져 있었음) — 상세는 sync-contract.md §5 | NUBiz AX Initiative |

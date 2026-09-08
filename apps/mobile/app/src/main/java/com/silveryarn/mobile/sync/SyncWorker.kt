@@ -4,6 +4,10 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.silveryarn.mobile.local.db.AppDatabase
+import com.silveryarn.mobile.local.db.AutobiographyFtsRow
+import com.silveryarn.mobile.local.db.QuestionCacheEntity
+import com.silveryarn.mobile.local.db.ScheduleCacheEntity
+import java.time.Instant
 
 /**
  * Wi-Fi 배치 동기화 워커 — decisions.md 확정 항목("등록 Wi-Fi 한정, 접속 즉시 자동
@@ -56,6 +60,76 @@ class SyncWorker(
             }
         }
 
+        applyDownload(db, deviceId, deviceState.lastSyncVersion)
+
         return Result.success()
+    }
+
+    /** GET /sync/download 결과를 로컬 캐시에 반영 — sync-contract.md §5.
+     *
+     * chapter_updates → autobiography_fts(FTS5 Upsert), priority_questions →
+     * questions_cache, schedule_items → schedule_cache. 실패해도 upload는 이미
+     * 끝났으니 워커 전체를 실패시키지 않는다(runCatching — 다음 주기에 다시 시도). */
+    private suspend fun applyDownload(
+        db: AppDatabase,
+        deviceId: String,
+        since: String?,
+    ) {
+        runCatching {
+            RetrofitClient.syncApi.download(
+                // TODO: 위 클래스 docstring 참조 — 아직 실 토큰 발급 경로가 없음
+                deviceToken = "",
+                deviceId = deviceId,
+                since = since,
+            )
+        }.onSuccess { response ->
+            val payload = response.data
+
+            for (chapter in payload.chapterUpdates) {
+                db.autobiographyFtsStore().upsert(
+                    AutobiographyFtsRow(
+                        chapterId = chapter.chapterId,
+                        chapterNo = chapter.chapterNo,
+                        period = chapter.period,
+                        summary = chapter.summary,
+                        // FTS5 unicode61 토크나이저는 공백 구분 토큰이라 join(" ")으로 충분
+                        keywords = chapter.keywords.joinToString(" "),
+                    ),
+                )
+            }
+
+            db.questionCacheDao().upsertAll(
+                payload.priorityQuestions.mapIndexed { index, question ->
+                    QuestionCacheEntity(
+                        id = question.questionId,
+                        linkedChapterId = question.linkedChapterId,
+                        text = question.text,
+                        type = question.type,
+                        answered = false, // 서버가 이미 미답변만 골라 보낸다(question_repository.py)
+                        priority = index,
+                    )
+                },
+            )
+
+            for (item in payload.scheduleItems) {
+                db.scheduleCacheDao().upsert(
+                    ScheduleCacheEntity(
+                        id = item.id,
+                        kind = item.kind,
+                        description = item.description,
+                        location = null, // 서버 응답엔 없음(design.md §4.3 예시에도 없음)
+                        dueAt = Instant.parse(item.dueAt).toEpochMilli(),
+                        status = "pending", // 서버가 이미 pending만 골라 보낸다(schedule_item_repository.py)
+                        remindCount = 0,
+                        origin = "server",
+                    ),
+                )
+            }
+
+            db.deviceStateDao().updateLastSync(
+                epochMs = System.currentTimeMillis(),
+                syncVersion = payload.syncVersion,
+            )
+        }
     }
 }

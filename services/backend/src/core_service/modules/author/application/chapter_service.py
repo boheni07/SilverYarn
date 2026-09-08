@@ -8,6 +8,7 @@
 """
 
 import uuid
+from datetime import datetime
 
 from core_service.core.errors import ApiError
 from core_service.modules.author.domain.chapter import (
@@ -36,6 +37,12 @@ class ChapterService:
 
     async def list_chapters_for_user(self, user_id: uuid.UUID) -> list[Chapter]:
         return await self._chapters.list_by_user(user_id)
+
+    async def list_chapter_updates_for_user(
+        self, user_id: uuid.UUID, since: datetime | None = None
+    ) -> list[Chapter]:
+        """GET /sync/download가 쓰는 증분 조회 — sync-contract.md §5."""
+        return await self._chapters.list_updated_since(user_id, since)
 
     async def get_chapter_by_user_and_no(self, user_id: uuid.UUID, chapter_no: int) -> Chapter | None:
         """UploadPipelineService가 기존 챕터 본문(있으면)을 조회할 때 사용 —

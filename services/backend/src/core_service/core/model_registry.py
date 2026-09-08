@@ -14,6 +14,7 @@ from core_service.modules.author.infrastructure.chapter_repository import Chapte
 from core_service.modules.author.infrastructure.chapter_revision_repository import (  # noqa: F401
     ChapterRevisionModel,
 )
+from core_service.modules.author.infrastructure.question_repository import QuestionModel  # noqa: F401
 from core_service.modules.care.infrastructure.conversation_chunk_repository import (  # noqa: F401
     ConversationChunkModel,
 )

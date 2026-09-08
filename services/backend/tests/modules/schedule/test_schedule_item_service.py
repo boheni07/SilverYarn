@@ -24,6 +24,12 @@ class FakeScheduleItemRepository:
     async def list_by_user(self, user_id: uuid.UUID) -> list[ScheduleItem]:
         return sorted((i for i in self._store.values() if i.user_id == user_id), key=lambda i: i.due_at)
 
+    async def list_pending_by_user(self, user_id: uuid.UUID) -> list[ScheduleItem]:
+        return sorted(
+            (i for i in self._store.values() if i.user_id == user_id and i.status == ScheduleStatus.PENDING),
+            key=lambda i: i.due_at,
+        )
+
     async def create(
         self,
         user_id: uuid.UUID,
@@ -169,3 +175,18 @@ async def test_list_schedule_items_filters_by_user(service: ScheduleItemService)
     items = await service.list_schedule_items_for_user(user_id)
     assert len(items) == 1
     assert items[0].user_id == user_id
+
+
+async def test_list_pending_schedule_items_excludes_responded(service: ScheduleItemService) -> None:
+    """GET /sync/download 소스 — 응답 완료된 항목은 빠지고 pending만 남는다."""
+    user_id = uuid.uuid4()
+    pending = await service.create_schedule_item(
+        user_id=user_id, kind=ScheduleKind.MEDICATION, due_at=datetime.now(UTC)
+    )
+    confirmed = await service.create_schedule_item(
+        user_id=user_id, kind=ScheduleKind.APPOINTMENT, due_at=datetime.now(UTC)
+    )
+    await service.respond(confirmed.id, ScheduleStatus.CONFIRMED)
+
+    items = await service.list_pending_schedule_items_for_user(user_id)
+    assert [i.id for i in items] == [pending.id]

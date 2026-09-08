@@ -8,11 +8,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core_service.core.db import get_db
 from core_service.modules.author.application.chapter_service import ChapterService
+from core_service.modules.author.application.question_service import QuestionService
 from core_service.modules.author.infrastructure.chapter_repository import ChapterRepository
 from core_service.modules.author.infrastructure.chapter_revision_repository import (
     ChapterRevisionRepository,
 )
+from core_service.modules.author.infrastructure.question_repository import QuestionRepository
 
 
 def get_chapter_service(session: AsyncSession = Depends(get_db)) -> ChapterService:
     return ChapterService(ChapterRepository(session), ChapterRevisionRepository(session))
+
+
+def get_question_service(session: AsyncSession = Depends(get_db)) -> QuestionService:
+    return QuestionService(QuestionRepository(session))

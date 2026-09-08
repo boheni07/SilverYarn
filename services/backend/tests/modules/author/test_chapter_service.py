@@ -5,7 +5,7 @@
 """
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -29,6 +29,12 @@ class FakeChapterRepository:
 
     async def list_by_user(self, user_id: uuid.UUID) -> list[Chapter]:
         return sorted((c for c in self.by_id.values() if c.user_id == user_id), key=lambda c: c.chapter_no)
+
+    async def list_updated_since(self, user_id: uuid.UUID, since: datetime | None = None) -> list[Chapter]:
+        chapters = (c for c in self.by_id.values() if c.user_id == user_id)
+        if since is not None:
+            chapters = (c for c in chapters if c.updated_at > since)
+        return sorted(chapters, key=lambda c: c.updated_at)
 
     async def upsert_draft(
         self,
@@ -201,6 +207,38 @@ async def test_get_chapter_not_found(service: ChapterService) -> None:
     with pytest.raises(ApiError) as exc_info:
         await service.get_chapter(uuid.uuid4())
     assert exc_info.value.code == "NOT_FOUND"
+
+
+async def test_list_chapter_updates_without_since_returns_all(service: ChapterService) -> None:
+    """GET /sync/download 최초 동기화(since 미지정) — 사용자의 전체 챕터."""
+    user_id = uuid.uuid4()
+    await service.save_draft(
+        user_id=user_id, chapter_no=1, title="A", period=ChapterPeriod.CHILDHOOD, body_text="본문1"
+    )
+    await service.save_draft(
+        user_id=user_id, chapter_no=2, title="B", period=ChapterPeriod.YOUTH, body_text="본문2"
+    )
+    updates = await service.list_chapter_updates_for_user(user_id)
+    assert len(updates) == 2
+
+
+async def test_list_chapter_updates_since_excludes_unchanged(
+    service: ChapterService, chapters: FakeChapterRepository
+) -> None:
+    """GET /sync/download 증분 — since 이후 갱신된 챕터만 반환(sync-contract.md §5)."""
+    user_id = uuid.uuid4()
+    old = await service.save_draft(
+        user_id=user_id, chapter_no=1, title="A", period=ChapterPeriod.CHILDHOOD, body_text="본문1"
+    )
+    watermark = old.updated_at
+    new = await service.save_draft(
+        user_id=user_id, chapter_no=2, title="B", period=ChapterPeriod.YOUTH, body_text="본문2"
+    )
+    # 두 번째 저장이 워터마크보다 뒤에 찍히도록 강제(테스트 환경의 시계 해상도 대비)
+    new.updated_at = max(new.updated_at, watermark + timedelta(milliseconds=1))
+
+    updates = await service.list_chapter_updates_for_user(user_id, since=watermark)
+    assert [c.id for c in updates] == [new.id]
 
 
 async def test_save_draft_rejects_empty_body(service: ChapterService) -> None:

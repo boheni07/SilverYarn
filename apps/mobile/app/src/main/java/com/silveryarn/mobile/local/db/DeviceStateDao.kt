@@ -15,4 +15,11 @@ interface DeviceStateDao {
 
     @Query("UPDATE device_state SET last_sync_at = :epochMs WHERE id = 0")
     suspend fun updateLastSyncAt(epochMs: Long)
+
+    /** SyncWorker의 download() 성공 직후 호출 — 다음 호출의 since 커서(mobile-schema.md v0.5). */
+    @Query("UPDATE device_state SET last_sync_at = :epochMs, last_sync_version = :syncVersion WHERE id = 0")
+    suspend fun updateLastSync(
+        epochMs: Long,
+        syncVersion: String,
+    )
 }
