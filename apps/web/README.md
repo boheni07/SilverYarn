@@ -65,10 +65,33 @@ URL은 배포마다 도메인이 달라 `next.config`의 `remotePatterns`에 고
 직접 확인. 지원하지 않는 파일 형식(.txt) 선택 시 클라이언트 측 검증이 서버 왕복
 없이 바로 에러를 보여주고 기존 갤러리 내용은 그대로 유지되는 것도 확인.
 
+### `(family)/photo-requests` 사진 요청 화면 신규 — 요청→확인→닫기 실제 검증 (2026-09-08)
+
+photo_requests API(생성/조회/닫기)는 백엔드에 이미 완성돼 있었으나 소비하는
+화면이 web·admin 어디에도 없었다. `PhotoRequestForm`(가족이 요청 생성,
+`(family)/photo-requests`)과 `PendingPhotoRequestBanner`(당사자가 대기 중인
+요청을 보고 닫기, `(user)/photos` 상단에 노출)를 신규 — 충족(fulfilled)은
+이 화면들이 만드는 게 아니라 사진을 실제로 올리면(`PhotoUploadForm`) 서버가
+자동 처리하므로(photo_request_service.py) 두 화면 다 "충족 처리" 버튼은 없다.
+`Photo`/`PhotoRequest` 타입(design.md §3.1)에 `createdAt`/`fulfilledAt` 등
+누락 필드 보강.
+
+실 백엔드+`next dev`+claude-in-chrome으로 검증: 가족 계정으로 요청 2건 생성 →
+어르신 화면(`/photos`)에 배너로 뜨는지 확인 → 하나를 "닫기" → 배너에서
+사라지고 Postgres에서 `status=dismissed`로 바뀐 것, 나머지 하나는 `pending`
+그대로인 것 확인.
+
+⚠️ 이 검증 중 애플리케이션과 무관한 로컬 도구 문제 하나 발견: `npm run build`
+직후 `.next`를 지우지 않고 바로 `npm run dev`(Turbopack)를 띄우면 `/`를 뺀
+모든 라우트가 404를 낸다 — production build 산출물과 dev 캐시가 같은 `.next`
+디렉터리를 다른 형식으로 써서 충돌하는 것으로 보인다. `rm -rf .next` 후
+`npm run dev`로 재기동하면 정상화된다. 코드 버그 아님, 로컬 검증 시 항상
+build→dev 순서로 실행했다면 `.next`부터 지울 것.
+
 ## 아직 안 된 것 (의도적 범위 제한)
 
 - **실제 로그인 없음** — 루트 `page.tsx`는 Keycloak SSO(decisions.md #17) 붙기 전까지 쓰는 임시 개발용 진입점(userId 텍스트 입력)이다. 절대 실제 로그인 대체물이 아니다.
-- 화면은 `(user)/chapters`(자서전 뷰어)·`(user)/photos`(사진 갤러리)·`(family)/review`(원고 감수) 3개만 구현 — architecture 증명 목적. 나머지 화면(온보딩, 사진 인라인 편집 등)은 요청 시 추가.
+- 화면은 `(user)/chapters`(자서전 뷰어)·`(user)/photos`(사진 갤러리)·`(family)/review`(원고 감수)·`(family)/photo-requests`(사진 요청) 4개만 구현 — architecture 증명 목적. 나머지 화면(온보딩, 사진 인라인 편집 등)은 요청 시 추가.
 - 사진 **삭제·캡션 편집** UI 없음 — 백엔드에도 아직 해당 엔드포인트가 없다(업로드/조회만 구현).
 - AI 자동 인라인 사진 삽입 제안(`photos.placement_status=proposed` → 챕터 본문 편입) 화면 없음 — 백엔드 자체가 아직 미구현(services/backend/README.md 참조).
 - 반려 후 작가 엔진 재생성 루프(workflow-diagrams.md §7)는 백엔드 미구현 — 현재 UI는 반려 상태 표시까지만 하고 재작성 트리거는 없다.

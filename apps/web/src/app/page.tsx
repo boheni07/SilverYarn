@@ -44,15 +44,16 @@ export default function HomePage() {
           placeholder="예: f645b7a3-e2fc-475d-b48c-ff18815b1f9b"
           className="mb-4 min-h-11 w-full rounded-lg border border-border bg-paper px-4 text-body-compact text-ink outline-none focus-visible:border-teal-deep"
         />
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Button className="flex-1" onClick={() => goTo("/chapters")}>
-            자서전 뷰어로 이동
-          </Button>
-          <Button variant="secondary" className="flex-1" onClick={() => goTo("/photos")}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Button onClick={() => goTo("/chapters")}>자서전 뷰어로 이동</Button>
+          <Button variant="secondary" onClick={() => goTo("/photos")}>
             사진 갤러리로 이동
           </Button>
-          <Button variant="secondary" className="flex-1" onClick={() => goTo("/review")}>
+          <Button variant="secondary" onClick={() => goTo("/review")}>
             가족 감수 화면으로 이동
+          </Button>
+          <Button variant="secondary" onClick={() => goTo("/photo-requests")}>
+            사진 요청 관리로 이동
           </Button>
         </div>
       </Card>

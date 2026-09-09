@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.15 (apps/web 사진 갤러리 화면 반영)
+> **Version**: 0.16 (apps/web 사진 요청 화면 반영)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -365,6 +365,8 @@ interface PhotoRequest {       // v1.1 신규
   requestedBy?: string;
   message?: string;
   status: "pending" | "fulfilled" | "dismissed";
+  createdAt: string;            // v0.16 신규 — 실 응답엔 있었으나 이 인터페이스엔 누락돼 있던 것을 apps/web 사진 요청 화면 구현 중 발견
+  fulfilledAt?: string;         // v0.16 신규
 }
 
 interface ConversationChunk {
@@ -762,5 +764,6 @@ silveryarn/
 | 0.11 | 2026-09-08 | `GET /sync/sessions` 응답에 `deviceDisplayId` 추가(§4.2) — devices 모듈의 신규 `DeviceService.get_display_ids()`(IN 쿼리 일괄 조회)를 라우터에서 조합, sync 모듈이 devices 테이블을 직접 조인하지 않는 원칙(structure.md §2)은 유지. SyncSession 엔티티(§3.1) 자체 컬럼이 아니라 이 응답에서만 붙는 필드임을 명시 | NUBiz AX Initiative |
 | 0.12 | 2026-09-08 | `GET /users`에 `name` 이름 검색 파라미터 추가(§4.2, ILIKE 부분일치) — apps/admin `(admin)/users` 화면에 검색창 신설. care 모듈의 conversation_chunks ILIKE 검색과 달리 "실제 하이브리드 서치로 교체 예정" TODO 없음(단순 이름 문자열 매칭이라 ILIKE가 최종 구현) | NUBiz AX Initiative |
 | 0.13 | 2026-09-08 | `photo_requests` 모듈 완성 — §4.2에 `GET /users/{userId}/photo-requests`·`POST /photo-requests/{id}/dismiss` 신규(스캐폴딩 시점 추가, invitations 모듈과 동일 사유). 충족(fulfilled)은 별도 엔드포인트 없이 `POST /photos/{id}/complete`가 devices/deps.py 패턴으로 photo_requests 모듈을 호출해 자동 처리 — schema.md §3.7 `fulfilled_at`("사진 업로드로 충족된 시각")이 이미 전제하던 흐름 | NUBiz AX Initiative |
+| 0.16 | 2026-09-08 | apps/web `(family)/photo-requests` 사진 요청 화면 신규 — photo_requests API를 소비하는 첫 화면(생성/조회/닫기). §3.1 `PhotoRequest` 인터페이스에 `createdAt`/`fulfilledAt` 보강(실 응답엔 있었으나 누락) | NUBiz AX Initiative |
 | 0.15 | 2026-09-08 | apps/web `(user)/photos` 사진 갤러리 화면 신규 — §5.1 화면 인벤토리의 "사진·타임라인 갤러리" 최초 구현, sync-contract.md §4 Presigned URL 흐름을 처음 소비하는 웹 화면. §3.1 `Photo` 인터페이스에 `status`(schema.md v1.6엔 있었으나 누락)·`viewUrl`(신규, MinIO presigned GET URL — storageRef는 내부 키라 브라우저가 못 열어서 추가) 보강. `GET /users/{userId}/photos`에 `view_url` 필드 추가(`PhotoService.get_view_url`, 실 MinIO로 검증) | NUBiz AX Initiative |
 | 0.14 | 2026-09-08 | `GET /sync/download` 실제 구현(§4.2, sync-contract.md v0.3) — `deviceId` 필수 파라미터 신규(원문엔 없었으나 Device Token 스텁이라 호출 주체 식별 수단이 필요했음). author 모듈에 `questions` 도메인/리포지토리/서비스 신규(schema.md §3.9 테이블은 있었으나 코드가 없었던 갭, photo_requests와 동일 패턴), schedule 모듈에 `deps.py` 신규. chapter_updates의 summary/keywords는 §2.11 Compaction Engine 미구현으로 body_text 원문/빈 배열 대체. §4.3 예시에 `priority_questions.linked_chapter_id` 보강(questions 엔티티엔 있는 실 데이터인데 원래 예시에 빠져 있었음) — 상세는 sync-contract.md §5 | NUBiz AX Initiative |

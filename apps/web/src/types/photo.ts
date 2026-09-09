@@ -31,10 +31,22 @@ export interface Photo {
   viewUrl: string | null;
 }
 
+export type PhotoRequestStatus = "pending" | "fulfilled" | "dismissed";
+
+/** `services/backend`의 photo_requests API(photo_requests/api/v1/photo_requests.py
+ * PhotoRequestResponse)와 1:1. */
 export interface PhotoRequest {
   id: string;
   userId: string;
   requestedBy?: string;
   message?: string;
-  status: "pending" | "fulfilled" | "dismissed";
+  status: PhotoRequestStatus;
+  createdAt: string;
+  fulfilledAt?: string;
 }
+
+export const PHOTO_REQUEST_STATUS_LABEL: Record<PhotoRequestStatus, string> = {
+  pending: "대기중",
+  fulfilled: "충족됨",
+  dismissed: "닫힘",
+};

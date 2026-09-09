@@ -1,8 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { listPhotos } from "@/services/photos";
+import { listPhotoRequests } from "@/services/photo-requests";
 import { PhotoUploadForm } from "@/features/photo-upload/PhotoUploadForm";
-import type { Photo } from "@/types";
+import { PendingPhotoRequestBanner } from "@/features/photo-request/PendingPhotoRequestBanner";
+import type { Photo, PhotoRequest } from "@/types";
 import { ApiError } from "@/services/errors";
 
 interface PhotosPageProps {
@@ -25,13 +27,16 @@ export default async function PhotosPage({ searchParams }: PhotosPageProps) {
   }
 
   let photos: Photo[];
+  let photoRequests: PhotoRequest[];
   let error: string | null = null;
   try {
-    photos = await listPhotos(userId);
+    [photos, photoRequests] = await Promise.all([listPhotos(userId), listPhotoRequests(userId)]);
   } catch (e) {
     error = e instanceof ApiError ? e.message : "사진 목록을 불러오지 못했습니다.";
     photos = [];
+    photoRequests = [];
   }
+  const pendingRequests = photoRequests.filter((r) => r.status === "pending");
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
@@ -39,6 +44,12 @@ export default async function PhotosPage({ searchParams }: PhotosPageProps) {
       <p className="mt-2 text-ink-muted">
         올린 사진은 자서전 회고 대화와 챕터 편입에 쓰입니다. (기획서 4.4절)
       </p>
+
+      {pendingRequests.length > 0 && (
+        <div className="mt-6">
+          <PendingPhotoRequestBanner requests={pendingRequests} />
+        </div>
+      )}
 
       <div className="mt-6">
         <PhotoUploadForm userId={userId} />
