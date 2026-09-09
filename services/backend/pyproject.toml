@@ -30,6 +30,8 @@ dev = [
     "mypy>=1.13,<2",
     "pytest>=8.3,<9",
     "pytest-asyncio>=0.24,<0.25",
+    # 모듈 경계·4계층 의존 규칙 CI 강제 (CTO Enterprise B3, design.md §11) — [tool.importlinter]
+    "import-linter>=2.0,<3",
 ]
 
 [build-system]
@@ -58,3 +60,88 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+# ── 모듈 경계·계층 의존 규칙 (CTO Enterprise B3, design.md §11 / structure.md §2) ──
+# `lint-imports` (CI ci.yml backend job)로 강제. decisions.md #44 모듈러 모놀리스에서
+# 향후 특정 모듈을 물리 분리하려면 이 경계가 지켜져야 코드 이동만으로 끝난다.
+[tool.importlinter]
+root_package = "core_service"
+# domain 계층의 프레임워크 의존 금지 계약이 외부 패키지(fastapi 등)를 대상으로 하므로 필요
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "도메인 모듈 4계층: api → application → infrastructure → domain (역방향 import 금지)"
+type = "layers"
+layers = [
+    "api",
+    "application",
+    "infrastructure",
+    "domain",
+]
+containers = [
+    "core_service.modules.author",
+    "core_service.modules.care",
+    "core_service.modules.consent",
+    "core_service.modules.devices",
+    "core_service.modules.family_members",
+    "core_service.modules.invitations",
+    "core_service.modules.notifications",
+    "core_service.modules.photo_requests",
+    "core_service.modules.photos",
+    "core_service.modules.schedule",
+    "core_service.modules.sync",
+    "core_service.modules.users",
+]
+# 각 컨테이너에 4계층이 모두 있지는 않다(예: care는 api 없음) — 없는 계층은 무시.
+exhaustive = false
+
+[[tool.importlinter.contracts]]
+name = "domain 계층은 프레임워크(fastapi/sqlalchemy/pydantic)에 의존하지 않는다 (순수 엔티티·규칙)"
+type = "forbidden"
+source_modules = [
+    "core_service.modules.author.domain",
+    "core_service.modules.care.domain",
+    "core_service.modules.consent.domain",
+    "core_service.modules.devices.domain",
+    "core_service.modules.family_members.domain",
+    "core_service.modules.invitations.domain",
+    "core_service.modules.notifications.domain",
+    "core_service.modules.photo_requests.domain",
+    "core_service.modules.photos.domain",
+    "core_service.modules.schedule.domain",
+    "core_service.modules.sync.domain",
+    "core_service.modules.users.domain",
+]
+forbidden_modules = [
+    "fastapi",
+    "sqlalchemy",
+    "pydantic",
+]
+
+[[tool.importlinter.contracts]]
+name = "공유 커널(shared/)은 도메인 모듈에 의존하지 않는다"
+type = "forbidden"
+source_modules = [
+    "core_service.shared",
+]
+forbidden_modules = [
+    "core_service.modules",
+]
+
+[[tool.importlinter.contracts]]
+name = "core/는 도메인 모듈에 의존하지 않는다 (아래 3건은 기록된 예외, 새 위반은 금지)"
+type = "forbidden"
+source_modules = [
+    "core_service.core",
+]
+forbidden_modules = [
+    "core_service.modules",
+]
+ignore_imports = [
+    # model_registry: 전 ORM 모델을 한 곳에서 import해 FK 문자열 참조를 해석(파일 상단 주석)
+    "core_service.core.model_registry -> core_service.modules.**",
+    # auth.py: principal 해석에 두 리포지토리가 필요(함수 내부 지연 import). 정석은 core에
+    # 포트(Protocol)를 두고 주입하는 것 — 후속 리팩터링 대상, 지금은 이 2건으로 고정한다.
+    "core_service.core.auth -> core_service.modules.family_members.infrastructure.family_member_repository",
+    "core_service.core.auth -> core_service.modules.devices.infrastructure.device_credential_repository",
+]
