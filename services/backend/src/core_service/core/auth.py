@@ -165,7 +165,10 @@ async def require_verified_subject(
 ) -> VerifiedSubject:
     """토큰만 검증하고 `sub`를 돌려준다. '연결을 만드는' 부트스트랩 엔드포인트
     (초대 수락 — 아직 어떤 family_member에도 매핑 안 된 계정)용."""
-    claims = await get_verifier().verify(_bearer_token(authorization))
+    # 토큰 유무를 먼저 본다 — 없으면 401(verifier를 만들지도 않는다). verifier 생성이
+    # AUTH_ISSUER_URL 미설정 시 RuntimeError라, 순서가 반대면 무인증 요청이 500이 된다.
+    token = _bearer_token(authorization)
+    claims = await get_verifier().verify(token)
     subject = str(claims.get("sub", ""))
     if not subject:
         raise ApiError("UNAUTHORIZED", "토큰에 sub claim이 없습니다.")
