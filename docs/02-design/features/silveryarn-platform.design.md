@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.26 (Keycloak 로컬 realm 추가 — 인증·RBAC·2FA 실 인프라 e2e)
+> **Version**: 0.27 (PDCA Check — 설계문서↔구현 드리프트 동기화: §9.1/§11.1 실제 모듈러 모놀리스 구조 반영, §3.1 Chapter.createdAt 제거, §8.1 phase 정정)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -328,8 +328,10 @@ interface Chapter {
   bodyText: string;
   status: "draft" | "in_review" | "rejected" | "confirmed";  // v1.1: rejected 추가
   version: number;
-  createdAt: string;            // v0.6 신규 — 3차 검증 L-11
   updatedAt: string;            // v0.6 신규 — 3차 검증 L-11
+  // v0.27(Check): `createdAt` 제거 — `chapters` 테이블/ChapterModel/ChapterResponse/schema.md DDL 어디에도
+  //   없는 필드였다(v0.6 L-11에서 추가됐으나 구현 미반영). 챕터는 sync 파이프라인 산출물이고 `updatedAt`이
+  //   이미 증분 다운로드 워터마크라 `createdAt` 수요 없음. SoR 원칙 1(코드 우선).
 }
 
 interface ChapterRevision {    // v1.1 신규
@@ -705,8 +707,8 @@ CTO 보안 검토 B4가 "스키마 결정, Do 단계 이연 불가"로 지목한
 | 동기화 시나리오 | Wi-Fi 접속/차단 반복, 업/다운로드 재시도·체크섬, Diff 멱등성(§2.8) | 네트워크 장애 주입 | Do |
 | 사진 회고 파이프라인 | 업로드→미회고 큐→회고 대화→챕터 인라인 편입(placement_status 전이 포함) | E2E 시나리오 | Do |
 | 설치모드 분기 | RAM/OS 경계값 기기에서 키오스크/일반 분기 정확도 (§7 확정 수치 기준) | 실기기 매트릭스(부록A 3.3) | Do |
-| 정서 모니터링 | emotion_scores 일별 기록, 임계치 초과 시 emotion_alerts 생성·알림 발송(§2.5) | E2E 시나리오 | Do |
-| 출판 파이프라인 | 챕터 전체 confirmed → publications 요청 → PDF/ePub 생성(§2.6) | E2E 시나리오 | Do |
+| 정서 모니터링 | emotion_scores 일별 기록, 임계치 초과 시 emotion_alerts 생성·알림 발송(§2.5) | E2E 시나리오 | Phase 2 (피처플래그 OFF — decisions.md #25, §11.2 step 6) |
+| 출판 파이프라인 | 챕터 전체 confirmed → publications 요청 → PDF/ePub 생성(§2.6) | E2E 시나리오 | Phase 3 (§11.2 step 7) |
 
 ---
 
@@ -714,15 +716,19 @@ CTO 보안 검토 B4가 "스키마 결정, Do 단계 이연 불가"로 지목한
 
 ### 9.1 Layer Structure (Enterprise, On-Premise 변형)
 
+> **v0.27 (Check 단계, SoR 원칙 1)**: 서버 Location 열을 실제 구현 구조로 교체했다. 첫 커밋을 6개
+> 서비스가 아닌 **단일 모듈러 모놀리스**(`services/backend/`, decisions.md #44)로 찍었으므로 `services/{engine}/`
+> 경로는 존재하지 않는다. 4계층 패턴은 이제 도메인 모듈(`modules/{name}/`) 단위로 반복된다 — structure.md v1.4 참조.
+
 | Layer | Responsibility | Location |
 |-------|---------------|----------|
-| **모바일 Presentation** | 음성 UI, 대화 화면, 사진 업로드 UI | `apps/mobile/` |
-| **모바일 On-Device AI** | VAD·STT·SLM·TTS, 로컬 라우터 | `apps/mobile/ondevice/` |
-| **모바일 Infrastructure** | 로컬 SQLite(FTS5, Phase 1 기본 — [mobile-schema.md](../../01-plan/mobile-schema.md)), 경량 VectorDB(Phase 2+, 고사양 단말 한정), 동기화 클라이언트 | `apps/mobile/local/` |
-| **서버 Presentation** | API Gateway, 웹 콘솔(`apps/web`, `apps/admin`) | `services/gateway/`, `apps/web/`, `apps/admin/` |
-| **서버 Application** | author-engine, care-engine, schedule-engine 유스케이스 | `services/{engine}/application/` |
-| **서버 Domain** | 서비스별 Entity·비즈니스 규칙(챕터 귀속, 사진 인라인 규칙) | `services/{engine}/domain/` — *v0.2: `services/shared/domain/`(단일 공유)에서 structure.md와 일치하도록 서비스별 분산으로 정정(design-validator F-2). `services/shared/`는 순수 공통 유틸·마이그레이션만 담당* |
-| **서버 Infrastructure** | Qdrant/Neo4j/PostgreSQL/MinIO 연동, vLLM 클라이언트 | `services/{engine}/infrastructure/` |
+| **모바일 Presentation** | 음성 UI, 대화 화면, 사진 업로드 UI | `apps/mobile/.../presentation/`, `.../onboarding/` |
+| **모바일 On-Device AI** | VAD·STT·SLM·TTS, 로컬 라우터 | `apps/mobile/.../ondevice/` |
+| **모바일 Infrastructure** | 로컬 SQLite(FTS5, Phase 1 기본 — [mobile-schema.md](../../01-plan/mobile-schema.md)), 경량 VectorDB(Phase 2+, 고사양 단말 한정), 동기화 클라이언트 | `apps/mobile/.../local/`, `.../sync/` |
+| **서버 Presentation** | FastAPI 라우터(모듈별 `api/v1/`), `main.py`(api 프로세스), 웹 콘솔 | `services/backend/src/core_service/modules/{name}/api/`, `apps/web/`, `apps/admin/` |
+| **서버 Application** | 모듈별 유스케이스(서비스 클래스), arq 워커(`worker.py`) | `services/backend/src/core_service/modules/{name}/application/` |
+| **서버 Domain** | 모듈별 Entity·비즈니스 규칙(챕터 귀속, 사진 인라인 규칙). 2+ 모듈 공유 값 객체(enum)는 공유 커널 | `services/backend/src/core_service/modules/{name}/domain/`, 공유분은 `core_service/shared/` |
+| **서버 Infrastructure** | Qdrant/Neo4j/PostgreSQL/MinIO 연동, vLLM 클라이언트, ORM 모델·리포지토리 | `services/backend/src/core_service/modules/{name}/infrastructure/`, `core_service/core/clients/` |
 
 ### 9.2 Dependency Rules
 
@@ -747,40 +753,60 @@ Application은 Domain에 항상 의존하며, Infrastructure는 Domain이 정의
 
 ## 11. Implementation Guide
 
-> ⚠️ **CTO팀 아키텍처 리뷰 권고(Enterprise B3)**: 아래 6개 서비스 구조를 첫 스캐폴딩 커밋에서 그대로 6개 독립 배포 단위로 찍지 말 것. Phase 1은 **모듈러 모놀리스 2프로세스(api / worker)**로 시작하고, 폴더 경계만 아래 구조로 유지하며 import-linter로 엔진 간 직접 참조를 CI에서 차단하는 방식을 권장한다. 실제 서비스 분리는 GPU 스케일 독립이 필요해지는 시점(rag-core 등)에 재검토([cto-review](../cto-review-2026-09-05.md#1-enterprise-architect--아키텍처-전략-심사) B3 참조).
+> ⚠️ **CTO팀 아키텍처 리뷰 권고(Enterprise B3)**: 6개 서비스 구조를 첫 스캐폴딩 커밋에서 그대로 6개 독립 배포 단위로 찍지 말 것. Phase 1은 **모듈러 모놀리스 2프로세스(api / worker)**로 시작하고, 폴더 경계만 유지하며 import-linter로 엔진 간 직접 참조를 CI에서 차단하는 방식을 권장한다. 실제 서비스 분리는 GPU 스케일 독립이 필요해지는 시점(rag-core 등)에 재검토([cto-review](../cto-review-2026-09-05.md#1-enterprise-architect--아키텍처-전략-심사) B3 참조).
+>
+> **v0.27 (Check 단계) — 구현 반영**: 위 권고대로 `services/backend/` 단일 모듈러 모놀리스로 구현됨(decisions.md #44). 아래 트리는 실제 구조다. **import-linter는 아직 미도입** — 현재 코드는 모듈 경계(모듈은 서로의 `application`/`domain`/`deps`만 참조, `infrastructure`/`api` 직접 참조 0건)와 4계층 의존 규칙을 지키고 있으나 CI 회귀 방지 장치가 없다(후속 아키텍처 작업).
 
-### 11.1 File Structure (제안)
+### 11.1 File Structure (실제 구현 — v0.27)
 
 ```
 silveryarn/
 ├── apps/
-│   ├── mobile/            # 온디바이스 앱 (설치모드 자동분기 포함)
-│   ├── web/                # 자서전 사용자·가족 웹 콘솔
-│   └── admin/               # 관리자 콘솔
+│   ├── mobile/             # 온디바이스 앱 (Kotlin, 설치모드 자동분기 포함)
+│   │   └── app/src/main/java/com/silveryarn/mobile/
+│   │       ├── auth/ installmode/ local/ ondevice/ onboarding/ sync/
+│   │       └── presentation/{assistant,author,care,onboarding,settings}/
+│   ├── web/                # 자서전 사용자·가족 웹 콘솔 (Next.js App Router)
+│   └── admin/              # 관리자 콘솔 (Next.js App Router)
 ├── services/
-│   ├── gateway/             # API Gateway/오케스트레이터 (Keycloak 연동)
-│   ├── author-engine/
-│   ├── care-engine/
-│   ├── schedule-engine/
-│   ├── sync-gateway/        # Wi-Fi 배치 동기화 처리
-│   ├── rag-core/            # LLM·임베딩·Vector DB 오케스트레이션
-│   └── shared/               # 공통 유틸·Alembic 마이그레이션만 (도메인 로직 없음 — §9.1)
-├── packages/
-│   └── py-common/            # 서비스 간 공유 Python 패키지
-├── infra/                   # 온프레미스 K8s/베어메탈 GPU 클러스터 (AWS 템플릿 미적용)
-├── docs/                     # PDCA 문서
-└── Plan/                     # 원본 기획 산출물 (보존)
+│   └── backend/            # ★ 단일 배포 단위 (모듈러 모놀리스, decisions.md #44)
+│       ├── src/core_service/
+│       │   ├── main.py            # api 프로세스 (FastAPI)
+│       │   ├── worker.py          # worker 프로세스 (arq 잡 큐)
+│       │   ├── core/              # 횡단 관심사: auth, crypto, db, queue, config,
+│       │   │   ├── clients/       #   model_registry(전 ORM 모델 import), access_log
+│       │   ├── shared/            # 공유 커널 — 2+ 모듈이 쓰는 enum 등 (domain_enums.py)
+│       │   └── modules/{users,devices,author,care,schedule,sync,
+│       │       consent,family_members,invitations,notifications,
+│       │       photos,photo_requests}/
+│       │       ├── api/v1/        # FastAPI 라우터
+│       │       ├── application/   # 유스케이스 (서비스 클래스)
+│       │       ├── domain/        # 엔티티·값 객체·규칙 (순수)
+│       │       ├── infrastructure/# ORM 모델·리포지토리·외부 연동
+│       │       └── deps.py        # 이 모듈의 DI 조립 (타 모듈은 이것만 import)
+│       ├── migrations/versions/   # Alembic 0001~0006
+│       ├── scripts/e2e_*.py       # 실 인프라 e2e (pii/http/keycloak)
+│       └── tests/                 # Fake*Repository 기반 Application 계층 단위 테스트
+├── infra/
+│   ├── docker-compose.yml         # postgres/redis/qdrant/neo4j/minio/keycloak (port 9670~9678)
+│   └── keycloak/import/           # 로컬 realm (--import-realm 자동)
+├── docs/                          # PDCA 문서
+└── Plan/                          # 원본 기획 산출물 (보존)
 ```
+
+> `packages/py-common`·`services/{gateway,*-engine,rag-core,shared}`는 만들지 않았다 — 단일 모놀리스에서는 `core_service/shared/`(공유 커널)와 `core_service/core/`(횡단)로 충분. 물리 분리가 필요해지면 `modules/{name}/`을 통째로 옮긴다(structure.md §2).
 
 ### 11.2 Implementation Order
 
-1. [x] Phase 1 스키마 확정 (`/phase-1-schema`) — v1.3, 17개 엔티티
+1. [x] Phase 1 스키마 확정 (`/phase-1-schema`) — schema.md v1.11, 서버 21개 테이블(도메인 17 + 부속 4), 마이그레이션 0001~0006
 2. [x] Phase 2 컨벤션 확정 (`/phase-2-convention`)
-3. [ ] 온디바이스 오프라인 코어(STT/SLM/TTS) + 로컬 캐시
-4. [ ] Wi-Fi 배치 동기화 기본 흐름 (업/다운로드, 재시도, 체크섬, Diff 멱등성)
-5. [ ] 자서전 작가 엔진 + 웹 콘솔 감수 흐름 (Phase 1 MVP)
-6. [ ] 말벗돌봄 엔진 + 정서 모니터링(emotion_scores/emotion_alerts) (Phase 2)
-7. [ ] 비서 엔진 + 출판 파이프라인 + 외부 연계 옵션 파일럿 (Phase 3)
+3. [~] 온디바이스 오프라인 코어(STT/SLM/TTS) + 로컬 캐시 — 앱 셸·온보딩·sync 클라이언트·Room 스키마 구현, STT/SLM/TTS 런타임은 모델 선정(decisions.md #27) 대기
+4. [x] Wi-Fi 배치 동기화 기본 흐름 (업/다운로드, 재시도, 체크섬, Diff 멱등성) — sync-contract.md v0.5, 업로드 멱등성 3계층
+5. [x] 자서전 작가 엔진 + 웹 콘솔 감수 흐름 (Phase 1 MVP) — author 모듈(chapters/questions), `POST /chapters/{id}/review`, apps/web 감수 화면. Compaction Engine(§2.11 요약·키워드)은 미구현(body_text 원문 대체)
+6. [ ] 말벗돌봄 엔진 + 정서 모니터링(emotion_scores/emotion_alerts) (Phase 2) — 테이블만 존재, 엔드포인트·피처플래그 OFF
+7. [ ] 비서 엔진 + 출판 파이프라인 + 외부 연계 옵션 파일럿 (Phase 3) — schedule 모듈은 조회·응답만 구현, `publications` 테이블만 존재
+
+> Do 단계 보안 트랙(PR #1~8): PII 1·2차 필드 암호화(§7.3), Keycloak JWKS 실 인증·RBAC/IDOR(§7.4), consent 모듈, 알림 수신 설정, social_worker fail-closed, 모바일 온보딩 흐름, 로컬 Keycloak realm. 실 인프라 e2e 17/17·13/13·9/9.
 
 ### 11.3 Session Guide
 
@@ -798,6 +824,7 @@ silveryarn/
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.27 | 2026-09-10 | **PDCA Check — 설계문서↔구현 갭 분석 반영.** ① §9.1 Layer Structure·§11.1 File Structure를 실제 모듈러 모놀리스 구조(`services/backend/src/core_service/modules/{name}/{4계층}` + `core/` + `shared/`, `main.py`/`worker.py`)로 교체 — 기존 `services/{engine}/` 6-서비스 트리는 미구현(decisions.md #44, structure.md v1.4는 이미 정정됨). ② §3.1 `interface Chapter`에서 `createdAt` 제거(테이블·ORM·응답·DDL 어디에도 없던 필드, v0.6 L-11에서 추가됐으나 미구현). ③ §8.1 Test Plan phase 열 정정(정서 모니터링 Phase 2·피처플래그 OFF, 출판 Phase 3 — §11.2/decisions #25와 정합). ④ §11.2 Implementation Order 체크박스를 실제 상태로 갱신. ⑤ §11 preamble: import-linter 미도입 상태 명시(모듈 경계·4계층은 준수 중이나 CI 회귀 방지 없음 — 후속). schema.md DDL ↔ 실 DB 21개 테이블은 일치 확인 | NUBiz AX Initiative |
 | 0.1 | 2026-09-05 | Plan/ 폴더 원본 문서 4종 기반 Design 초안 등록 | NUBiz AX Initiative |
 | 0.2 | 2026-09-05 | design-validator 검증 반영 — RAG/정서모니터링/출판/온보딩/상태전이/Diff처리/페르소나 절 신설(§2.4~2.10), API 표준화(§4), RBAC·백업정책 추가(§7), 데이터모델 v1.1 동기화(§3), Domain 레이어 위치 정정(§9) | NUBiz AX Initiative |
 | 0.3 | 2026-09-06 | 사용자 제안 "Closed-Loop Architecture" 보고서 검토 반영 — §2.11 신설(Opus/WorkManager/Whisper Large-v3/Neo4j/Critic Agent/Compaction Engine 구체화), 컴포넌트 다이어그램·의존성표에 Neo4j 추가, §4.3에 sync/download 응답 예시 추가. 외부 GPT-4o/Claude 제안은 미채택(온프레미스 vLLM 유지, decisions #26) | NUBiz AX Initiative (사용자 제안 반영) |
