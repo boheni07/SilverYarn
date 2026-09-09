@@ -27,6 +27,9 @@ class FamilyMemberModel(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     contact: Mapped[str] = mapped_column(String(100), nullable=False)
     two_factor_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Keycloak 토큰 sub ↔ DB 행 매핑 (decisions.md #47, 마이그레이션 0003). 비유일 —
+    # 한 사람이 여러 어르신을 담당하면 같은 sub로 여러 행이 생긴다.
+    keycloak_sub: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     def to_domain(self) -> FamilyMember:
@@ -37,6 +40,7 @@ class FamilyMemberModel(Base):
             name=self.name,
             contact=self.contact,
             two_factor_enabled=self.two_factor_enabled,
+            keycloak_sub=self.keycloak_sub,
             created_at=self.created_at,
         )
 
@@ -53,6 +57,15 @@ class FamilyMemberRepository:
         result = await self._session.execute(
             select(FamilyMemberModel)
             .where(FamilyMemberModel.user_id == user_id)
+            .order_by(FamilyMemberModel.created_at)
+        )
+        return [m.to_domain() for m in result.scalars().all()]
+
+    async def list_by_keycloak_sub(self, keycloak_sub: str) -> list[FamilyMember]:
+        """core/auth.py의 require_family가 토큰 sub → DB 행(들)을 해석할 때 사용."""
+        result = await self._session.execute(
+            select(FamilyMemberModel)
+            .where(FamilyMemberModel.keycloak_sub == keycloak_sub)
             .order_by(FamilyMemberModel.created_at)
         )
         return [m.to_domain() for m in result.scalars().all()]

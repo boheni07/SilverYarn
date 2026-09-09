@@ -16,3 +16,10 @@ class QuestionService:
         self, user_id: uuid.UUID, since: datetime | None = None
     ) -> list[Question]:
         return await self._repo.list_unanswered_by_user(user_id, since)
+
+    async def list_questions_for_user(
+        self, user_id: uuid.UUID, answered: bool | None = None
+    ) -> list[Question]:
+        """GET /users/{userId}/questions (design.md §4.2, L-12) — 큐 전체 조회.
+        sync/download의 priority_questions(미답변·`since` 이후만)와 달리 필터 없이 본다."""
+        return await self._repo.list_by_user(user_id, answered)

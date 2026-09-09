@@ -19,6 +19,18 @@ class FakeConversationChunkRepository:
     async def get_by_id(self, chunk_id: uuid.UUID) -> ConversationChunk | None:
         return self._store.get(chunk_id)
 
+    async def find_by_turn(
+        self, user_id: uuid.UUID, session_id: str, turn_id: int
+    ) -> ConversationChunk | None:
+        return next(
+            (
+                c
+                for c in self._store.values()
+                if c.user_id == user_id and c.session_id == session_id and c.turn_id == turn_id
+            ),
+            None,
+        )
+
     async def list_by_user(
         self, user_id: uuid.UUID, limit: int = 50, offset: int = 0
     ) -> list[ConversationChunk]:

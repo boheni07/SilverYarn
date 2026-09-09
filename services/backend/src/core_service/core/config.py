@@ -61,14 +61,42 @@ class Settings(BaseSettings):
     llm_endpoint: str = Field(default="http://localhost:8001/v1", alias="LLM_ENDPOINT")
     llm_model_name: str = Field(default="", alias="LLM_MODEL_NAME")
 
-    # --- AUTH_ (Keycloak SSO, decisions.md #17) ---
+    # --- AUTH_ (Keycloak SSO, decisions.md #17 / #47) ---
     auth_issuer_url: str = Field(default="", alias="AUTH_ISSUER_URL")
     auth_client_id: str = Field(default="silveryarn-backend", alias="AUTH_CLIENT_ID")
     auth_secret: str = Field(default="", alias="AUTH_SECRET")
+    # 토큰 audience 검증값. 비우면 client_id를 쓴다.
+    auth_audience: str = Field(default="", alias="AUTH_AUDIENCE")
+    # JWKS 엔드포인트. 비우면 issuer_url에서 표준 경로로 유도한다.
+    auth_jwks_url: str = Field(default="", alias="AUTH_JWKS_URL")
+    auth_jwks_cache_seconds: int = Field(default=600, alias="AUTH_JWKS_CACHE_SECONDS")
+    # 2FA(step-up)로 인정할 토큰 `amr` claim 값들(콤마 구분). Keycloak 인증흐름 설정에 맞춘다.
+    auth_2fa_amr_values_raw: str = Field(default="mfa,otp,hwk", alias="AUTH_2FA_AMR_VALUES")
+
+    @property
+    def resolved_jwks_url(self) -> str:
+        if self.auth_jwks_url:
+            return self.auth_jwks_url
+        return f"{self.auth_issuer_url.rstrip('/')}/protocol/openid-connect/certs"
+
+    @property
+    def resolved_audience(self) -> str:
+        return self.auth_audience or self.auth_client_id
+
+    @property
+    def auth_2fa_amr_values(self) -> set[str]:
+        return {v.strip() for v in self.auth_2fa_amr_values_raw.split(",") if v.strip()}
 
     # --- SYNC_ (배치 동기화, sync-contract.md) ---
     sync_max_retry: int = Field(default=5, alias="SYNC_MAX_RETRY")
     sync_checksum_algo: str = Field(default="sha256", alias="SYNC_CHECKSUM_ALGO")
+
+    # --- PII_ (애플리케이션 레벨 필드 암호화 — schema.md §5, decisions.md #45, CTO 검토 B4) ---
+    # KEK(Key Encryption Key): Fernet 키 문자열. 회전 대비로 콤마 구분 다중 키 허용
+    # (첫 키로 암호화, 전체 키로 복호화 시도 — MultiFernet). 온프레미스 Vault 이전 전까지
+    # 시크릿 매니저/환경변수로 주입한다(CONVENTIONS.md §4). 비어 있으면 PII 대상
+    # repository가 처음 호출될 때 RuntimeError(생성 방법 안내 포함).
+    pii_kek: str = Field(default="", alias="PII_KEK")
 
     # --- Worker (arq, sync-contract.md §2) ---
     redis_host: str = Field(default="localhost", alias="REDIS_HOST")

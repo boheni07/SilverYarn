@@ -15,8 +15,9 @@ from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core_service.core.auth import AuthContext, require_auth, require_device_token
+from core_service.core.auth import DeviceIdentity, require_device_token, require_roles
 from core_service.core.db import get_db
+from core_service.core.errors import ApiError
 from core_service.core.queue import get_arq_pool
 from core_service.modules.author.application.chapter_service import ChapterService
 from core_service.modules.author.application.question_service import QuestionService
@@ -28,6 +29,7 @@ from core_service.modules.schedule.deps import get_schedule_item_service
 from core_service.modules.sync.application.sync_service import SyncService
 from core_service.modules.sync.domain.sync_session import SyncStatus
 from core_service.modules.sync.infrastructure.sync_repository import SyncSessionRepository
+from core_service.shared.domain_enums import FamilyRole
 from core_service.shared.schemas import DataResponse, PaginatedResponse, Pagination
 
 router = APIRouter(prefix="/sync", tags=["sync"])
@@ -132,13 +134,15 @@ async def upload(
     response: Response,
     service: SyncService = Depends(_service),
     device_service: DeviceService = Depends(get_device_service),
-    _device: str = Depends(require_device_token),
+    _device: DeviceIdentity = Depends(require_device_token),
 ) -> DataResponse[SyncUploadAccepted]:
     """sync-contract.md §2.1 — 즉시 202 Accepted, 처리는 worker.py의 process_upload 잡.
 
-    user_id는 클라이언트가 주장하게 두지 않는다 — device_id로 devices 모듈에서
-    조회한다(Device Token → 기기 → 사용자로 신뢰 사슬을 유지).
+    user_id는 클라이언트가 주장하게 두지 않는다 — Device Token이 해석한 기기(_device)와
+    body.device_id가 일치해야 하고, user_id는 그 기기 소유자로 고정한다.
     """
+    if body.device_id != _device.device_id:
+        raise ApiError("FORBIDDEN", "요청한 device_id가 인증된 기기와 일치하지 않습니다.")
     device = await device_service.get_device(body.device_id)  # 없으면 NOT_FOUND
     session, job_id = await service.start_upload_session(
         device_id=body.device_id,
@@ -158,10 +162,12 @@ async def upload(
 async def get_session_status(
     session_id: uuid.UUID,
     service: SyncService = Depends(_service),
-    _device: str = Depends(require_device_token),
+    _device: DeviceIdentity = Depends(require_device_token),
 ) -> DataResponse[SyncSessionStatusResponse]:
-    """sync-contract.md §2.2 — 클라이언트 폴링용."""
+    """sync-contract.md §2.2 — 클라이언트 폴링용. 자기 기기의 세션만 조회 가능."""
     session = await service.get_session_status(session_id)
+    if session.device_id != _device.device_id:
+        raise ApiError("FORBIDDEN", "다른 기기의 동기화 세션은 조회할 수 없습니다.")
     return DataResponse(
         data=SyncSessionStatusResponse(
             session_id=session.id,
@@ -181,8 +187,7 @@ async def list_sessions(
     status: SyncStatus | None = None,
     service: SyncService = Depends(_service),
     device_service: DeviceService = Depends(get_device_service),
-    # Admin — TODO: role 체크 강화 (devices.py list_user_devices와 동일 패턴)
-    _ctx: AuthContext = Depends(require_auth),
+    _admin=Depends(require_roles(FamilyRole.ADMIN)),  # noqa: ANN001 — design.md §7.1 동기화 모니터링 = admin
 ) -> PaginatedResponse[SyncSessionResponse]:
     """apps/admin 동기화 모니터링 화면 — 공통 조회 경로.
 
@@ -226,20 +231,19 @@ async def download(
     chapter_service: ChapterService = Depends(get_chapter_service),
     question_service: QuestionService = Depends(get_question_service),
     schedule_service: ScheduleItemService = Depends(get_schedule_item_service),
-    _device: str = Depends(require_device_token),
+    _device: DeviceIdentity = Depends(require_device_token),
 ) -> DataResponse[SyncDownloadResponse]:
     """sync-contract.md §5 — 증분 다운로드.
 
-    ⚠️ sync-contract.md §5 원문은 `since` 하나뿐이고 호출 주체(어느 사용자 것을
-    내려줄지)를 식별할 파라미터가 없었다 — POST /sync/upload가 body의 device_id로
-    device→user_id 신뢰사슬을 쓰는 것과 같은 이유(Device Token 자체는 아직 특정
-    기기를 검증하지 못하는 스텁, core/auth.py)로 `device_id` 쿼리 파라미터를
-    추가했다(sync-contract.md v0.3에 반영).
+    `device_id` 쿼리 파라미터(sync-contract.md v0.3)는 유지하되, 이제 Device Token이
+    실제로 기기를 검증하므로 토큰이 해석한 기기와 일치하는지 확인한다(불일치 시 403).
 
     chapter_updates의 summary/keywords는 design.md §2.11 Compaction Engine(AI
     요약 파이프라인, 이 세션 스코프 밖)이 아직 없어 body_text 원문/빈 배열로
     대체한다 — 실 파이프라인이 생기면 이 자리만 교체.
     """
+    if device_id != _device.device_id:
+        raise ApiError("FORBIDDEN", "요청한 device_id가 인증된 기기와 일치하지 않습니다.")
     device = await device_service.get_device(device_id)
     since_dt = _parse_since(since)
 

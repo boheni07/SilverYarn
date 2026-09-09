@@ -451,19 +451,17 @@ flowchart LR
 
 ---
 
-## 11. 알려진 확장 후보 (schema.md v1.4에도 미반영 — 결정 대기)
+## 11. 알려진 확장 후보
 
-CTO 보안·백엔드 리뷰([cto-review-2026-09-05.md](../02-design/cto-review-2026-09-05.md))에서 구체적으로 제안됐으나, 이 문서(ERD)는 **schema.md 현재 확정 상태를 있는 그대로 시각화**하는 것이 목적이라 아래 항목은 반영하지 않았다. Do 단계 착수 전 별도 결정이 필요하다.
+CTO 보안·백엔드 리뷰([cto-review-2026-09-05.md](../02-design/cto-review-2026-09-05.md))에서 제안된 항목. **3종은 Do 단계에서 확정·반영**([decisions.md #47](./decisions/silveryarn-platform.decisions.md), schema.md v1.8), 2종은 계속 보류.
 
-| 후보 엔티티/컬럼 | 목적 | 근거 |
-|---|---|---|
-| `access_logs` (신규 테이블) | 접속기록(누가·언제·무엇을 열람) 감사로그 | 「개인정보의 안전성 확보조치 기준」제8조, CTO 보안리뷰 B5(e) |
-| `family_members.keycloak_sub` (UK 컬럼) | Keycloak 토큰 subject ↔ DB 행 매핑 (RBAC 강제의 전제조건) | CTO 보안리뷰 B5(a) |
-| `device_credentials` (신규 테이블) | Device Token 발급·회전·폐기 이력 (분실단말 접근 차단) | CTO 보안리뷰 B5(b) |
-| `organizations` + `family_members.org_id` | B2G 시설 단위 멀티테넌시(시설간 열람 차단) | CTO 보안리뷰 B5(c), decisions.md #1(B2C/B2G 병행) |
-| `*.retention_until` / `*.purged_at` | 보유기간·파기 시점 관리 (crypto-shredding 등) | CTO 보안리뷰 B3, decisions.md 미결 항목 |
-
-> 이 5가지를 지금 스키마에 반영할지 결정해주시면 schema.md 후속 버전으로 확정해서 이 ERD도 함께 갱신하겠습니다.
+| 후보 엔티티/컬럼 | 목적 | 근거 | 상태 |
+|---|---|---|---|
+| `family_members.keycloak_sub` | Keycloak 토큰 subject ↔ DB 행 매핑 (RBAC 강제의 전제조건) | B5(a) | ✅ 반영 (v1.8) — **비유일**로 확정(1인 다(多)어르신 담당) |
+| `device_credentials` (신규 테이블) | Device Token 발급·회전·폐기 이력 (분실단말 접근 차단) | B5(b) | ✅ 반영 (v1.8) — SHA-256 해시 저장 |
+| `access_logs` (신규 테이블) | 접속기록(누가·언제·무엇을 열람) 감사로그 | 제8조, B5(e) | ✅ 반영 (v1.8) — HTTP 미들웨어 적재 |
+| `organizations` + `family_members.org_id` | B2G 시설 단위 멀티테넌시(시설간 열람 차단) | B5(c), decisions.md #1 | ⏸️ 보류 — B2G 운영모델 확정 필요 |
+| `*.retention_until` / `*.purged_at` | 보유기간·파기 시점 관리 (crypto-shredding 등) | B3, decisions.md 미결 항목 | ⏸️ 보류 — 법무 회신 대기 |
 
 ---
 

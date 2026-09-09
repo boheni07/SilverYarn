@@ -19,6 +19,9 @@ dependencies = [
     "minio>=7.2,<8",
     "httpx>=0.27,<0.28",
     "python-jose[cryptography]>=3.3,<4",
+    # PII 필드 암호화(core/crypto.py, schema.md §5 / decisions.md #45) — python-jose가
+    # 이미 끌어오지만 직접 import하므로 명시적 의존성으로 고정한다.
+    "cryptography>=43,<47",
 ]
 
 [project.optional-dependencies]

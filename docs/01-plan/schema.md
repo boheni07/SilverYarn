@@ -4,7 +4,7 @@
 
 **Project**: 은빛실타래 (SilverYarn)
 **Date**: 2026-09-07
-**Version**: 1.6 (Do 단계 — photos 모듈 완성, status 컬럼 신규)
+**Version**: 1.9 (Do 단계 — 동기화 멱등성: conversation_chunks 부분 유니크 인덱스)
 **Source**: Design 문서 §3 Data Model 초안 + UI/UX 화면설계서 필드 단위 대조 결과 반영
 **용어 정의**: [glossary.md](./glossary.md) 참조
 
@@ -19,6 +19,12 @@
 > **v1.5 변경 요약** (Do 단계, 2026-09-08): apps/admin "전체 기기 통합 모니터링" 화면용 `idx_sync_started_at ON sync_sessions(started_at DESC)` 인덱스 신규 — 기기로 필터하지 않는 전역 정렬 쿼리는 기존 `idx_sync_device(device_id, started_at DESC)`를 못 쓰기 때문(선두 컬럼 불일치).
 >
 > **v1.6 변경 요약** (Do 단계 — photos 모듈 완성, 2026-09-08): `photos`에 `status` 컬럼 신규(`pending_upload`/`uploaded`, 기본값 `pending_upload`) — [sync-contract.md §4](../02-design/sync-contract.md#4-사진-업로드--presigned-url-흐름-be-b2)의 "3단계 확인 콜백이 없으면 `photos` 행은 `status=pending_upload`로 남고" 문장이 이미 전제하고 있던 컬럼인데 §3.6 속성 표에는 빠져 있던 걸 실제 구현 중 발견 — 문서가 이미 확정해 둔 흐름을 코드로 옮기며 정정했다.
+>
+> **v1.9 변경 요약** (Do 단계 — 동기화 업로드 멱등성, 2026-09-09): `conversation_chunks`에 **부분 유니크 인덱스** `uq_conversation_chunks_turn (user_id, session_id, turn_id) WHERE session_id IS NOT NULL AND turn_id IS NOT NULL` — 재전송/잡 재시도 시 한 대화 턴이 한 행만 되도록(sync-contract.md §2.3, CTO B1). 컬럼 추가 없음. 마이그레이션 `0004_sync_idempotency.py`.
+>
+> **v1.8 변경 요약** (Do 단계 — 실 인증 구현, 2026-09-09): erd.md §11의 "결정 대기" 5개 중 3개를 확정·반영([decisions.md #47](./decisions/silveryarn-platform.decisions.md), CTO B5). ① `family_members.keycloak_sub VARCHAR(255)` — Keycloak 토큰 `sub` ↔ DB 행 매핑, **비유일**(한 사람이 여러 어르신 담당 시 다중 행). ② `device_credentials` 테이블 — Device Token SHA-256 해시 저장(발급·회전·폐기). ③ `access_logs` 테이블 + `access_actor_kind` enum — 접속기록 감사로그(제8조). `organizations`(B2G 테넌시)·`*.retention_until`은 계속 보류. 마이그레이션 `0003_auth_real.py`.
+>
+> **v1.7 변경 요약** (Do 단계 — PII 필드 암호화 1차, 2026-09-09): [decisions.md #45](./decisions/silveryarn-platform.decisions.md) 확정에 따라 초민감 자유텍스트 5개 컬럼(`chapters.body_text`, `chapter_revisions.body_text_snapshot`, `conversation_chunks.transcript_on_device`/`transcript_server`/`assistant_response`)에 **애플리케이션 레벨 필드 암호화 + 사용자별 DEK** 적용. ① 부속 테이블 `user_encryption_keys` 신설(§5, §3.18) — 도메인 엔티티 17개에는 포함하지 않는다. ② 컬럼 **타입 변경 없음**(Fernet 토큰은 ASCII → 기존 `TEXT` 유지). ③ `name`/`contact`/`birth_date`는 부분일치 검색·컬럼 타입 변경이 얽혀 다음 라운드로 분리. 구현: `services/backend/src/core_service/core/crypto.py` + repository 계층. 마이그레이션 `0002_pii_field_encryption.py`.
 
 ---
 
@@ -49,6 +55,9 @@
 | `notification_settings` **(신규 v1.1)** | 가족 알림 수신 채널·항목 설정 | id, family_member_id, channel, receives_* |
 | `invitations` **(신규 v1.1)** | 가족 구성원 초대 링크 | id, token, role, status |
 | `publications` **(신규 v1.1)** | 인쇄용 PDF/ePub 출판 요청·상태 | id, format, status, storage_ref |
+| `user_encryption_keys` **(부속 v1.7, 도메인 아님)** | 사용자별 PII DEK를 KEK로 랩핑 저장 (decisions.md #45) | user_id, dek_wrapped, key_version |
+| `device_credentials` **(부속 v1.8, 도메인 아님)** | Device Token 발급·회전·폐기 (SHA-256 해시 저장, decisions.md #47) | device_id, token_hash, revoked_at |
+| `access_logs` **(부속 v1.8, 도메인 아님)** | 접속기록 감사로그 (제8조, CTO B5(e)) | actor_kind, actor_subject, method, path, status_code |
 
 > **범위 밖 (스코프 아웃, decisions.md #18)**: 구독·결제(Subscription/Payment) 도메인은 본 스키마에 포함하지 않는다. PG사·요금제가 결정되지 않은 상태로 엔티티를 설계하면 임의 결정이 되므로, 경영진 결정 이후 별도 Phase에서 추가한다.
 
@@ -83,6 +92,7 @@
 | name | varchar(100) | Y | 이름 (PII) |
 | contact | varchar(100) | Y | 연락처 (PII) |
 | two_factor_enabled | boolean | Y | 2FA 활성화 여부 |
+| keycloak_sub | varchar(255) | N | **v1.8** — Keycloak 토큰 `sub` claim ↔ 이 행 매핑(RBAC 강제 전제). **비유일**: 한 사람(1 Keycloak 계정)이 여러 어르신을 담당하면 같은 `sub`로 여러 행이 생긴다(erd.md §11 "UK" 제안과 달라진 이유는 decisions.md #47) |
 | created_at | timestamptz | Y | 생성 시각 |
 
 **Relationships**: 1:N → `notification_settings`, `invitations.invited_by`, `emotion_alerts.acknowledged_by`, `consent_logs.granted_by`, `chapter_revisions.reviewer_id`, `photo_requests.requested_by`
@@ -314,8 +324,8 @@
 | user_id | UUID | Y | FK → users.id |
 | consent_type | enum(`data_collection`,`external_tts_optin`,`external_llm_optin`) | Y | 동의 유형 |
 | granted | boolean | Y | 동의(true)/철회(false) |
-| granted_by | UUID | N | FK → family_members.id |
-| granted_at | timestamptz | Y | 동의/철회 시각 |
+| granted_by | UUID | N | FK → family_members.id. **없으면 어르신 본인 동의(self), 있으면 가족 대리 동의(proxy)** — API 응답의 `actor` 필드가 이 유무에서 파생된다(저장 컬럼 아님). CTO 검토 B2의 명시적 `actor` enum·`legal_guardian`은 법무 확정 대기(decisions.md #46) |
+| granted_at | timestamptz | Y | 동의/철회 시각. `granted=false`가 철회이며, 매 동의/철회가 새 행(append-only) — 유형별 최신 행이 현재 상태 |
 
 ---
 
@@ -370,6 +380,36 @@
 
 ---
 
+### 3.18 device_credentials (Device Token) — 부속 v1.8, 도메인 아님
+
+**Description**: CTO 검토 B5(b). `POST /devices` 응답으로 평문 토큰을 1회 발급하고 서버는 SHA-256 해시만 보관. 이후 `/sync/*` 호출은 `X-Device-Token` 헤더로 이 토큰을 제시하며, `core/auth.py`의 `require_device`가 해시로 조회해 (device → 소속 어르신)까지 해석한다. 분실·재프로비저닝 시 `revoked_at`으로 폐기.
+
+| Attribute | Type | Required | Description |
+|-----------|------|----------|-------------|
+| id | UUID | Y | PK |
+| device_id | UUID | Y | FK → devices.id (ON DELETE CASCADE) |
+| token_hash | varchar(64) | Y | SHA-256 hex, UNIQUE |
+| issued_at | timestamptz | Y | 발급 시각 |
+| last_used_at | timestamptz | N | 마지막 검증 시각 |
+| revoked_at | timestamptz | N | 폐기 시각(NULL이면 활성) |
+
+---
+
+### 3.19 access_logs (접속기록 감사로그) — 부속 v1.8, 도메인 아님
+
+**Description**: 「개인정보의 안전성 확보조치 기준」제8조, CTO 검토 B5(e). `main.py`의 HTTP 미들웨어가 `/api/v1/*` 요청 처리 후 best-effort로 1행 적재(실패해도 요청에 영향 없음).
+
+| Attribute | Type | Required | Description |
+|-----------|------|----------|-------------|
+| id | UUID | Y | PK |
+| actor_kind | enum(`family_member`,`device`,`anonymous`) | Y | 요청 주체 유형 |
+| actor_subject | varchar(255) | N | keycloak `sub` 또는 device_id |
+| method / path / status_code | | Y | 무엇을 했고 결과는 무엇인지 |
+| client_ip | varchar(64) | N | 요청 IP |
+| created_at | timestamptz | Y | 시각 |
+
+---
+
 ## 4. Entity Relationship Diagram
 
 > **정식 시각화 ERD**는 [`erd.md`](./erd.md)에서 관리한다 — 전체 관계 개요 + 도메인별(사용자/자서전/운영) Mermaid erDiagram, 속성·카디널리티·참조무결성 정책까지 포함한 완전판. 아래는 요약용 ASCII 스케치다.
@@ -403,7 +443,11 @@
 
 ## 5. PostgreSQL DDL
 
-> PII 컬럼(`name`, `contact`, `body_text`, `body_text_snapshot`, `transcript_*`, `birth_date`, **`assistant_response`**)은 애플리케이션 레벨 암호화 또는 `pgcrypto` 적용을 Do 단계에서 최종 결정한다. *(v1.4: `assistant_response`는 decisions.md #34에서 영구보존 확정 시 암호화 대상 포함이 함께 결정됐으나 이 목록에 누락돼 있던 것을 3차 검증 H-1로 정정)*
+> **PII 암호화 정책** ([decisions.md #45](./decisions/silveryarn-platform.decisions.md), CTO 검토 B4):
+> - **1차 적용 (v1.7, 코드 반영 완료)**: `chapters.body_text`, `chapter_revisions.body_text_snapshot`, `conversation_chunks.transcript_on_device`/`transcript_server`/`assistant_response` → **애플리케이션 레벨 필드 암호화**(Fernet, `pii.v1.` 접두 토큰) + **사용자별 DEK**(`user_encryption_keys`에 KEK로 랩핑 저장, KEK는 환경변수 `PII_KEK` — Vault 이전 전까지 임시). 컬럼 타입은 `TEXT` 유지. `pgcrypto`는 CTO B4 권고대로 **미사용**(키 유출 위험·인덱스 불가). 구현: `core/crypto.py`.
+> - **2차 예정**: `users.name`(부분일치 검색 재설계 필요), `family_members.contact`/`invitations.contact`(blind index, HMAC-SHA256 동등검색), `users.birth_date`(DATE→BYTEA 타입 변경). `transcript_server`가 암호화되며 `conversation_chunks` 임시 ILIKE 검색은 앱 레이어 복호화 필터로 전환됨(rag-core Qdrant 하이브리드 서치로 교체 예정).
+> - **crypto-shredding**: 사용자 파기 시 `user_encryption_keys` 행 삭제 = 해당 사용자 PII 자유텍스트 전부 복호화 불가. B3 파기정책의 파기 수단 후보(법무 확인 대기).
+> - `CREATE EXTENSION pgcrypto`는 마이그레이션에 남아 있으나(0001) 현재 사용처 없음 — 2차 라운드에서 blind index HMAC 함수용으로 재검토.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -425,8 +469,10 @@ CREATE TABLE family_members (
   name VARCHAR(100) NOT NULL,
   contact VARCHAR(100) NOT NULL,
   two_factor_enabled BOOLEAN NOT NULL DEFAULT false,
+  keycloak_sub VARCHAR(255),                          -- v1.8: Keycloak 토큰 sub 매핑(비유일). decisions.md #47
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX idx_family_members_keycloak_sub ON family_members(keycloak_sub);  -- v1.8
 
 CREATE TYPE install_mode AS ENUM ('kiosk', 'normal');
 CREATE TABLE devices (
@@ -645,10 +691,52 @@ CREATE TABLE publications (
   completed_at TIMESTAMPTZ
 );
 
+-- v1.7: PII 필드 암호화 부속 테이블 (decisions.md #45) — 도메인 엔티티 아님.
+--   dek_wrapped = 사용자별 DEK(Fernet 키)를 KEK(PII_KEK)로 랩핑한 값.
+--   ON DELETE CASCADE: 사용자 파기 시 함께 삭제되며 그 순간 해당 사용자 PII 자유텍스트는
+--   전부 복호화 불가능해진다(crypto-shredding — B3 파기정책 후보).
+CREATE TABLE user_encryption_keys (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  dek_wrapped BYTEA NOT NULL,
+  key_version SMALLINT NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- v1.8: 실 인증 부속 테이블 (decisions.md #47, CTO B5) — 도메인 엔티티 아님.
+--   Device Token 평문은 발급 시 1회만 응답에 담고 서버는 SHA-256 해시만 보관.
+CREATE TABLE device_credentials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  token_hash VARCHAR(64) NOT NULL UNIQUE,
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_used_at TIMESTAMPTZ,
+  revoked_at TIMESTAMPTZ
+);
+CREATE INDEX idx_device_credentials_device ON device_credentials(device_id);
+
+-- 접속기록 감사로그(「개인정보의 안전성 확보조치 기준」제8조, CTO B5(e)).
+--   HTTP 미들웨어가 요청 처리 후 best-effort로 1행씩 적재.
+CREATE TYPE access_actor_kind AS ENUM ('family_member', 'device', 'anonymous');
+CREATE TABLE access_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_kind access_actor_kind NOT NULL,
+  actor_subject VARCHAR(255),           -- keycloak sub 또는 device_id
+  method VARCHAR(10) NOT NULL,
+  path VARCHAR(500) NOT NULL,
+  status_code SMALLINT NOT NULL,
+  client_ip VARCHAR(64),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_access_logs_created ON access_logs(created_at DESC);
+CREATE INDEX idx_access_logs_subject ON access_logs(actor_subject, created_at DESC);
+
 -- 조회 성능을 위한 기본 인덱스
 CREATE INDEX idx_chapters_user ON chapters(user_id);
 CREATE INDEX idx_photos_user_recall ON photos(user_id, recall_status);
 CREATE INDEX idx_chunks_user ON conversation_chunks(user_id);
+-- v1.9: 업로드 멱등성 — 한 대화 턴 = 한 행 (sync-contract.md §2.3, 마이그레이션 0004)
+CREATE UNIQUE INDEX uq_conversation_chunks_turn ON conversation_chunks (user_id, session_id, turn_id)
+  WHERE session_id IS NOT NULL AND turn_id IS NOT NULL;
 CREATE INDEX idx_schedule_user_due ON schedule_items(user_id, due_at);
 CREATE INDEX idx_sync_device ON sync_sessions(device_id, started_at DESC);
 CREATE INDEX idx_sync_started_at ON sync_sessions(started_at DESC);  -- v1.5 신규 — 전체 기기 통합 모니터링(기기로 필터 없이 전역 정렬)용
@@ -687,6 +775,12 @@ CREATE INDEX idx_devices_display_id ON devices(display_id);
 
 ## 8. Next Steps
 
-- Do 단계 착수 시 PII 컬럼 암호화 방식(pgcrypto vs 애플리케이션 레벨) 최종 결정
+- ✅ PII 자유텍스트 5개 컬럼 암호화 방식 확정·적용 (v1.7, decisions.md #45 — 애플리케이션 레벨 필드 암호화 + 사용자별 DEK)
+- ⬜ PII 2차 라운드: `name` 부분검색 재설계, `contact` blind index(HMAC), `birth_date` DATE→BYTEA, `PII_KEK`의 Vault 이전
+- ⬜ `user_encryption_keys` KEK 회전 절차 문서화(`key_version` 컬럼 활용) — B3 파기정책·법무 회신과 함께
+- ✅ 실 인증 스키마 3종 확정 (v1.8, decisions.md #47 — keycloak_sub·device_credentials·access_logs)
+- ⬜ `organizations` + `family_members.org_id` (B2G 시설 테넌시) — B2G 운영모델 확정 후 (erd.md §11)
+- ⬜ `*.retention_until` / `*.purged_at` (보유기간·파기) — CTO B3, 법무 회신 후
+- ⬜ 인가 술어를 나머지 엔드포인트(family_members·invitations·photo_requests 등)로 확대 — 이번엔 핵심 엔드포인트만
 - `meta_prosody` JSONB 상세 스키마는 정서분석 모듈 설계 시 확정
 - 구독/결제 도메인은 경영진 결정(decisions.md #18) 이후 별도 스키마 추가

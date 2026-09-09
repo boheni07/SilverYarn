@@ -11,8 +11,14 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core_service.core.auth import AuthContext, require_auth
+from core_service.core.auth import (
+    WRITE_ELDER_DATA_ROLES,
+    AuthContext,
+    authorize_user_access,
+    require_auth,
+)
 from core_service.core.db import get_db
+from core_service.core.errors import ApiError
 from core_service.modules.author.application.chapter_service import ChapterService
 from core_service.modules.author.domain.chapter import RevisionAction
 from core_service.modules.author.infrastructure.chapter_repository import ChapterRepository
@@ -54,9 +60,8 @@ class ChapterRevisionResponse(BaseModel):
 class ChapterReviewRequest(BaseModel):
     action: RevisionAction
     review_comment: str | None = None
-    # TODO(Keycloak 연동 후 제거): 지금은 AuthContext가 스텁이라 "현재 로그인한
-    # 가족 구성원"을 토큰에서 구할 수 없어, 호출자가 reviewer_id를 직접 넘긴다.
-    # family_members 모듈에 실존하는 id인지는 아래 review_chapter()에서 검증한다.
+    # 하위호환용 — 이제 감수자는 토큰(AuthContext)에서 가져온다. 넘어오면 호출자 본인의
+    # 구성원 id인지 검증하고, 없으면 토큰에서 자동으로 채운다(review_chapter 참조).
     reviewer_id: uuid.UUID | None = None
 
 
@@ -82,9 +87,10 @@ def _to_response(chapter) -> ChapterResponse:  # noqa: ANN001 — Chapter 도메
 async def list_user_chapters(
     user_id: uuid.UUID,
     service: ChapterService = Depends(_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[list[ChapterResponse]]:
     """design.md §4.2 — 챕터 목록/본문 조회."""
+    authorize_user_access(ctx, user_id)
     chapters = await service.list_chapters_for_user(user_id)
     return DataResponse(data=[_to_response(c) for c in chapters])
 
@@ -93,9 +99,10 @@ async def list_user_chapters(
 async def get_chapter(
     chapter_id: uuid.UUID,
     service: ChapterService = Depends(_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[ChapterResponse]:
     chapter = await service.get_chapter(chapter_id)
+    authorize_user_access(ctx, chapter.user_id)
     return DataResponse(data=_to_response(chapter))
 
 
@@ -103,8 +110,10 @@ async def get_chapter(
 async def list_chapter_revisions(
     chapter_id: uuid.UUID,
     service: ChapterService = Depends(_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[list[ChapterRevisionResponse]]:
+    chapter = await service.get_chapter(chapter_id)
+    authorize_user_access(ctx, chapter.user_id)
     revisions = await service.list_revisions(chapter_id)
     return DataResponse(
         data=[
@@ -129,21 +138,31 @@ async def review_chapter(
     body: ChapterReviewRequest,
     service: ChapterService = Depends(_service),
     family_service: FamilyMemberService = Depends(get_family_member_service),
-    ctx: AuthContext = Depends(require_auth),  # TODO: role(family)만 허용하도록 강화
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[ChapterResponse]:
     """design.md §4.2 — 감수 승인/반려 (chapter_revisions 생성은 이 시점에만 발생, M-5).
 
-    reviewer_id가 넘어오면 family_members 모듈에 실존하는지 먼저 검증한다(잘못된
-    id로 서명 기록이 남는 것을 막기 위함) — 없으면 FamilyMemberService.get_family_member가
-    NOT_FOUND를 던진다. AuthContext(ctx)에서 자동으로 구하지 못하는 이유는 위 요청 필드
-    주석 참조 — Keycloak 연동 후에는 이 파라미터 없이 ctx에서 바로 구하도록 바꾼다.
+    인가: 해당 어르신에 대한 family/admin 역할 + 2FA(design.md §7.1). 감수자(reviewer_id)는
+    토큰이 해석한 구성원에서 가져온다 — 요청 본문의 `reviewer_id`는 하위호환용으로 계속
+    받되, 넘어오면 반드시 호출자 본인의 구성원 id여야 한다(타인 명의 서명 방지).
     """
-    _ = ctx
-    if body.reviewer_id is not None:
-        await family_service.get_family_member(body.reviewer_id)  # 존재하지 않으면 NOT_FOUND
+    target = await service.get_chapter(chapter_id)
+    authorize_user_access(ctx, target.user_id, allowed_roles=WRITE_ELDER_DATA_ROLES)
+
+    membership = ctx.membership_for(target.user_id)
+    caller_member_id = membership.family_member_id if membership else None
+    if ctx.is_admin and caller_member_id is None:
+        caller_member_id = None  # admin이 다른 어르신을 감수하는 경우 서명자 없음 허용
+
+    reviewer_id = body.reviewer_id or caller_member_id
+    if body.reviewer_id is not None and body.reviewer_id != caller_member_id:
+        raise ApiError("FORBIDDEN", "다른 구성원 명의로 감수 서명을 남길 수 없습니다.")
+    if reviewer_id is not None:
+        await family_service.get_family_member(reviewer_id)  # 존재하지 않으면 NOT_FOUND
+
     chapter = await service.review_chapter(
         chapter_id=chapter_id,
-        reviewer_id=body.reviewer_id,
+        reviewer_id=reviewer_id,
         action=body.action,
         comment=body.review_comment,
     )

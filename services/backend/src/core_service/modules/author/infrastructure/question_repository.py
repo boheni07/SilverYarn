@@ -51,6 +51,21 @@ class QuestionRepository:
         model = await self._session.get(QuestionModel, question_id)
         return model.to_domain() if model else None
 
+    async def list_by_user(self, user_id: uuid.UUID, answered: bool | None = None) -> list[Question]:
+        """GET /users/{userId}/questions — 회고 질문 큐 조회(design.md §4.2, L-12).
+
+        `answered`를 주면 그 상태만, 생략하면 전부. 정렬은 미답변 우선 → 생성 오름차순
+        (가족 웹 콘솔이 "다음에 물어볼 질문"을 위에서부터 보게)."""
+        conditions = [QuestionModel.user_id == user_id]
+        if answered is not None:
+            conditions.append(QuestionModel.answered.is_(answered))
+        result = await self._session.execute(
+            select(QuestionModel)
+            .where(*conditions)
+            .order_by(QuestionModel.answered, QuestionModel.created_at)
+        )
+        return [m.to_domain() for m in result.scalars().all()]
+
     async def list_unanswered_by_user(
         self, user_id: uuid.UUID, since: datetime | None = None
     ) -> list[Question]:

@@ -113,6 +113,26 @@
 
 ---
 
+## 2.7 추가 기술 결정 (Do 단계 — PII 필드 암호화 1차, 2026-09-09)
+
+| # | 항목 | 결정(근거 포함) | 상태 |
+|---|------|------|:---:|
+| 45 | PII 자유텍스트 컬럼 암호화 방식 | **애플리케이션 레벨 필드 암호화 + 사용자별 DEK로 확정** (CTO 검토 [B4](../../02-design/cto-review-2026-09-05.md) 권고 ②·③ 채택, schema.md §5가 "Do 단계 최종 결정"으로 남겨둔 항목). `pgcrypto`는 **미채택**(키 유출 위험·인덱스 불가, B4 명시). **1차 대상(코드 반영 완료)**: `chapters.body_text`, `chapter_revisions.body_text_snapshot`, `conversation_chunks.transcript_on_device`/`transcript_server`/`assistant_response` 5개 컬럼. **알고리즘**: Fernet(AES-128-CBC+HMAC-SHA256), 토큰 접두사 `pii.v1.`로 평문/암호문 구분(마이그레이션 안전장치). **키 계층**: 사용자별 DEK를 `user_encryption_keys` 테이블에 KEK로 랩핑 저장, KEK는 환경변수 `PII_KEK`(MultiFernet 회전 대비) — **온프레미스 Vault 이전 전까지 임시**이며 `core/crypto.py`의 `PiiCrypto` 생성 지점만 교체하면 됨. **crypto-shredding**: 사용자 파기 시 `user_encryption_keys` 행 삭제로 해당 사용자 PII 자유텍스트 전부 복호화 불가 → B3 파기정책의 파기 수단 후보(법무 확인 대기). **범위**: `users.name`(부분일치 검색 재설계 선행)·`contact`(blind index)·`birth_date`(컬럼 타입 변경)는 2차 라운드로 분리 | ✅ 확정 (구현: `services/backend`, 마이그레이션 `0002`) |
+
+> **2차 라운드 선결 과제**: `name` ILIKE 부분검색(`GET /users?name=`, apps/admin)을 결정적 암호화+정확일치 또는 별도 토큰 인덱스로 재설계해야 `name` 암호화가 가능하다. `PII_KEK`의 Vault 이전, `key_version` 기반 KEK 회전 절차 문서화도 이 라운드에 포함.
+
+---
+
+## 2.8 추가 기술 결정 (Do 단계 — 실 인증 구현, 2026-09-09)
+
+| # | 항목 | 결정(근거 포함) | 상태 |
+|---|------|------|:---:|
+| 47 | 인증·인가 실구현 방식 + erd.md §11 스키마 추가 범위 | **Keycloak JWKS RS256 검증 + 사용자별 DEK식이 아닌 토큰 기반 RBAC로 확정.** `core/auth.py` 스텁(하드코딩 `roles=["family"]`)을 실 검증으로 교체([cto-review B5](../../02-design/cto-review-2026-09-05.md), 원본 프로세스흐름도 §4.1). erd.md §11 5개 중 **3개 반영**: ① `family_members.keycloak_sub`(VARCHAR, **비유일 인덱스** — erd의 "UK" 제안과 달리 한 사람이 여러 어르신을 담당하면 같은 sub로 여러 행이 생기므로), ② `device_credentials`(Device Token을 SHA-256 해시로만 보관, `POST /devices` 응답에 평문 1회 발급 — B5(b)), ③ `access_logs`(HTTP 미들웨어 best-effort 적재 — 제8조·B5(e)). **보류**: `organizations`(B2G 시설 테넌시 — 운영모델 확정 필요), `*.retention_until`(B3 법무 대기). **2FA**: 토큰 `amr` claim으로 판정(`AUTH_2FA_AMR_VALUES` 설정, Keycloak 인증흐름 의존). **IDOR/소유권**: `authorize_user_access()` 헬퍼로 핵심 엔드포인트(chapters·photos·consent·schedule·conversation-chunks·users·devices·sync)에 우선 적용, 나머지(family_members·invitations·photo_requests)는 인증만 유지하고 인가 확대는 후속. **환경변수**: `AUTH_AUDIENCE`·`AUTH_JWKS_URL`·`AUTH_2FA_AMR_VALUES` 추가(CONVENTIONS.md §4). `AUTH_ISSUER_URL` 미설정 시 `require_family` 첫 호출에서 RuntimeError(fail closed) | ✅ 확정 (구현: `services/backend`, 마이그레이션 `0003`) |
+
+> **후속 과제**: Device Token 회전 UI·주기, 나머지 엔드포인트 인가 확대, social_worker의 "동의 시 챕터 조회"(design.md §7.1) 동의 게이팅, `organizations` 테넌시(B2G 착수 시).
+
+---
+
 ## 3. 별도 검토가 필요한 항목 (AI가 임의 결정하지 않음)
 
 | # | 항목 | 사유 | 상태 |
@@ -121,6 +141,7 @@
 | 13 | 외부 TTS 연계의 구체 대상 서비스·비용·DPA 체결 | 계약·비용 문제로 경영진/법무 결정 사항 (§1의 결정에 따라 Phase 3 착수 시점으로 유예) | ⚖️ 별도 검토 필요 (Phase 3 시점) |
 | 14 | Phase 1~3 착수 일정·예산·인력 | 경영진 승인 사항 (§1 참조) | ⚖️ 별도 검토 필요 |
 | 23 | 구독·결제 PG사·요금제 | #18에서 Phase 1 스코프 아웃은 확정했으나, 실제 결제 도메인 설계 자체는 B2C/B2G 과금 방식이 정해져야 가능 (경영/법무 결정 사항) | ⚖️ 별도 검토 필요 |
+| 46 | 가족 대리동의의 법적 근거 + 정보주체(어르신) 권리행사 모델 | CTO 검토 [B2](../../02-design/cto-review-2026-09-05.md) — 성년후견 미개시 어르신에 대한 가족 대리동의 유효성·본인동의 필수범위가 법무 확정 대기. **Do 단계 임시 구현(2026-09-09)**: `consent_logs.granted_by` 유무로 `actor`(self/proxy)를 파생만 하고, CTO 권고인 명시적 enum(self/proxy/**legal_guardian**)·`data_subject` RBAC 행은 도입하지 않음 — `legal_guardian`을 코드가 임의 정의하면 안 되므로. 법무 회신 후 스키마 컬럼(`actor` enum)·RBAC 반영 | ⚖️ 별도 검토 필요 (임시 구현 존재) |
 
 > 12번 항목에 대해 초안 성격의 시작점을 제안할 수는 있으나(예: 1차 알림은 가족에게만, 복지사는 가족 동의 시에만, 무응답 시 단계적 에스컬레이션), **이를 정식 기준으로 채택하는 것은 법무·윤리 검토 이후에만 가능**하다.
 
@@ -168,3 +189,7 @@
 | 0.6 | 2026-09-07 | 2차 design-validator 검증 반영 — #34(conversation_chunks 서버 영구보존 확정), #35(devices SLM/프롬프트팩 버전 추적) 추가. **번호 중복 버그 수정**: §3에 있던 #24~#33을 §2.2/§2.3/§2.4로 재배치(카테고리 정정), §4의 원본 문서 오류 로그를 #24~#30에서 #36~#42로 재번호(§2.2와의 충돌 해소) | NUBiz AX Initiative |
 | 0.7 | 2026-09-07 | 3차 design-validator 검증 반영 — §2.5 신설, #43(본문 텍스트 20px 상향, CTO FE-B4) 추가. M-1: §2.2/§2.3 표 헤더가 5열인데 실제 셀은 4열이던 렌더링 버그 정정(4열 헤더로 통일, 내용 변경 없음) | NUBiz AX Initiative |
 | 0.8 | 2026-09-07 | Do 단계 착수 — §2.6 신설, #44(서버 첫 커밋을 `services/backend/` 모듈러 모놀리스 단일 배포 단위로 확정, CTO Enterprise B3) 추가 | NUBiz AX Initiative |
+| 0.9 | 2026-09-09 | Do 단계 — §2.7 신설, #45(PII 자유텍스트 5개 컬럼 암호화 방식 확정: 애플리케이션 레벨 필드 암호화 + 사용자별 DEK, `PII_KEK` 임시, CTO B4) 추가. schema.md v1.7·CONVENTIONS.md §4(`PII_` 접두사)·design.md §7.3 동반 갱신 | NUBiz AX Initiative |
+| 0.10 | 2026-09-09 | Do 단계 — consent 모듈 구현. §3에 #46(가족 대리동의 법적 근거 — CTO B2, `actor` 임시 파생 구현만) 추가. design.md v0.18(§2.9·§3.1·§4.2) 동반 갱신 | NUBiz AX Initiative |
+| 0.11 | 2026-09-09 | Do 단계 — 실 인증 구현. §2.8 신설, #47(Keycloak JWKS 검증 + erd.md §11 스키마 3종 반영: keycloak_sub·device_credentials·access_logs; organizations·retention은 보류) 추가. schema.md v1.8·erd.md §11·CONVENTIONS.md §4·design.md §7.4 동반 갱신 | NUBiz AX Initiative |
+| 0.12 | 2026-09-09 | Do 단계 — 동기화 계약 잔여분(멱등성·questions 조회·schedule 필드병합). 별도 ULID 컬럼 없이 기존 `(session_id, turn_id)`를 멱등성 키로 채택(sync-contract.md §2.3, schema.md v1.9). 새 결정 항목은 없음 — 기존 계약(CTO B1)의 구현 마감 | NUBiz AX Initiative |

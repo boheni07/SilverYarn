@@ -88,7 +88,24 @@ class UploadPipelineService:
     async def run(self, data: UploadPipelineInput) -> ConversationChunk:
         """전체 파이프라인 1회 실행. `conversation_chunks` 적재 자체가 실패하면
         예외를 그대로 던진다 — 세션/트랜잭션 처리는 호출자(worker.py) 책임이다.
+
+        멱등성(sync-contract.md §2): 같은 `(user_id, session_id, turn_id)`가 이미
+        적재됐으면 재처리하지 않고 기존 청크를 그대로 돌려준다 — 재전송/잡 재시도로
+        STT·임베딩·**챕터 윤문(save_draft가 version을 올리며 본문을 덧붙임)**이 중복
+        실행되는 것을 막는다.
         """
+        if data.device_session_id is not None and data.turn_id is not None:
+            existing = await self._chunks.find_existing_turn(
+                data.user_id, data.device_session_id, data.turn_id
+            )
+            if existing is not None:
+                logger.info(
+                    "이미 처리된 턴 — 파이프라인 건너뜀. session=%s turn=%s",
+                    data.device_session_id,
+                    data.turn_id,
+                )
+                return existing
+
         transcript_server = await self._safe_transcribe(data.raw_audio_ref, data.transcript_on_device)
         knowledge = await self._safe_extract_knowledge(transcript_server)
 

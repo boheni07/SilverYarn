@@ -27,6 +27,14 @@ class ConversationChunkService:
             raise ApiError("NOT_FOUND", f"대화 청크({chunk_id})를 찾을 수 없습니다.")
         return chunk
 
+    async def find_existing_turn(
+        self, user_id: uuid.UUID, session_id: str, turn_id: int
+    ) -> ConversationChunk | None:
+        """업로드 파이프라인이 재처리 전에 "이미 적재된 턴인지" 확인하는 용도
+        (sync-contract.md §2 멱등성). 모듈 경계상 UploadPipelineService가 repo를
+        직접 만지지 않도록 서비스에 노출한다."""
+        return await self._repo.find_by_turn(user_id, session_id, turn_id)
+
     async def list_chunks_for_user(
         self, user_id: uuid.UUID, limit: int = 50, offset: int = 0
     ) -> list[ConversationChunk]:

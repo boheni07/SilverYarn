@@ -87,6 +87,7 @@ class ChapterService:
 
         await self._revisions.create(
             chapter_id=chapter.id,
+            user_id=chapter.user_id,  # body_text_snapshot 암호화용 DEK 소유자
             version=chapter.version,
             body_text_snapshot=chapter.body_text,
             reviewer_id=reviewer_id,

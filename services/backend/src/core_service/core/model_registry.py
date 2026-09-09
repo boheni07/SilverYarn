@@ -10,6 +10,8 @@ import 목록을 여러 진입점(main.py/worker.py/migrations/env.py)에 따로
 이런 누락이 재발하기 쉽다. 이제 모든 진입점이 이 모듈 하나만 import한다.
 """
 
+from core_service.core.access_log import AccessLogModel  # noqa: F401
+from core_service.core.crypto import UserEncryptionKeyModel  # noqa: F401
 from core_service.modules.author.infrastructure.chapter_repository import ChapterModel  # noqa: F401
 from core_service.modules.author.infrastructure.chapter_revision_repository import (  # noqa: F401
     ChapterRevisionModel,
@@ -17,6 +19,12 @@ from core_service.modules.author.infrastructure.chapter_revision_repository impo
 from core_service.modules.author.infrastructure.question_repository import QuestionModel  # noqa: F401
 from core_service.modules.care.infrastructure.conversation_chunk_repository import (  # noqa: F401
     ConversationChunkModel,
+)
+from core_service.modules.consent.infrastructure.consent_log_repository import (  # noqa: F401
+    ConsentLogModel,
+)
+from core_service.modules.devices.infrastructure.device_credential_repository import (  # noqa: F401
+    DeviceCredentialModel,
 )
 from core_service.modules.devices.infrastructure.device_repository import DeviceModel  # noqa: F401
 from core_service.modules.family_members.infrastructure.family_member_repository import (  # noqa: F401

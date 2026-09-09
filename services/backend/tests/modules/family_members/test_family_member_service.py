@@ -30,6 +30,7 @@ class FakeFamilyMemberRepository:
             name=name,
             contact=contact,
             two_factor_enabled=False,
+            keycloak_sub=None,
             created_at=datetime.now(UTC),
         )
         self._store[member.id] = member
