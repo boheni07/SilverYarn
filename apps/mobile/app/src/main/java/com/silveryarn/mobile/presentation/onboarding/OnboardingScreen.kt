@@ -14,6 +14,10 @@ import androidx.compose.ui.unit.dp
  * Wi-Fi 등록 → 어르신 계정 연결)은 UI/UX 화면설계서 기준으로 별도 구현 필요.
  * 지금은 모듈 구조(presentation/·installmode/·local/·ondevice/·sync/)가
  * 실제로 컴파일되는 것을 증명하는 최소 골격이다.
+ *
+ * 서버 계약은 [com.silveryarn.mobile.onboarding.OnboardingApi]에 고정돼 있다
+ * (createUser → recordConsent, design.md §2.9). 화면 연결(네비게이션·상태 관리·
+ * 동의 화면 UI)은 온보딩 네비게이션 아키텍처 확정 후 진행한다.
  */
 @Composable
 fun OnboardingScreen(modifier: Modifier = Modifier) {

@@ -15,7 +15,10 @@ import retrofit2.http.Query
  * 갈라지면 여기와 서버 둘 중 하나가 낡은 것이니 서버 코드를 SoR로 맞춘다.
  */
 interface SyncApi {
-    /** POST /devices — 설치 시 1회 등록. Device Token이 아직 없는 유일한 예외 호출. */
+    /** POST /devices — 설치 시 1회 등록(인증 없는 부트스트랩). 응답의 `deviceToken`은
+     *  이 호출에서만 평문으로 내려온다(서버는 SHA-256 해시만 보관, decisions.md #47) —
+     *  이후 모든 `/sync/*` 호출의 `X-Device-Token` 헤더에 쓴다. 안전한 저장소(Keystore
+     *  기반 EncryptedSharedPreferences 등)에 보관해야 한다 — 후속 과제. */
     @POST("devices")
     suspend fun registerDevice(
         @Body body: DeviceRegisterRequest,
@@ -64,6 +67,8 @@ data class DeviceResponse(
     @Json(name = "install_mode") val installMode: String,
     @Json(name = "slm_model_version") val slmModelVersion: String?,
     @Json(name = "prompt_pack_version") val promptPackVersion: String?,
+    // POST /devices 응답에만 존재(decisions.md #47) — 재조회로는 얻을 수 없다.
+    @Json(name = "device_token") val deviceToken: String? = null,
 )
 
 @JsonClass(generateAdapter = true)

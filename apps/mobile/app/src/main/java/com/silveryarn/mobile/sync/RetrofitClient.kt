@@ -1,6 +1,7 @@
 package com.silveryarn.mobile.sync
 
 import com.silveryarn.mobile.BuildConfig
+import com.silveryarn.mobile.onboarding.OnboardingApi
 import com.squareup.moshi.Moshi
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -16,13 +17,16 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 object RetrofitClient {
     private val moshi = Moshi.Builder().build()
 
-    val syncApi: SyncApi by lazy {
+    private val retrofit: Retrofit by lazy {
         Retrofit
             .Builder()
             .baseUrl("${BuildConfig.API_BASE_URL}/api/v1/")
             .client(OkHttpClient.Builder().build())
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
-            .create(SyncApi::class.java)
     }
+
+    val syncApi: SyncApi by lazy { retrofit.create(SyncApi::class.java) }
+
+    val onboardingApi: OnboardingApi by lazy { retrofit.create(OnboardingApi::class.java) }
 }

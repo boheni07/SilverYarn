@@ -80,6 +80,11 @@ dependencies {
     // --- WorkManager — sync/SyncWorker ---
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
+    // --- 보안 저장소 — auth/DeviceCredentialStore (Device Token, decisions.md #47) ---
+    // security-crypto는 1.1.0-alpha06가 사실상 마지막 릴리스다(이후 deprecated). MasterKey.Builder
+    // API가 이 버전부터라 1.0.0(구 MasterKeys)이 아닌 이 버전을 쓴다 — 버전 미검증(README 환경 제약).
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
     // --- 서버 API 클라이언트 — sync/SyncApi (design.md §4.1 응답 포맷) ---
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-moshi:2.11.0")
