@@ -12,8 +12,16 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core_service.core.auth import AuthContext, require_auth
+from core_service.core.auth import (
+    WRITE_ELDER_DATA_ROLES,
+    AuthContext,
+    VerifiedSubject,
+    authorize_user_access,
+    require_auth,
+    require_verified_subject,
+)
 from core_service.core.db import get_db
+from core_service.core.errors import ApiError
 from core_service.modules.family_members.application.family_member_service import (
     FamilyMemberService,
 )
@@ -77,10 +85,14 @@ async def create_invitation(
     body: InvitationCreateRequest,
     service: InvitationService = Depends(_service),
     family_service: FamilyMemberService = Depends(get_family_member_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[InvitationResponse]:
-    """design.md §4.2 — 가족 구성원 초대."""
+    """design.md §4.2 — 가족 구성원 초대. 초대는 접근 권한 부여이므로 family/admin + 2FA.
+    `invited_by`가 오면 호출자 본인의 구성원 id여야 한다(타인 명의 초대 방지)."""
+    authorize_user_access(ctx, body.user_id, allowed_roles=WRITE_ELDER_DATA_ROLES)
     if body.invited_by is not None:
+        if not ctx.is_admin and body.invited_by not in {m.family_member_id for m in ctx.memberships}:
+            raise ApiError("FORBIDDEN", "다른 구성원 명의로 초대할 수 없습니다.")
         await family_service.get_family_member(body.invited_by)  # 존재하지 않으면 NOT_FOUND
     invitation = await service.create_invitation(
         user_id=body.user_id, invited_by=body.invited_by, contact=body.contact, role=body.role
@@ -105,8 +117,13 @@ async def accept_invitation(
     body: InvitationAcceptRequest,
     service: InvitationService = Depends(_service),
     family_service: FamilyMemberService = Depends(get_family_member_service),
+    subject: VerifiedSubject = Depends(require_verified_subject),
 ) -> DataResponse[InvitationResponse]:
     """초대 수락 — pending/미만료 검증 후 accepted로 전이하고 family_members 행 생성.
+
+    수락자는 Keycloak 로그인 상태여야 한다(토큰만 검증, 아직 family_member 연결 전이라
+    require_family은 못 씀). 토큰 `sub`를 새 family_member의 `keycloak_sub`로 박아넣어야
+    이후 그 사람이 실제로 로그인해 앱을 쓸 수 있다 — 이게 없으면 계정 연결이 끊긴다.
 
     두 Repository가 같은 `Depends(get_db)` 세션을 공유하므로(FastAPI 요청별 캐싱)
     한 트랜잭션으로 묶인다: 초대 상태 갱신과 family_member 생성 중 하나가 실패하면
@@ -114,7 +131,11 @@ async def accept_invitation(
     """
     invitation = await service.validate_and_consume(token)
     member = await family_service.create_family_member(
-        user_id=invitation.user_id, role=invitation.role, name=body.name, contact=invitation.contact
+        user_id=invitation.user_id,
+        role=invitation.role,
+        name=body.name,
+        contact=invitation.contact,
+        keycloak_sub=subject.subject,
     )
     _ = member  # 응답은 초대 자체를 반환 — family_member 조회는 별도 엔드포인트(family_members 모듈)
     return DataResponse(data=_to_response(invitation))

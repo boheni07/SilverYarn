@@ -76,6 +76,7 @@ class FamilyMemberRepository:
         role: FamilyRole,
         name: str,
         contact: str,
+        keycloak_sub: str | None = None,
     ) -> FamilyMember:
         model = FamilyMemberModel(
             id=uuid.uuid4(),
@@ -84,6 +85,7 @@ class FamilyMemberRepository:
             name=name,
             contact=contact,
             two_factor_enabled=False,
+            keycloak_sub=keycloak_sub,
             created_at=datetime.now(UTC),
         )
         self._session.add(model)

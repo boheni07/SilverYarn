@@ -152,6 +152,26 @@ def _bearer_token(authorization: str | None) -> str:
     return authorization[7:].strip()
 
 
+@dataclass(frozen=True)
+class VerifiedSubject:
+    """Keycloak 토큰 서명·클레임만 검증한 결과 — family_members 연결 여부는 보지 않는다."""
+
+    subject: str
+    is_2fa: bool
+
+
+async def require_verified_subject(
+    authorization: str | None = Header(default=None),
+) -> VerifiedSubject:
+    """토큰만 검증하고 `sub`를 돌려준다. '연결을 만드는' 부트스트랩 엔드포인트
+    (초대 수락 — 아직 어떤 family_member에도 매핑 안 된 계정)용."""
+    claims = await get_verifier().verify(_bearer_token(authorization))
+    subject = str(claims.get("sub", ""))
+    if not subject:
+        raise ApiError("UNAUTHORIZED", "토큰에 sub claim이 없습니다.")
+    return VerifiedSubject(subject=subject, is_2fa=_is_2fa(claims))
+
+
 async def require_family(
     request: Request,
     authorization: str | None = Header(default=None),
@@ -161,10 +181,9 @@ async def require_family(
 
     인증은 됐으나 어떤 어르신에도 연결되지 않은 계정(provisioning 전)은 403.
     """
-    claims = await get_verifier().verify(_bearer_token(authorization))
-    subject = str(claims.get("sub", ""))
-    if not subject:
-        raise ApiError("UNAUTHORIZED", "토큰에 sub claim이 없습니다.")
+    verified = await require_verified_subject(authorization)
+    subject = verified.subject
+    claims_is_2fa = verified.is_2fa
 
     from core_service.modules.family_members.infrastructure.family_member_repository import (
         FamilyMemberRepository,
@@ -178,7 +197,7 @@ async def require_family(
 
     ctx = AuthContext(
         subject=subject,
-        is_2fa=_is_2fa(claims),
+        is_2fa=claims_is_2fa,
         memberships=[
             Membership(
                 family_member_id=m.id,

@@ -22,7 +22,14 @@ class FakeFamilyMemberRepository:
     async def list_by_user(self, user_id: uuid.UUID) -> list[FamilyMember]:
         return [m for m in self._store.values() if m.user_id == user_id]
 
-    async def create(self, user_id: uuid.UUID, role: FamilyRole, name: str, contact: str) -> FamilyMember:
+    async def create(
+        self,
+        user_id: uuid.UUID,
+        role: FamilyRole,
+        name: str,
+        contact: str,
+        keycloak_sub: str | None = None,
+    ) -> FamilyMember:
         member = FamilyMember(
             id=uuid.uuid4(),
             user_id=user_id,
@@ -30,7 +37,7 @@ class FakeFamilyMemberRepository:
             name=name,
             contact=contact,
             two_factor_enabled=False,
-            keycloak_sub=None,
+            keycloak_sub=keycloak_sub,
             created_at=datetime.now(UTC),
         )
         self._store[member.id] = member
@@ -48,6 +55,21 @@ async def test_create_family_member_succeeds(service: FamilyMemberService) -> No
     )
     assert member.role == FamilyRole.FAMILY
     assert member.two_factor_enabled is False
+    assert member.keycloak_sub is None  # 임시 직접생성 경로는 계정 미연결
+
+
+async def test_create_family_member_binds_keycloak_sub_from_invitation_accept(
+    service: FamilyMemberService,
+) -> None:
+    """초대 수락 흐름: 수락자의 토큰 sub를 새 구성원에 박아넣어야 이후 로그인이 된다."""
+    member = await service.create_family_member(
+        user_id=uuid.uuid4(),
+        role=FamilyRole.CAREGIVER,
+        name="박복지",
+        contact="010-9999-0000",
+        keycloak_sub="kc-sub-abc",
+    )
+    assert member.keycloak_sub == "kc-sub-abc"
 
 
 async def test_create_family_member_rejects_empty_name(service: FamilyMemberService) -> None:
