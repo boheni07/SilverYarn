@@ -18,7 +18,8 @@ class DeviceCapabilityReader(
         return InstallModeResolver.resolve(ramGb, Build.VERSION.SDK_INT)
     }
 
-    private fun totalRamGb(): Double {
+    /** POST /devices 요청의 ram_gb 값 — 온보딩(OnboardingCoordinator)에서도 쓴다. */
+    fun totalRamGb(): Double {
         val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val memoryInfo = ActivityManager.MemoryInfo()
         activityManager.getMemoryInfo(memoryInfo)
