@@ -36,6 +36,8 @@ class InvitationService:
     ) -> Invitation:
         if not contact or len(contact) > 100:
             raise ApiError("VALIDATION_ERROR", "contact는 1~100자여야 합니다.")
+        if await self._repo.exists_pending_for_contact(user_id, contact):
+            raise ApiError("CONFLICT", "이 연락처로 이미 대기 중인 초대가 있습니다.")
         token = secrets.token_urlsafe(32)
         expires_at = datetime.now(UTC) + timedelta(days=DEFAULT_EXPIRY_DAYS)
         return await self._repo.create(

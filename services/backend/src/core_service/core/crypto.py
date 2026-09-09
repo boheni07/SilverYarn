@@ -27,6 +27,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import logging
 import uuid
 from datetime import datetime
@@ -79,9 +81,16 @@ class PiiCrypto:
         if not kek_keys:
             raise RuntimeError(_KEK_MISSING_MSG)
         try:
-            self._kek = MultiFernet([Fernet(k.strip().encode()) for k in kek_keys])
+            fernets = [Fernet(k.strip().encode()) for k in kek_keys]
         except (ValueError, TypeError) as exc:  # 잘못된 키 포맷
             raise RuntimeError(f"PII_KEK 형식이 올바른 Fernet 키가 아닙니다: {exc}") from exc
+        self._kek = MultiFernet(fernets)
+        # blind index(동등검색용 HMAC) 키 — **첫 KEK에서만** 유도한다. KEK 회전 시에도
+        # 첫 KEK를 목록 마지막에 남겨두면 인덱스가 유지되고, 첫 KEK를 완전히 폐기하려면
+        # contact_bidx 백필 배치가 필요하다(decisions.md #45 2차 — 임시 방식).
+        self._bidx_key = hashlib.blake2b(
+            kek_keys[0].strip().encode(), person=b"silveryarn-bidx", digest_size=32
+        ).digest()
 
     @classmethod
     def from_settings(cls, settings: Settings) -> PiiCrypto:
@@ -103,6 +112,13 @@ class PiiCrypto:
     def encrypt_field(self, dek: bytes, plaintext: str) -> str:
         token = Fernet(dek).encrypt(plaintext.encode()).decode()
         return f"{_TOKEN_PREFIX}{token}"
+
+    # --- blind index (동등검색 전용, decisions.md #45 2차 / CTO B4) ---
+    def blind_index(self, value: str) -> str:
+        """정규화된 값의 HMAC-SHA256(hex). 같은 평문 → 같은 인덱스이므로 `WHERE bidx = ?`로
+        동등검색만 가능하다(부분검색·정렬 불가). 원문은 복원 불가."""
+        normalized = " ".join(value.split()).strip().casefold()
+        return hmac.new(self._bidx_key, normalized.encode(), hashlib.sha256).hexdigest()
 
     def decrypt_field(self, dek: bytes, stored: str) -> str:
         if not stored.startswith(_TOKEN_PREFIX):
@@ -185,6 +201,10 @@ class PiiFieldEncryptor:
         if stored is None:
             return None
         return await self.decrypt(session, user_id, stored)
+
+    def blind_index(self, value: str) -> str:
+        """동등검색용 HMAC(hex). user_id 불필요(전역 키). `contact` 검색·중복확인용."""
+        return self._crypto.blind_index(value)
 
 
 @lru_cache

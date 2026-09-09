@@ -24,6 +24,12 @@ class FakeInvitationRepository:
     async def list_by_user(self, user_id: uuid.UUID) -> list[Invitation]:
         return [i for i in self._store.values() if i.user_id == user_id]
 
+    async def exists_pending_for_contact(self, user_id: uuid.UUID, contact: str) -> bool:
+        return any(
+            i.user_id == user_id and i.contact == contact and i.status == InvitationStatus.PENDING
+            for i in self._store.values()
+        )
+
     async def create(
         self,
         user_id: uuid.UUID,
@@ -70,6 +76,18 @@ async def test_create_invitation_generates_pending_with_token(service: Invitatio
     assert invitation.status == InvitationStatus.PENDING
     assert len(invitation.token) > 20
     assert invitation.expires_at > datetime.now(UTC)
+
+
+async def test_create_invitation_rejects_duplicate_pending_contact(service: InvitationService) -> None:
+    user_id = uuid.uuid4()
+    await service.create_invitation(
+        user_id=user_id, invited_by=None, contact="010-1234-5678", role=FamilyRole.FAMILY
+    )
+    with pytest.raises(ApiError) as exc:
+        await service.create_invitation(
+            user_id=user_id, invited_by=None, contact="010-1234-5678", role=FamilyRole.CAREGIVER
+        )
+    assert exc.value.code == "CONFLICT"
 
 
 async def test_create_invitation_rejects_empty_contact(service: InvitationService) -> None:

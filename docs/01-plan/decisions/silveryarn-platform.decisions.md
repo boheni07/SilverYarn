@@ -119,7 +119,7 @@
 |---|------|------|:---:|
 | 45 | PII 자유텍스트 컬럼 암호화 방식 | **애플리케이션 레벨 필드 암호화 + 사용자별 DEK로 확정** (CTO 검토 [B4](../../02-design/cto-review-2026-09-05.md) 권고 ②·③ 채택, schema.md §5가 "Do 단계 최종 결정"으로 남겨둔 항목). `pgcrypto`는 **미채택**(키 유출 위험·인덱스 불가, B4 명시). **1차 대상(코드 반영 완료)**: `chapters.body_text`, `chapter_revisions.body_text_snapshot`, `conversation_chunks.transcript_on_device`/`transcript_server`/`assistant_response` 5개 컬럼. **알고리즘**: Fernet(AES-128-CBC+HMAC-SHA256), 토큰 접두사 `pii.v1.`로 평문/암호문 구분(마이그레이션 안전장치). **키 계층**: 사용자별 DEK를 `user_encryption_keys` 테이블에 KEK로 랩핑 저장, KEK는 환경변수 `PII_KEK`(MultiFernet 회전 대비) — **온프레미스 Vault 이전 전까지 임시**이며 `core/crypto.py`의 `PiiCrypto` 생성 지점만 교체하면 됨. **crypto-shredding**: 사용자 파기 시 `user_encryption_keys` 행 삭제로 해당 사용자 PII 자유텍스트 전부 복호화 불가 → B3 파기정책의 파기 수단 후보(법무 확인 대기). **범위**: `users.name`(부분일치 검색 재설계 선행)·`contact`(blind index)·`birth_date`(컬럼 타입 변경)는 2차 라운드로 분리 | ✅ 확정 (구현: `services/backend`, 마이그레이션 `0002`) |
 
-> **2차 라운드 선결 과제**: `name` ILIKE 부분검색(`GET /users?name=`, apps/admin)을 결정적 암호화+정확일치 또는 별도 토큰 인덱스로 재설계해야 `name` 암호화가 가능하다. `PII_KEK`의 Vault 이전, `key_version` 기반 KEK 회전 절차 문서화도 이 라운드에 포함.
+> **2차 라운드 결과 (2026-09-09, v0.15)**: `contact`(암호문+blind index)·`birth_date`(앱 레이어 암호화) 적용. **`name`은 평문 유지로 확정** — 부분검색 UX 손실 대비 민감도가 낮고 CTO B4도 최고위험으로 보지 않음. **3차(남음)**: `PII_KEK`의 Vault 이전, `key_version` 기반 KEK 회전 절차, blind index 키 정식 분리(현재 KEK 첫 키에서 유도).
 
 ---
 
@@ -193,5 +193,6 @@
 | 0.10 | 2026-09-09 | Do 단계 — consent 모듈 구현. §3에 #46(가족 대리동의 법적 근거 — CTO B2, `actor` 임시 파생 구현만) 추가. design.md v0.18(§2.9·§3.1·§4.2) 동반 갱신 | NUBiz AX Initiative |
 | 0.11 | 2026-09-09 | Do 단계 — 실 인증 구현. §2.8 신설, #47(Keycloak JWKS 검증 + erd.md §11 스키마 3종 반영: keycloak_sub·device_credentials·access_logs; organizations·retention은 보류) 추가. schema.md v1.8·erd.md §11·CONVENTIONS.md §4·design.md §7.4 동반 갱신 | NUBiz AX Initiative |
 | 0.12 | 2026-09-09 | Do 단계 — 동기화 계약 잔여분(멱등성·questions 조회·schedule 필드병합). 별도 ULID 컬럼 없이 기존 `(session_id, turn_id)`를 멱등성 키로 채택(sync-contract.md §2.3, schema.md v1.9). 새 결정 항목은 없음 — 기존 계약(CTO B1)의 구현 마감 | NUBiz AX Initiative |
+| 0.15 | 2026-09-09 | Do 단계 — PII 2차 확정·구현. `contact`(family_members·invitations) = 사용자별 DEK 암호문 + `contact_bidx`(HMAC-SHA256, 동등검색). `birth_date` = 앱 레이어 암호화(DATE→VARCHAR). **`name`은 평문 유지** — 사용자 결정(부분검색 UX·낮은 민감도). blind index 키는 `PII_KEK` 첫 키에서 유도(임시). schema.md v1.11·design.md v0.23·마이그레이션 0006 | NUBiz AX Initiative |
 | 0.14 | 2026-09-09 | Do 단계 — `notifications` 모듈. CTO 검토 B1 부수결함 수정: `notification_settings.receives_emotion_alerts` 기본값 opt-out(true)→opt-in(false). `(family_member_id, channel)` UNIQUE 신설. schema.md v1.10·design.md v0.22·마이그레이션 0005. 새 결정 항목 없음 | NUBiz AX Initiative |
 | 0.13 | 2026-09-09 | Do 단계 — 인가 확대(family-members·invitations·photo-requests). #47의 "나머지 엔드포인트" 후속. `POST /invitations/{token}/accept`가 수락자 토큰 `sub`를 `family_members.keycloak_sub`에 연결하도록 수정(계정 연결 갭). social_worker "동의 시 챕터 조회"(RBAC §7.1)는 전용 consent 유형 enum 결정이 필요해 #46 관련 항목으로 유예. design.md v0.21 | NUBiz AX Initiative |
