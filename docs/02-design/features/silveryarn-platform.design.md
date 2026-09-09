@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.27 (PDCA Check — 설계문서↔구현 드리프트 동기화: §9.1/§11.1 실제 모듈러 모놀리스 구조 반영, §3.1 Chapter.createdAt 제거, §8.1 phase 정정)
+> **Version**: 0.28 (모바일 앱 시작 게이트 — §2.9 구현 상태: 온보딩 스킵·install_mode 분기(키오스크 lockTask)·최초 동기화 화면)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -202,7 +202,9 @@ Idle → Listening(웨이크워드 또는 마이크 버튼 탭 — M2 화면과 
   → 가족이 초대 수락(status='accepted') → 최초 Wi-Fi 동기화 → 첫 구술 인터뷰 시작
 ```
 
-> **구현 상태 (v0.25)**: 서버측 consent 모듈 완료. **모바일 온보딩 화면 흐름 구현** — `presentation/onboarding/OnboardingScreen.kt`가 상태 호이스팅(sealed `OnboardingStep` + `when`, nav 프레임워크 미도입 결정)으로 이름 입력 → 개인정보 수집 동의 → 서버 3연쇄 → 완료. `onboarding/OnboardingCoordinator.kt`가 `createUser` → `POST /devices`(토큰·install_mode 발급) → `recordConsent(data_collection, granted=true)` 순으로 호출한다(동의 기록은 X-Device-Token이 필요해 기기 등록 뒤에 오지만, UI상 동의 화면이 먼저라 "수집 전 동의"는 지켜짐). `MainActivity`가 완료 시 홈으로 전환. 가족 초대·최초 동기화 화면은 이후. `actor`(self/proxy)는 `granted_by` 유무에서 파생 — CTO 검토 B2가 권고한 명시적 enum(self/proxy/**legal_guardian**)·`data_subject` RBAC 행은 성년후견 대리동의 법적 근거가 법무 검토 대기라 미도입([decisions.md #12](../../01-plan/decisions/silveryarn-platform.decisions.md)).
+> **구현 상태 (v0.25)**: 서버측 consent 모듈 완료. **모바일 온보딩 화면 흐름 구현** — `presentation/onboarding/OnboardingScreen.kt`가 상태 호이스팅(sealed `OnboardingStep` + `when`, nav 프레임워크 미도입 결정)으로 이름 입력 → 개인정보 수집 동의 → 서버 3연쇄 → 완료. `onboarding/OnboardingCoordinator.kt`가 `createUser` → `POST /devices`(토큰·install_mode 발급) → `recordConsent(data_collection, granted=true)` 순으로 호출한다(동의 기록은 X-Device-Token이 필요해 기기 등록 뒤에 오지만, UI상 동의 화면이 먼저라 "수집 전 동의"는 지켜짐). `actor`(self/proxy)는 `granted_by` 유무에서 파생 — CTO 검토 B2가 권고한 명시적 enum(self/proxy/**legal_guardian**)·`data_subject` RBAC 행은 성년후견 대리동의 법적 근거가 법무 검토 대기라 미도입([decisions.md #12](../../01-plan/decisions/silveryarn-platform.decisions.md)).
+>
+> **구현 상태 (v0.28)**: 앱 시작 게이트 완성. `presentation/AppEntry.kt`가 `device_state` 조회로 시작 목적지를 정한다 — `device_id`가 있으면(온보딩 3연쇄 완료분) **온보딩·최초 동기화를 건너뛰고 바로 홈**, 없으면 온보딩 → **최초 Wi-Fi 동기화 화면**(`presentation/sync/FirstSyncScreen.kt` — 위 흐름의 "최초 Wi-Fi 동기화" 단계, `sync/SyncRunner.kt`를 1회 실행해 자서전 스냅샷·질문 큐·일정을 로컬 캐시에 채움, 실패 시 "건너뛰기"로 오프라인 진입 가능) → 홈. `install_mode` 분기(§9.3): `MainActivity`가 확정 모드를 받아 `installmode/KioskController.kt`로 `kiosk`면 lockTask 진입(decisions.md #6 — Device Owner가 아니면 조용히 무시). 동기화 절차 본체는 `SyncWorker.doWork()`에서 `SyncRunner`로 분리(Worker·최초 동기화 화면 공유). **"가족 계정 웹 콘솔 초대" 단계는 이 흐름에 미포함** — 갓 온보딩한 어르신 기기(Device Token)는 `POST /invitations`(2FA + family role) 호출 권한이 없어, 첫 가족 구성원 연결 경로는 별도 설계 결정 대기(웹 콘솔/admin 경로 또는 device-token 부트스트랩 엔드포인트).
 
 ### 2.10 에이전트 페르소나 정의 — 신규 v0.2
 
@@ -825,6 +827,7 @@ silveryarn/
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 0.27 | 2026-09-10 | **PDCA Check — 설계문서↔구현 갭 분석 반영.** ① §9.1 Layer Structure·§11.1 File Structure를 실제 모듈러 모놀리스 구조(`services/backend/src/core_service/modules/{name}/{4계층}` + `core/` + `shared/`, `main.py`/`worker.py`)로 교체 — 기존 `services/{engine}/` 6-서비스 트리는 미구현(decisions.md #44, structure.md v1.4는 이미 정정됨). ② §3.1 `interface Chapter`에서 `createdAt` 제거(테이블·ORM·응답·DDL 어디에도 없던 필드, v0.6 L-11에서 추가됐으나 미구현). ③ §8.1 Test Plan phase 열 정정(정서 모니터링 Phase 2·피처플래그 OFF, 출판 Phase 3 — §11.2/decisions #25와 정합). ④ §11.2 Implementation Order 체크박스를 실제 상태로 갱신. ⑤ §11 preamble: import-linter 미도입 상태 명시(모듈 경계·4계층은 준수 중이나 CI 회귀 방지 없음 — 후속). schema.md DDL ↔ 실 DB 21개 테이블은 일치 확인 | NUBiz AX Initiative |
+| 0.28 | 2026-09-10 | Do 단계 — 모바일 앱 시작 게이트 구현(§2.9 구현 상태 v0.28). `presentation/AppEntry.kt`가 `device_state.device_id`로 온보딩 스킵 판정, 없으면 온보딩 → `presentation/sync/FirstSyncScreen.kt`(최초 Wi-Fi 동기화, §2.9 흐름의 마지막 단계) → 홈. `installmode/KioskController.kt`로 install_mode="kiosk" 시 lockTask 진입(decisions.md #6). `SyncWorker.doWork()`의 동기화 절차를 `sync/SyncRunner.kt`로 분리(Worker·화면 공유). 가족 초대 화면은 미포함(Device Token은 `POST /invitations` 권한 없음 — 첫 가족 연결 경로 별도 결정 대기). mobile-schema.md v0.8 | NUBiz AX Initiative |
 | 0.1 | 2026-09-05 | Plan/ 폴더 원본 문서 4종 기반 Design 초안 등록 | NUBiz AX Initiative |
 | 0.2 | 2026-09-05 | design-validator 검증 반영 — RAG/정서모니터링/출판/온보딩/상태전이/Diff처리/페르소나 절 신설(§2.4~2.10), API 표준화(§4), RBAC·백업정책 추가(§7), 데이터모델 v1.1 동기화(§3), Domain 레이어 위치 정정(§9) | NUBiz AX Initiative |
 | 0.3 | 2026-09-06 | 사용자 제안 "Closed-Loop Architecture" 보고서 검토 반영 — §2.11 신설(Opus/WorkManager/Whisper Large-v3/Neo4j/Critic Agent/Compaction Engine 구체화), 컴포넌트 다이어그램·의존성표에 Neo4j 추가, §4.3에 sync/download 응답 예시 추가. 외부 GPT-4o/Claude 제안은 미채택(온프레미스 vLLM 유지, decisions #26) | NUBiz AX Initiative (사용자 제안 반영) |
