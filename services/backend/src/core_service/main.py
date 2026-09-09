@@ -25,6 +25,9 @@ from core_service.modules.family_members.api.v1.family_members import (
     router as family_members_router,
 )
 from core_service.modules.invitations.api.v1.invitations import router as invitations_router
+from core_service.modules.notifications.api.v1.notification_settings import (
+    router as notification_settings_router,
+)
 from core_service.modules.photo_requests.api.v1.photo_requests import (
     router as photo_requests_router,
 )
@@ -57,6 +60,7 @@ app.include_router(chapters_router, prefix=settings.api_prefix)
 app.include_router(questions_router, prefix=settings.api_prefix)
 app.include_router(family_members_router, prefix=settings.api_prefix)
 app.include_router(invitations_router, prefix=settings.api_prefix)
+app.include_router(notification_settings_router, prefix=settings.api_prefix)
 app.include_router(conversation_chunks_router, prefix=settings.api_prefix)
 app.include_router(consent_logs_router, prefix=settings.api_prefix)
 app.include_router(schedule_items_router, prefix=settings.api_prefix)

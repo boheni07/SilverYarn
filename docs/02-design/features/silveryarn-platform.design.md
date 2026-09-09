@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.21 (인가 확대 — family-members·invitations·photo-requests + 초대 수락 계정 연결)
+> **Version**: 0.22 (notification_settings 모듈 — 알림 수신 설정 GET/PUT)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -540,7 +540,8 @@ interface Publication {         // v1.1 신규
 | POST | /api/v1/photo-requests/{id}/dismiss | 사진 추가 요청 닫기(신규 0.13) — 충족(fulfilled)은 이 엔드포인트가 아니라 POST /photos/{id}/complete가 자동 처리 | 2FA + Role |
 | GET | /api/v1/users/{userId}/emotion-scores | 일별 정서 점수 추이 조회 | 2FA + Role |
 | GET | /api/v1/users/{userId}/emotion-alerts | 정서 알림 이력 | 2FA + Role |
-| PUT | /api/v1/family-members/{id}/notification-settings | 알림 수신 채널·항목 설정 | 2FA + Role(family) |
+| GET | /api/v1/family-members/{id}/notification-settings | 알림 수신 설정 조회 (구현 v0.22) | 2FA + 본인/admin |
+| PUT | /api/v1/family-members/{id}/notification-settings | 알림 수신 채널·항목 설정 — 이 구성원의 설정 전체 교체(delete→insert). `receives_emotion_alerts` 기본 opt-out(CTO B1). 구현 v0.22 | 2FA + 본인/admin |
 | POST | /api/v1/invitations | 가족 구성원 초대 | 2FA + Role(family) |
 | POST | /api/v1/users/{userId}/publications | 인쇄/출판 요청 | 2FA + Role |
 | POST | /api/v1/devices | 설치 시점 1회 기기 등록(F-3 예외, 부트스트랩 — 인증 없음). 응답에 **Device Token 1회 발급**(v0.19, decisions.md #47 — 이후 `/sync/*`는 이 토큰을 `X-Device-Token`으로 제시) | 없음(부트스트랩) |
@@ -810,6 +811,7 @@ silveryarn/
 | 0.14 | 2026-09-08 | `GET /sync/download` 실제 구현(§4.2, sync-contract.md v0.3) — `deviceId` 필수 파라미터 신규(원문엔 없었으나 Device Token 스텁이라 호출 주체 식별 수단이 필요했음). author 모듈에 `questions` 도메인/리포지토리/서비스 신규(schema.md §3.9 테이블은 있었으나 코드가 없었던 갭, photo_requests와 동일 패턴), schedule 모듈에 `deps.py` 신규. chapter_updates의 summary/keywords는 §2.11 Compaction Engine 미구현으로 body_text 원문/빈 배열 대체. §4.3 예시에 `priority_questions.linked_chapter_id` 보강(questions 엔티티엔 있는 실 데이터인데 원래 예시에 빠져 있었음) — 상세는 sync-contract.md §5 | NUBiz AX Initiative |
 | 0.17 | 2026-09-09 | Do 단계 — §7.3 신설(PII 필드 암호화). CTO 보안 검토 B4 "Do 단계 이연 불가" 항목 착수: `chapters.body_text`·`chapter_revisions.body_text_snapshot`·`conversation_chunks.{transcript_on_device, transcript_server, assistant_response}` 5개 컬럼에 애플리케이션 레벨 필드 암호화 + 사용자별 DEK 적용([decisions.md #45](../../01-plan/decisions/silveryarn-platform.decisions.md), schema.md v1.7). `name`/`contact`/`birth_date`는 2차 라운드. §7.2 백업 스냅샷 암호화 경고 추가 | NUBiz AX Initiative |
 | 0.19 | 2026-09-09 | Do 단계 — 실 인증. §7.4 신설(Keycloak JWKS RS256 검증, Device Token=`device_credentials` SHA-256, `authorize_user_access` RBAC+IDOR, `access_logs` 미들웨어). `core/auth.py` 스텁 교체. `POST /devices` 응답에 `device_token` 1회 발급. `POST /chapters/{id}/review`의 `reviewer_id`를 토큰 파생으로 전환. schema.md v1.8(keycloak_sub·device_credentials·access_logs), erd.md §11(3종 반영), decisions.md #47 | NUBiz AX Initiative |
+| 0.22 | 2026-09-09 | Do 단계 — `notifications` 모듈 신설. `GET/PUT /family-members/{id}/notification-settings`(§4.2) — WF5 알림 설정. PUT은 이 구성원 설정 전체 교체(delete→insert). 인가는 `authorize_own_family_member`(신규 — "본인 것만", RBAC §7.1) + 2FA. CTO B1 반영: `receives_emotion_alerts` 기본값 opt-in(false), `(family_member_id, channel)` UNIQUE. schema.md v1.10, 마이그레이션 0005 | NUBiz AX Initiative |
 | 0.21 | 2026-09-09 | Do 단계 — 인가(RBAC/IDOR) 확대. §7.4에 family-members·invitations·photo-requests 적용 추가. `POST /invitations/{token}/accept`가 `require_verified_subject`(신규 — 토큰만 검증)로 수락자 `sub`를 `family_members.keycloak_sub`에 연결(없으면 수락 후 로그인 불가였던 갭). `create_family_member`에 `keycloak_sub` 파라미터. social_worker "동의 시 조회"는 전용 consent 유형 결정 필요로 미도입 | NUBiz AX Initiative |
 | 0.20 | 2026-09-09 | Do 단계 — 동기화 계약 잔여분. ① 업로드 멱등성 3계층(arq `_job_id`·파이프라인 사전 확인·부분 유니크 인덱스, sync-contract.md §2.3, schema.md v1.9, 마이그레이션 0004). ② `GET /users/{userId}/questions` 실제 구현(§4.2 — `questions` 모듈에 라우터·`list_by_user` 추가, `answered` 필터). ③ `schedule_items` Device-Wins 필드 병합이 `/schedule-items/{id}/respond` 엔드포인트로 이미 실현됨을 sync-contract.md §3에 명시(배치 병합 코드 불필요) | NUBiz AX Initiative |
 | 0.18 | 2026-09-09 | Do 단계 — `consent` 모듈 신설. §4.2에 `POST /users/{userId}/consent-logs`(§2.9 온보딩이 전제하던 '동의 기록' 경로가 표에 없던 갭)·`GET .../consent-state` 추가. §3.1 `ConsentLog`에 `actor`(self/proxy, `granted_by` 파생 — CTO B2)·`grantedAt`(실 응답엔 있었으나 누락) 보강. §2.9에 구현 상태·B2 미도입 사유 명시. 모바일 `OnboardingApi.kt`(createUser→recordConsent 계약) 추가, 화면 흐름은 후속 | NUBiz AX Initiative |
