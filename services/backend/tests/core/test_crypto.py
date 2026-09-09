@@ -62,6 +62,19 @@ def test_multi_kek_rotation() -> None:
     assert rotated.unwrap_dek(wrapped_with_old) == dek
 
 
+def test_blind_index_is_deterministic_and_normalized(crypto: PiiCrypto) -> None:
+    a = crypto.blind_index("010-1234-5678")
+    assert a == crypto.blind_index("  010-1234-5678 ")  # 공백 정규화
+    assert a == crypto.blind_index("010-1234-5678")
+    assert a != crypto.blind_index("010-9999-0000")
+    assert len(a) == 64  # sha256 hex
+    assert "1234" not in a  # 원문 노출 없음
+
+
+def test_blind_index_case_folded(crypto: PiiCrypto) -> None:
+    assert crypto.blind_index("Family@Example.com") == crypto.blind_index("family@example.com")
+
+
 def test_empty_kek_raises() -> None:
     with pytest.raises(RuntimeError, match="PII_KEK"):
         PiiCrypto([])

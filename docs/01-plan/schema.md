@@ -4,7 +4,7 @@
 
 **Project**: 은빛실타래 (SilverYarn)
 **Date**: 2026-09-07
-**Version**: 1.10 (Do 단계 — notification_settings: 채널 UNIQUE + 정서알림 기본 opt-in)
+**Version**: 1.11 (Do 단계 — PII 2차: contact 암호문+blind index, birth_date 암호화, name 평문)
 **Source**: Design 문서 §3 Data Model 초안 + UI/UX 화면설계서 필드 단위 대조 결과 반영
 **용어 정의**: [glossary.md](./glossary.md) 참조
 
@@ -19,6 +19,8 @@
 > **v1.5 변경 요약** (Do 단계, 2026-09-08): apps/admin "전체 기기 통합 모니터링" 화면용 `idx_sync_started_at ON sync_sessions(started_at DESC)` 인덱스 신규 — 기기로 필터하지 않는 전역 정렬 쿼리는 기존 `idx_sync_device(device_id, started_at DESC)`를 못 쓰기 때문(선두 컬럼 불일치).
 >
 > **v1.6 변경 요약** (Do 단계 — photos 모듈 완성, 2026-09-08): `photos`에 `status` 컬럼 신규(`pending_upload`/`uploaded`, 기본값 `pending_upload`) — [sync-contract.md §4](../02-design/sync-contract.md#4-사진-업로드--presigned-url-흐름-be-b2)의 "3단계 확인 콜백이 없으면 `photos` 행은 `status=pending_upload`로 남고" 문장이 이미 전제하고 있던 컬럼인데 §3.6 속성 표에는 빠져 있던 걸 실제 구현 중 발견 — 문서가 이미 확정해 둔 흐름을 코드로 옮기며 정정했다.
+>
+> **v1.11 변경 요약** (Do 단계 — PII 2차, 2026-09-09): decisions.md #45 2차 확정 반영(마이그레이션 `0006`). ① `family_members.contact`·`invitations.contact` → 암호문(VARCHAR(100)→255) + `contact_bidx VARCHAR(64)`(HMAC-SHA256, 동등검색 전용) + 인덱스. `invitations`는 이 bidx로 "같은 연락처 대기 중 초대" 중복을 막는다. ② `users.birth_date` → 앱 레이어 암호화(DATE→VARCHAR(200)). ③ **`name`은 평문 유지** — 부분검색 UX. blind index는 앱 레이어 HMAC(`core/crypto.py`)이라 pgcrypto 불필요.
 >
 > **v1.10 변경 요약** (Do 단계 — notification_settings 모듈, 2026-09-09): ① `receives_emotion_alerts` 기본값 `true`→`false` (CTO 검토 B1 — 정서/민감정보 인접 알림은 opt-out 아닌 opt-in). ② `UNIQUE (family_member_id, channel)` 신설 (한 구성원 = 채널당 최대 1개 설정). 마이그레이션 `0005_notification_settings.py`. API: `GET/PUT /family-members/{id}/notification-settings` (PUT은 전체 교체).
 >
@@ -75,8 +77,8 @@
 | Attribute | Type | Required | Description |
 |-----------|------|----------|-------------|
 | id | UUID | Y | PK |
-| name | varchar(100) | Y | 이름 (PII — 암호화 대상) |
-| birth_date | date | N | 생년월일 (PII) — *v1.1: 온보딩 화면(M1) 요구사항에 맞춰 `birth_year`(연도만)에서 변경. 챕터 시기 매핑에는 연도만 추출해 사용* |
+| name | varchar(100) | Y | 이름 (PII). **v1.11: 평문 유지 확정** — 부분일치 검색(admin) UX·상대적 낮은 민감도(decisions.md #45 2차) |
+| birth_date | varchar(200) | N | 생년월일 (PII — **v1.11: 앱 레이어 암호화**, 컬럼 DATE→VARCHAR). 도메인·API는 `date`로 다룸. 챕터 시기 매핑엔 복호화 후 연도만 추출 |
 | primary_device_id | UUID | N | FK → devices.id |
 | created_at | timestamptz | Y | 생성 시각 |
 | updated_at | timestamptz | Y | 수정 시각 |
@@ -92,7 +94,8 @@
 | user_id | UUID | Y | FK → users.id |
 | role | enum(`family`,`caregiver`,`social_worker`,`admin`) | Y | 역할 |
 | name | varchar(100) | Y | 이름 (PII) |
-| contact | varchar(100) | Y | 연락처 (PII) |
+| contact | varchar(255) | Y | 연락처 (PII — **v1.11: 암호문 저장**, 소유 어르신 DEK) |
+| contact_bidx | varchar(64) | N | **v1.11** — `contact` 정규화값의 HMAC-SHA256 hex (동등검색 전용, 향후 중복확인 등) |
 | two_factor_enabled | boolean | Y | 2FA 활성화 여부 |
 | keycloak_sub | varchar(255) | N | **v1.8** — Keycloak 토큰 `sub` claim ↔ 이 행 매핑(RBAC 강제 전제). **비유일**: 한 사람(1 Keycloak 계정)이 여러 어르신을 담당하면 같은 `sub`로 여러 행이 생긴다(erd.md §11 "UK" 제안과 달라진 이유는 decisions.md #47) |
 | created_at | timestamptz | Y | 생성 시각 |
@@ -358,7 +361,8 @@
 | id | UUID | Y | PK |
 | user_id | UUID | Y | FK → users.id (초대 대상 시니어 계정) |
 | invited_by | UUID | N | FK → family_members.id |
-| contact | varchar(100) | Y | 초대받는 사람의 이메일/전화 |
+| contact | varchar(255) | Y | 초대받는 사람의 이메일/전화 (PII — **v1.11: 암호문 저장**) |
+| contact_bidx | varchar(64) | N | **v1.11** — `contact` HMAC-SHA256 hex. "같은 연락처로 대기 중 초대" 중복 방지 |
 | role | family_role | Y | 부여될 역할 |
 | token | varchar(100) | Y | 초대 링크 토큰 (UNIQUE) |
 | status | enum(`pending`,`accepted`,`expired`) | Y | 기본값 `pending` |
@@ -449,17 +453,18 @@
 
 > **PII 암호화 정책** ([decisions.md #45](./decisions/silveryarn-platform.decisions.md), CTO 검토 B4):
 > - **1차 적용 (v1.7, 코드 반영 완료)**: `chapters.body_text`, `chapter_revisions.body_text_snapshot`, `conversation_chunks.transcript_on_device`/`transcript_server`/`assistant_response` → **애플리케이션 레벨 필드 암호화**(Fernet, `pii.v1.` 접두 토큰) + **사용자별 DEK**(`user_encryption_keys`에 KEK로 랩핑 저장, KEK는 환경변수 `PII_KEK` — Vault 이전 전까지 임시). 컬럼 타입은 `TEXT` 유지. `pgcrypto`는 CTO B4 권고대로 **미사용**(키 유출 위험·인덱스 불가). 구현: `core/crypto.py`.
-> - **2차 예정**: `users.name`(부분일치 검색 재설계 필요), `family_members.contact`/`invitations.contact`(blind index, HMAC-SHA256 동등검색), `users.birth_date`(DATE→BYTEA 타입 변경). `transcript_server`가 암호화되며 `conversation_chunks` 임시 ILIKE 검색은 앱 레이어 복호화 필터로 전환됨(rag-core Qdrant 하이브리드 서치로 교체 예정).
-> - **crypto-shredding**: 사용자 파기 시 `user_encryption_keys` 행 삭제 = 해당 사용자 PII 자유텍스트 전부 복호화 불가. B3 파기정책의 파기 수단 후보(법무 확인 대기).
-> - `CREATE EXTENSION pgcrypto`는 마이그레이션에 남아 있으나(0001) 현재 사용처 없음 — 2차 라운드에서 blind index HMAC 함수용으로 재검토.
+> - **2차 적용 (v1.11, 코드 반영 완료, decisions.md #45 2차)**: `family_members.contact`/`invitations.contact` → 사용자별 DEK 암호문(컬럼 VARCHAR(100)→VARCHAR(255)) + `contact_bidx`(HMAC-SHA256 hex, **동등검색 전용**, KEK에서 유도한 전역 키). `users.birth_date` → 앱 레이어 암호화(컬럼 DATE→VARCHAR(200), 쿼리 필터 미사용). **`name`은 평문 유지** — 부분일치 검색(admin) UX·상대적 낮은 민감도(CTO B4도 name을 최고위험으로 보지 않음). 마이그레이션 `0006`.
+> - **crypto-shredding**: 사용자 파기 시 `user_encryption_keys` 행 삭제 = 해당 사용자 PII(자유텍스트 + contact + birth_date) 전부 복호화 불가. B3 파기정책의 파기 수단 후보(법무 확인 대기). `contact_bidx`는 HMAC이라 원문 복원 불가지만 별도로 지워야 완전 파기.
+> - **blind index 키 회전**: `contact_bidx`는 `PII_KEK`의 첫 키에서 유도한다. KEK 회전 시 첫 키를 목록 마지막에 남기면 유지되고, 첫 키 완전 폐기 시 `contact_bidx` 백필 배치 필요(임시 방식 — Vault 이전 시 정식화).
+> - `CREATE EXTENSION pgcrypto`는 마이그레이션에 남아 있으나(0001) 현재 사용처 없음 — blind index는 앱 레이어 HMAC(`core/crypto.py`)로 구현했으므로 pgcrypto 불필요, 다음 정리 시 제거 검토.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(100) NOT NULL,
-  birth_date DATE,
+  name VARCHAR(100) NOT NULL,                     -- 평문 (v1.11 확정)
+  birth_date VARCHAR(200),                        -- v1.11: DATE→VARCHAR, 앱 레이어 암호문
   primary_device_id UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -471,12 +476,14 @@ CREATE TABLE family_members (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   role family_role NOT NULL,
   name VARCHAR(100) NOT NULL,
-  contact VARCHAR(100) NOT NULL,
+  contact VARCHAR(255) NOT NULL,                      -- v1.11: 암호문 (100→255)
+  contact_bidx VARCHAR(64),                           -- v1.11: HMAC-SHA256 hex (동등검색)
   two_factor_enabled BOOLEAN NOT NULL DEFAULT false,
   keycloak_sub VARCHAR(255),                          -- v1.8: Keycloak 토큰 sub 매핑(비유일). decisions.md #47
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_family_members_keycloak_sub ON family_members(keycloak_sub);  -- v1.8
+CREATE INDEX idx_family_members_contact_bidx ON family_members(contact_bidx);  -- v1.11
 
 CREATE TYPE install_mode AS ENUM ('kiosk', 'normal');
 CREATE TABLE devices (
@@ -677,13 +684,15 @@ CREATE TABLE invitations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   invited_by UUID REFERENCES family_members(id),
-  contact VARCHAR(100) NOT NULL,
+  contact VARCHAR(255) NOT NULL,                    -- v1.11: 암호문 (100→255)
+  contact_bidx VARCHAR(64),                         -- v1.11: HMAC-SHA256 hex (중복 초대 방지)
   role family_role NOT NULL,
   token VARCHAR(100) NOT NULL UNIQUE,
   status invitation_status NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   expires_at TIMESTAMPTZ NOT NULL
 );
+CREATE INDEX idx_invitations_contact_bidx ON invitations(contact_bidx);  -- v1.11
 
 CREATE TYPE publication_format AS ENUM ('hardcover_pdf', 'epub');
 CREATE TYPE publication_status AS ENUM ('requested', 'processing', 'ready', 'delivered');
@@ -782,7 +791,8 @@ CREATE INDEX idx_devices_display_id ON devices(display_id);
 ## 8. Next Steps
 
 - ✅ PII 자유텍스트 5개 컬럼 암호화 방식 확정·적용 (v1.7, decisions.md #45 — 애플리케이션 레벨 필드 암호화 + 사용자별 DEK)
-- ⬜ PII 2차 라운드: `name` 부분검색 재설계, `contact` blind index(HMAC), `birth_date` DATE→BYTEA, `PII_KEK`의 Vault 이전
+- ✅ PII 2차 라운드 (v1.11): `contact` 암호문+blind index, `birth_date` 앱 레이어 암호화, `name`은 평문 유지 확정
+- ⬜ `PII_KEK`의 Vault 이전 + blind index 키 정식 분리(현재는 KEK 첫 키에서 유도)
 - ⬜ `user_encryption_keys` KEK 회전 절차 문서화(`key_version` 컬럼 활용) — B3 파기정책·법무 회신과 함께
 - ✅ 실 인증 스키마 3종 확정 (v1.8, decisions.md #47 — keycloak_sub·device_credentials·access_logs)
 - ⬜ `organizations` + `family_members.org_id` (B2G 시설 테넌시) — B2G 운영모델 확정 후 (erd.md §11)
