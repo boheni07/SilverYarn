@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.28 (모바일 앱 시작 게이트 — §2.9 구현 상태: 온보딩 스킵·install_mode 분기(키오스크 lockTask)·최초 동기화 화면)
+> **Version**: 0.29 (import-linter 도입 — 모듈 경계·4계층 의존 규칙 CI 강제, CTO Enterprise B3 §11)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -757,7 +757,9 @@ Application은 Domain에 항상 의존하며, Infrastructure는 Domain이 정의
 
 > ⚠️ **CTO팀 아키텍처 리뷰 권고(Enterprise B3)**: 6개 서비스 구조를 첫 스캐폴딩 커밋에서 그대로 6개 독립 배포 단위로 찍지 말 것. Phase 1은 **모듈러 모놀리스 2프로세스(api / worker)**로 시작하고, 폴더 경계만 유지하며 import-linter로 엔진 간 직접 참조를 CI에서 차단하는 방식을 권장한다. 실제 서비스 분리는 GPU 스케일 독립이 필요해지는 시점(rag-core 등)에 재검토([cto-review](../cto-review-2026-09-05.md#1-enterprise-architect--아키텍처-전략-심사) B3 참조).
 >
-> **v0.27 (Check 단계) — 구현 반영**: 위 권고대로 `services/backend/` 단일 모듈러 모놀리스로 구현됨(decisions.md #44). 아래 트리는 실제 구조다. **import-linter는 아직 미도입** — 현재 코드는 모듈 경계(모듈은 서로의 `application`/`domain`/`deps`만 참조, `infrastructure`/`api` 직접 참조 0건)와 4계층 의존 규칙을 지키고 있으나 CI 회귀 방지 장치가 없다(후속 아키텍처 작업).
+> **v0.27 (Check 단계) — 구현 반영**: 위 권고대로 `services/backend/` 단일 모듈러 모놀리스로 구현됨(decisions.md #44). 아래 트리는 실제 구조다.
+>
+> **v0.29 — import-linter 도입**: `pyproject.toml [tool.importlinter]`에 contract 4개 + CI(`ci.yml` backend job `lint-imports` 스텝). ① 12개 도메인 모듈 각각 `api → application → infrastructure → domain` 4계층(역방향 import 금지), ② `modules.*.domain`의 프레임워크(fastapi/sqlalchemy/pydantic) 의존 금지, ③ `shared/`↛`modules`, ④ `core/`↛`modules`(예외 3건 고정: `model_registry`의 ORM 전체 import, `auth.py`가 principal 해석에 쓰는 `family_members`/`devices` 리포지토리 2건 — core에 포트 두고 주입하는 리팩터링이 후속). 모듈은 서로의 `application`/`domain`/`deps`만 참조하고 `infrastructure`/`api`는 직접 참조하지 않는다.
 
 ### 11.1 File Structure (실제 구현 — v0.27)
 
@@ -828,6 +830,7 @@ silveryarn/
 |---------|------|---------|--------|
 | 0.27 | 2026-09-10 | **PDCA Check — 설계문서↔구현 갭 분석 반영.** ① §9.1 Layer Structure·§11.1 File Structure를 실제 모듈러 모놀리스 구조(`services/backend/src/core_service/modules/{name}/{4계층}` + `core/` + `shared/`, `main.py`/`worker.py`)로 교체 — 기존 `services/{engine}/` 6-서비스 트리는 미구현(decisions.md #44, structure.md v1.4는 이미 정정됨). ② §3.1 `interface Chapter`에서 `createdAt` 제거(테이블·ORM·응답·DDL 어디에도 없던 필드, v0.6 L-11에서 추가됐으나 미구현). ③ §8.1 Test Plan phase 열 정정(정서 모니터링 Phase 2·피처플래그 OFF, 출판 Phase 3 — §11.2/decisions #25와 정합). ④ §11.2 Implementation Order 체크박스를 실제 상태로 갱신. ⑤ §11 preamble: import-linter 미도입 상태 명시(모듈 경계·4계층은 준수 중이나 CI 회귀 방지 없음 — 후속). schema.md DDL ↔ 실 DB 21개 테이블은 일치 확인 | NUBiz AX Initiative |
 | 0.28 | 2026-09-10 | Do 단계 — 모바일 앱 시작 게이트 구현(§2.9 구현 상태 v0.28). `presentation/AppEntry.kt`가 `device_state.device_id`로 온보딩 스킵 판정, 없으면 온보딩 → `presentation/sync/FirstSyncScreen.kt`(최초 Wi-Fi 동기화, §2.9 흐름의 마지막 단계) → 홈. `installmode/KioskController.kt`로 install_mode="kiosk" 시 lockTask 진입(decisions.md #6). `SyncWorker.doWork()`의 동기화 절차를 `sync/SyncRunner.kt`로 분리(Worker·화면 공유). 가족 초대 화면은 미포함(Device Token은 `POST /invitations` 권한 없음 — 첫 가족 연결 경로 별도 결정 대기). mobile-schema.md v0.8 | NUBiz AX Initiative |
+| 0.29 | 2026-09-10 | Do 단계 — import-linter 도입(§11). CTO Enterprise B3 "import-linter로 CI에서 경계 차단" 권고 구현. `services/backend/pyproject.toml [tool.importlinter]` contract 4개(모듈 4계층 layers, domain 프레임워크 의존 금지, shared/·core/의 modules 의존 금지) + `ci.yml` backend job `lint-imports` 스텝. 도입 중 `modules/photo_requests/__init__.py` 누락 발견·수정(정적 도구가 패키지 인식 못 하던 결함, gap-analysis G6). `core/auth.py`→모듈 infrastructure 결합 2건은 예외로 고정(후속 리팩터링) | NUBiz AX Initiative |
 | 0.1 | 2026-09-05 | Plan/ 폴더 원본 문서 4종 기반 Design 초안 등록 | NUBiz AX Initiative |
 | 0.2 | 2026-09-05 | design-validator 검증 반영 — RAG/정서모니터링/출판/온보딩/상태전이/Diff처리/페르소나 절 신설(§2.4~2.10), API 표준화(§4), RBAC·백업정책 추가(§7), 데이터모델 v1.1 동기화(§3), Domain 레이어 위치 정정(§9) | NUBiz AX Initiative |
 | 0.3 | 2026-09-06 | 사용자 제안 "Closed-Loop Architecture" 보고서 검토 반영 — §2.11 신설(Opus/WorkManager/Whisper Large-v3/Neo4j/Critic Agent/Compaction Engine 구체화), 컴포넌트 다이어그램·의존성표에 Neo4j 추가, §4.3에 sync/download 응답 예시 추가. 외부 GPT-4o/Claude 제안은 미채택(온프레미스 vLLM 유지, decisions #26) | NUBiz AX Initiative (사용자 제안 반영) |

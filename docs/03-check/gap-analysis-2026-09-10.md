@@ -12,10 +12,11 @@
 | # | 구분 | 항목 | 조치 |
 |---|---|---|---|
 | G1 | 문서 드리프트 | design §9.1/§11.1이 미구현 `services/{engine}/` 6-서비스 구조로 서술 | design v0.27에서 실제 구조로 교체 ✅ |
-| G2 | 강제 부재 | 모듈 경계 CI 강제(import-linter) 미도입 — CTO Enterprise B3 권고 | design §11에 "미도입" 명시 ✅ / 실제 도입은 아키텍처 트랙 |
+| G2 | 강제 부재 | 모듈 경계 CI 강제(import-linter) 미도입 — CTO Enterprise B3 권고 | **import-linter 4개 contract 도입 + CI 배선 완료** (`chore/import-linter-module-boundaries`, pyproject.toml `[tool.importlinter]`, ci.yml backend job) ✅ |
 | G3 | 문서 드리프트 | design §3.1 `interface Chapter.createdAt` — 테이블·ORM·응답·DDL 어디에도 없음 | design v0.27에서 제거 ✅ |
 | G4 | 문서 내부 불일치 | §8.1 Test Plan이 정서 모니터링·출판을 "Phase Do"로 표기 (§11.2·decisions #25와 모순) | design v0.27에서 Phase 2/3로 정정 ✅ |
 | G5 | 의도된 이연(확인) | `emotion-scores`/`emotion-alerts`/`publications` 엔드포인트 미구현 | 정상 — Phase 2/3, 피처플래그 OFF. 문서에 이연 근거 존재 |
+| G6 | 구현 결함 | `modules/photo_requests/__init__.py` 누락 — 나머지 11개 모듈엔 모두 존재. 암묵적 namespace 패키지라 런타임 import는 되지만 정적 도구(grimp/import-linter)가 패키지를 못 봄 | `__init__.py` 추가 (import-linter 도입 중 발견) ✅ |
 
 정상 확인: schema.md §5 DDL ↔ 실 DB 21개 테이블 컬럼 일치. 4계층 의존 규칙(domain 순수·역참조 0)·모듈 경계(타 모듈 `infrastructure`/`api` 직접 import 0건) 준수. 마이그레이션 0001~0006 전부 적용.
 
@@ -50,17 +51,21 @@ services/backend/src/core_service/
 
 **권고(design §11 preamble)**: "폴더 경계만 유지하며 **import-linter로 엔진 간 직접 참조를 CI에서 차단**".
 
-**현황**:
-- `services/backend/pyproject.toml`에 `[tool.importlinter]` 없음.
-- `.github/workflows/ci.yml`에 contract 검사 스텝 없음.
-- **현재 코드는 경계를 지키고 있음** (아래 검증):
+**발견 당시 현황**:
+- `services/backend/pyproject.toml`에 `[tool.importlinter]` 없음, `.github/workflows/ci.yml`에 contract 검사 스텝 없음.
+- **현재 코드는 경계를 지키고 있었음**:
   - 모듈 간 교차 import는 `application`(서비스 클래스)·`domain`(값 객체·enum)·`deps`(DI 제공자)로 한정. 타 모듈 `infrastructure`/`api` 직접 import **0건**.
   - 실제 교차 지점: `author→family_members`, `consent→family_members`, `invitations→family_members`, `photos→photo_requests`, `photo_requests→family_members`, `sync→{author,devices,schedule}`, `sync(upload_pipeline)→{author,care}` — 전부 `.application`/`.domain`/`.deps`.
   - 4계층: `domain/*.py`는 `fastapi`/`sqlalchemy`/상위 계층 import 0. `application`→`api` 역참조 0. `infrastructure`→`application`/`api` 역참조 0.
+  - 예외: `core/auth.py`가 principal 해석에 `family_members`/`devices`의 infrastructure를 함수 내부 지연 import(정석은 core에 포트를 두고 주입 — 후속 리팩터링).
 
-**리스크**: 회귀 방지 장치가 없어 다음 커밋에서 경계가 깨져도 CI가 통과함.
+**조치 (완료)**: `import-linter>=2.0` 추가, `pyproject.toml [tool.importlinter]`에 contract 4개:
+1. **layers** — 12개 도메인 모듈 각각 `api → application → infrastructure → domain` (역방향 import 금지)
+2. **forbidden** — `modules.*.domain`은 `fastapi`/`sqlalchemy`/`pydantic`에 의존 금지 (순수성)
+3. **forbidden** — `core_service.shared`는 `core_service.modules`에 의존 금지
+4. **forbidden** — `core_service.core`는 `core_service.modules`에 의존 금지 (예외 3건 `ignore_imports`로 고정: `model_registry`의 ORM 전체 import + `auth.py`의 2건)
 
-**조치**: 아키텍처 트랙에서 import-linter contract(모듈 독립성 + 4계층 layers) 추가 + CI 배선. Check 단계에서는 design §11에 "미도입" 상태만 명시.
+CI: `ci.yml` backend job에 `lint-imports` 스텝(mypy 다음). 로컬: `4 kept, 0 broken` 확인.
 
 ---
 
@@ -116,6 +121,7 @@ design §4.2 Endpoint List에 있으나 미구현:
 
 ## 후속 (별도 트랙)
 
-1. **import-linter 도입** (G2) — 아키텍처 트랙. `[tool.importlinter]` contract(모듈 독립성 + 4계층 layers) + CI 스텝.
-2. **모바일 앱 흐름 완성** — 온보딩 재시작 스킵(`device_state.device_id`), install_mode 기반 진입 분기(키오스크 lockTask), 가족 초대 수락 화면, 최초 동기화 화면.
-3. **PDCA Report 생성** — Do 단계 전체(PR #1~8 + Check) 종합.
+1. ~~import-linter 도입 (G2)~~ — **완료** (`chore/import-linter-module-boundaries`).
+2. **모바일 앱 흐름 완성** — 온보딩 재시작 스킵(`device_state.device_id`), install_mode 기반 진입 분기(키오스크 lockTask), 최초 동기화 화면: **완료** (`feat/mobile-app-entry-first-sync`). 가족 초대 수락 화면은 첫 가족 연결 경로 설계 결정 대기라 제외.
+3. **`core/auth.py` → 모듈 infrastructure 결합 제거** — core에 리포지토리 포트(Protocol) 정의 후 주입. 현재 import-linter contract 4에 예외 2건으로 고정돼 있음.
+4. **PDCA Report 생성** — Do 단계 전체(PR #1~10 + Check) 종합.

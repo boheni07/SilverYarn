@@ -18,6 +18,8 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.import_linter_cache/
+.grimp_cache/
 
 # ==== Node / Next.js (apps/web, apps/admin) ====
 node_modules/

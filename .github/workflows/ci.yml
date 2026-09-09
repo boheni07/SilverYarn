@@ -49,6 +49,12 @@ jobs:
       - name: mypy
         run: python -m mypy src
 
+      # 모듈 경계·4계층 의존 규칙 (CTO Enterprise B3, pyproject.toml [tool.importlinter])
+      - name: import-linter
+        run: lint-imports
+        env:
+          PYTHONPATH: src
+
       - name: pytest
         run: python -m pytest -q
         env:
