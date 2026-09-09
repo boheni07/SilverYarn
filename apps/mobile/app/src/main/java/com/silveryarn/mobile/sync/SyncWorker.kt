@@ -3,10 +3,13 @@ package com.silveryarn.mobile.sync
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.silveryarn.mobile.auth.DeviceCredentialStore
 import com.silveryarn.mobile.local.db.AppDatabase
 import com.silveryarn.mobile.local.db.AutobiographyFtsRow
 import com.silveryarn.mobile.local.db.QuestionCacheEntity
 import com.silveryarn.mobile.local.db.ScheduleCacheEntity
+import java.io.File
+import java.security.MessageDigest
 import java.time.Instant
 
 /**
@@ -15,16 +18,17 @@ import java.time.Instant
  * 등록 SSID 비교, decisions.md #22)은 아직 없다 — 이 워커는 WorkManager가 실제로
  * 실행할 작업 단위(PENDING 대화 업로드 → download 폴링)만 정의한다.
  *
+ * 인증: [DeviceCredentialStore]에서 Device Token을 읽어 `X-Device-Token` 헤더로 보낸다
+ * (decisions.md #47). 토큰이 없으면(= POST /devices 등록 전) 재시도해도 소용없으므로
+ * `Result.failure()` — 온보딩에서 [com.silveryarn.mobile.onboarding.DeviceRegistrar]가
+ * 먼저 돌아야 한다.
+ *
  * TODO(Do 단계):
  * - Wi-Fi 등록 SSID 매칭 후 enqueue하는 트리거 로직(installmode 또는 별도 net/ 패키지)
- * - Device Token 발급·저장 위치 확정(erd.md §11 device_credentials 후보, 결정 대기 —
- *   device_id는 mobile-schema.md v0.4로 device_state에 저장하지만, "인증 토큰" 자체는
- *   아직 별도 컬럼/보안저장소가 없다. core/auth.py의 require_device_token도 지금은
- *   아무 문자열이나 통과하는 스텁이라 서버 쪽도 같이 확정돼야 함)
- * - checksum 계산(원본 오디오 sha256, SYNC_CHECKSUM_ALGO와 일치)
  * - raw_audio_ref 업로드 계약(sync/upload는 아직 원본 업로드 자체가 없어 —
- *   services/backend README "아직 안 된 것" — 로컬 파일 경로를 그대로 보낼 수 없다.
- *   photos 모듈의 Presigned URL 흐름처럼 확정되면 교체)
+ *   services/backend README "아직 안 된 것" — 로컬 파일 경로를 그대로 보낸다.
+ *   photos 모듈의 Presigned URL 흐름처럼 확정되면 교체). checksum은 서버가 아직
+ *   검증하지 않지만 SYNC_CHECKSUM_ALGO=sha256에 맞춰 원본 파일 해시를 계산해 보낸다.
  */
 class SyncWorker(
     context: Context,
@@ -34,20 +38,20 @@ class SyncWorker(
         val db = AppDatabase.getInstance(applicationContext)
         val deviceState = db.deviceStateDao().get() ?: return Result.failure()
         val deviceId = deviceState.deviceId ?: return Result.failure() // 아직 등록 전(POST /devices 미완료)
+        // Device Token 없음 = DeviceRegistrar(POST /devices)가 아직 안 돌았다 — 재시도 무의미
+        val store = DeviceCredentialStore.getInstance(applicationContext)
+        val deviceToken = store.token() ?: return Result.failure()
         val pending = db.conversationDao().listPendingSync()
 
         for (conversation in pending) {
             val audioPath = conversation.audioPath ?: continue // 이미 업로드돼 정리된 행은 건너뜀
             runCatching {
                 RetrofitClient.syncApi.uploadSession(
-                    // TODO: 위 클래스 docstring 참조 — 아직 실 토큰 발급 경로가 없음
-                    deviceToken = "",
+                    deviceToken = deviceToken,
                     body =
                         SyncUploadRequest(
                             deviceId = deviceId,
-                            // TODO: 위 클래스 docstring 참조
-                            checksum = "",
-                            // TODO: 위 클래스 docstring 참조
+                            checksum = fileSha256OrEmpty(audioPath),
                             rawAudioRef = audioPath,
                             transcriptOnDevice = conversation.userQuery,
                             mode = conversation.mode,
@@ -60,10 +64,26 @@ class SyncWorker(
             }
         }
 
-        applyDownload(db, deviceId, deviceState.lastSyncVersion)
+        applyDownload(db, deviceId, deviceToken, deviceState.lastSyncVersion)
 
         return Result.success()
     }
+
+    /** 원본 오디오 파일의 SHA-256(hex) — SYNC_CHECKSUM_ALGO와 일치. 파일이 없거나
+     * 읽기 실패 시 빈 문자열(서버가 아직 값을 검증하지 않으므로 업로드 자체는 진행). */
+    private fun fileSha256OrEmpty(path: String): String =
+        runCatching {
+            val digest = MessageDigest.getInstance("SHA-256")
+            File(path).inputStream().use { stream ->
+                val buffer = ByteArray(8192)
+                var read = stream.read(buffer)
+                while (read >= 0) {
+                    digest.update(buffer, 0, read)
+                    read = stream.read(buffer)
+                }
+            }
+            digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+        }.getOrDefault("")
 
     /** GET /sync/download 결과를 로컬 캐시에 반영 — sync-contract.md §5.
      *
@@ -73,12 +93,12 @@ class SyncWorker(
     private suspend fun applyDownload(
         db: AppDatabase,
         deviceId: String,
+        deviceToken: String,
         since: String?,
     ) {
         runCatching {
             RetrofitClient.syncApi.download(
-                // TODO: 위 클래스 docstring 참조 — 아직 실 토큰 발급 경로가 없음
-                deviceToken = "",
+                deviceToken = deviceToken,
                 deviceId = deviceId,
                 since = since,
             )

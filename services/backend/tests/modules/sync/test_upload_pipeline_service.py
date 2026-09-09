@@ -91,6 +91,16 @@ class FakeConversationChunkRepository:
     async def get_by_id(self, chunk_id):
         return self._store.get(chunk_id)
 
+    async def find_by_turn(self, user_id, session_id, turn_id):
+        return next(
+            (
+                c
+                for c in self._store.values()
+                if c.user_id == user_id and c.session_id == session_id and c.turn_id == turn_id
+            ),
+            None,
+        )
+
     async def list_by_user(self, user_id, limit=50, offset=0):
         return [c for c in self._store.values() if c.user_id == user_id]
 
@@ -306,3 +316,22 @@ async def test_second_upload_same_period_appends_to_existing_chapter() -> None:
     chapters = [c for c in chapter_repo.by_id.values() if c.user_id == user_id]
     assert len(chapters) == 1  # 같은 시기는 같은 챕터로 귀속(단순화된 규칙)
     assert chapters[0].version == 2
+
+
+async def test_resent_same_turn_is_idempotent() -> None:
+    """sync-contract.md §2 — 같은 (user, session, turn)의 재전송/잡 재시도는
+    새 청크를 만들지 않고, 챕터 윤문도 다시 돌지 않는다(version 안 오름)."""
+    chapter_repo = FakeChapterRepository()
+    chunk_repo = FakeConversationChunkRepository()
+    llm = FakeLLMClient(knowledge={"period": "youth"})
+    pipeline, _ = _build_pipeline(llm=llm, chapter_repo=chapter_repo, chunk_repo=chunk_repo)
+
+    user_id = uuid.uuid4()
+    first = await pipeline.run(_input(user_id=user_id, device_session_id="sess-1", turn_id=3))
+    second = await pipeline.run(_input(user_id=user_id, device_session_id="sess-1", turn_id=3))
+
+    assert second.id == first.id
+    assert len(chunk_repo._store) == 1  # noqa: SLF001
+    chapters = [c for c in chapter_repo.by_id.values() if c.user_id == user_id]
+    assert len(chapters) == 1
+    assert chapters[0].version == 1  # 두 번째 실행은 save_draft를 아예 호출 안 함

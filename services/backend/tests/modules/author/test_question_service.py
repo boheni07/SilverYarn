@@ -27,6 +27,12 @@ class FakeQuestionRepository:
             result = [q for q in result if q.created_at > since]
         return sorted(result, key=lambda q: q.created_at)
 
+    async def list_by_user(self, user_id: uuid.UUID, answered: bool | None = None) -> list[Question]:
+        result = [q for q in self.questions if q.user_id == user_id]
+        if answered is not None:
+            result = [q for q in result if q.answered == answered]
+        return sorted(result, key=lambda q: (q.answered, q.created_at))
+
 
 def _make_question(
     user_id: uuid.UUID, text: str, answered: bool = False, created_at: datetime | None = None
@@ -75,3 +81,30 @@ async def test_list_priority_questions_ignores_other_users() -> None:
 
     result = await service.list_priority_questions_for_user(user_id)
     assert result == []
+
+
+async def test_list_questions_for_user_returns_all_unanswered_first() -> None:
+    """GET /users/{userId}/questions — priority와 달리 답변된 것도 포함, 미답변 우선 정렬."""
+    repo = FakeQuestionRepository()
+    service = QuestionService(repo)  # type: ignore[arg-type]
+    user_id = uuid.uuid4()
+    now = datetime.now(UTC)
+    repo.questions.append(
+        _make_question(user_id, "답변됨", answered=True, created_at=now - timedelta(days=2))
+    )
+    repo.questions.append(_make_question(user_id, "미답변2", created_at=now))
+    repo.questions.append(_make_question(user_id, "미답변1", created_at=now - timedelta(days=1)))
+
+    result = await service.list_questions_for_user(user_id)
+    assert [q.text for q in result] == ["미답변1", "미답변2", "답변됨"]
+
+
+async def test_list_questions_for_user_answered_filter() -> None:
+    repo = FakeQuestionRepository()
+    service = QuestionService(repo)  # type: ignore[arg-type]
+    user_id = uuid.uuid4()
+    repo.questions.append(_make_question(user_id, "답변됨", answered=True))
+    repo.questions.append(_make_question(user_id, "미답변"))
+
+    assert [q.text for q in await service.list_questions_for_user(user_id, answered=False)] == ["미답변"]
+    assert [q.text for q in await service.list_questions_for_user(user_id, answered=True)] == ["답변됨"]

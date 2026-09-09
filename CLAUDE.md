@@ -47,7 +47,9 @@ Claude automatically applies PDCA methodology. Commands are shortcuts for power 
 > - 정서 모니터링 파이프라인은 Phase 1에서 **피처플래그로 OFF** ([decisions.md #25](./docs/01-plan/decisions/silveryarn-platform.decisions.md))
 > - 온디바이스 SLM 모델 벤치마크(2주)는 예산 승인과 무관하게 즉시 착수 가능. 동기화 계약([sync-contract.md](./docs/02-design/sync-contract.md))은 3차 검증에서 작성 완료
 > - 6개 마이크로서비스로 첫 커밋을 찍지 말 것 — 모듈러 모놀리스(api/worker 2프로세스) 권고
-> - PII 암호화 대상(`assistant_response` 포함)·접근성 최소기준(BODY 20px 등)은 문서화 완료, **구체 구현 방식은 Do 단계 확정**
+> - PII 암호화: 자유텍스트 5개 컬럼(`body_text`·`body_text_snapshot`·`transcript_*`·`assistant_response`)은 **1차 구현 완료** — 애플리케이션 레벨 필드 암호화 + 사용자별 DEK([decisions.md #45](./docs/01-plan/decisions/silveryarn-platform.decisions.md), `services/backend/src/core_service/core/crypto.py`, 마이그레이션 `0002`). `name`·`contact`·`birth_date`는 2차 라운드(부분검색 재설계·blind index·타입변경 선행). KEK는 `PII_KEK` 환경변수(Vault 이전 전까지 임시)
+> - 인증: **실 구현 완료(1차)** — Keycloak JWKS RS256 검증 + `family_members.keycloak_sub` 매핑 + Device Token(`device_credentials` SHA-256 해시) + `access_logs` 감사로그 + `authorize_user_access` RBAC/IDOR([decisions.md #47](./docs/01-plan/decisions/silveryarn-platform.decisions.md), `core/auth.py`, 마이그레이션 `0003`). 인가 술어는 핵심 엔드포인트에만 적용(나머지 확대는 후속). `organizations`(B2G 테넌시)·보유기간 컬럼은 계속 보류. `AUTH_ISSUER_URL` 미설정 시 웹 콘솔 인증 fail closed
+> - 접근성 최소기준(BODY 20px 등)은 문서화 완료, 구체 구현 방식은 Do 단계 확정
 
 > **⚠️ 중요**: bkit Enterprise 스킬의 기본 인프라 템플릿(AWS EKS/RDS/Terraform, Turborepo Next.js/FastAPI 표준 스택)은 **참고용일 뿐 그대로 적용하지 않는다.** 본 프로젝트는 Zero External Data Egress 원칙(기획서 3.1절)에 따라 **온프레미스 자체 GPU 서버(vLLM·A100)** 기반이며, 모바일은 온디바이스 STT/SLM/TTS가 필수인 네이티브(또는 이에 준하는) 앱이다. 실제 스택 확정 전까지 아래 Tech Stack 표를 우선한다.
 

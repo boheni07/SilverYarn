@@ -7,10 +7,11 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core_service.core.auth import AuthContext, require_auth
+from core_service.core.auth import AuthContext, authorize_user_access, require_auth, require_roles
 from core_service.core.db import get_db
 from core_service.modules.users.application.user_service import UserService
 from core_service.modules.users.infrastructure.user_repository import UserRepository
+from core_service.shared.domain_enums import FamilyRole
 from core_service.shared.schemas import DataResponse, PaginatedResponse, Pagination
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -50,11 +51,9 @@ async def list_users(
     page_size: int = 20,
     name: str | None = None,
     service: UserService = Depends(_service),
-    # Admin — TODO: role 체크 강화 (devices.py list_user_devices와 동일 패턴).
-    # apps/admin "전체 사용자 목록" 화면용(2026-09-08 신규) — design.md §4.1의
-    # PaginatedResponse 봉투를 실제로 쓰는 첫 엔드포인트다. name은 이름 검색
-    # 필터(2026-09-08 추가, ILIKE 부분일치).
-    _ctx: AuthContext = Depends(require_auth),
+    # apps/admin "전체 사용자 목록" 화면용 — design.md §7.1 "사용자 관리 = admin 전용".
+    # name은 이름 검색 필터(ILIKE 부분일치).
+    _admin=Depends(require_roles(FamilyRole.ADMIN)),  # noqa: ANN001
 ) -> PaginatedResponse[UserResponse]:
     users, total = await service.list_users(page=page, page_size=page_size, name=name)
     return PaginatedResponse(
@@ -67,7 +66,8 @@ async def list_users(
 async def get_user(
     user_id: uuid.UUID,
     service: UserService = Depends(_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[UserResponse]:
+    authorize_user_access(ctx, user_id)
     user = await service.get_user(user_id)
     return DataResponse(data=UserResponse(**user.__dict__))

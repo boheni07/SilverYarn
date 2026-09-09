@@ -175,14 +175,15 @@ import './styles.css'
 | `EMBEDDING_` | BGE-M3 임베딩 서비스 접속 | Server only | `EMBEDDING_ENDPOINT` |
 | `GRAPH_` | Neo4j 지식그래프 접속 (신규) | Server only | `GRAPH_URI`, `GRAPH_PASSWORD` |
 | `LLM_` | vLLM 추론 서버 | Server only | `LLM_ENDPOINT`, `LLM_MODEL_NAME` |
-| `AUTH_` | 인증 | Server only | `AUTH_SECRET` *(Keycloak SSO 확정 — decisions.md #17)* |
+| `AUTH_` | 인증 (Keycloak SSO) | Server only | `AUTH_ISSUER_URL`, `AUTH_CLIENT_ID`, `AUTH_SECRET`, `AUTH_AUDIENCE`, `AUTH_JWKS_URL`, `AUTH_2FA_AMR_VALUES` *(decisions.md #17/#47 — `AUTH_ISSUER_URL` 미설정 시 웹 콘솔 인증 fail closed)* |
 | `SYNC_` | 배치 동기화 파라미터 | Server only | `SYNC_MAX_RETRY`, `SYNC_CHECKSUM_ALGO` |
+| `PII_` | PII 필드 암호화 KEK (신규, decisions.md #45) | Server only | `PII_KEK` *(Fernet 키, 콤마 구분 다중 키로 회전 대비 — Vault 이전 전까지 임시)* |
 
 ```
 ⚠️ 보안 원칙
 - NEXT_PUBLIC_* 외 어떤 것도 클라이언트에 노출 금지
 - 온프레미스 시크릿(DB/Storage/LLM/VectorDB 접속정보)은 시크릿 매니저(구체 도구는 인프라 설계에서 확정) 경유, .env 파일에 평문 커밋 금지
-- 원본 구술 음성·전사 텍스트 등 PII는 환경변수가 아닌 schema.md §5 암호화 정책(Do 단계 확정)을 따름
+- PII 자유텍스트 컬럼(schema.md §5) 자체는 애플리케이션 레벨 필드 암호화 + 사용자별 DEK로 보호한다(core/crypto.py). 환경변수로 두는 것은 그 DEK를 랩핑하는 KEK(`PII_KEK`)뿐이며, 이 값은 반드시 시크릿 매니저 경유·`.env.local` 커밋 금지 — 유출 시 crypto-shredding 전제(파기 수단)가 무너진다
 ```
 
 ### 4.1 모바일(Kotlin) 시크릿 관리 — v1.1 신규 (design-validator F-7)

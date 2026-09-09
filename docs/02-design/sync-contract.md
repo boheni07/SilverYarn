@@ -2,7 +2,7 @@
 
 > Phase 4 보강 산출물 — 3차 design-validator 검증 H-3, CTO Enterprise B1/백엔드 BE-B1/BE-B2/BE-B4 반영. `workflow-diagrams.md` §3(시퀀스)·§17(충돌 플로우차트)·§20(미결 영향)에서 각주로 예고된 계약 산출물의 본문이다.
 
-**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-08 · **Version**: 0.4
+**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-09 · **Version**: 0.5
 
 > 이 문서는 `docs/02-design/features/silveryarn-platform.design.md` §4(API Specification)를 동기화 도메인에 한해 상세화한다. 충돌하면 design.md가 아니라 **이 문서가 동기화 관련 SoR**이며, design.md §4.2/§6.1은 이 문서의 요약만 담는다(design.md v0.6에서 갱신 예정).
 
@@ -65,6 +65,18 @@ Auth: Device Token
 - `status=failed`/`partial`일 때 `failed_items`에 실패한 청크 ID 목록과 사유 코드 반환 — 클라이언트는 해당 원본만 재전송(전량 재업로드 금지).
 - `sync_sessions` 테이블(schema.md)의 `status` 컬럼과 1:1 매핑.
 
+### 2.3 멱등성 (신규 v0.5, CTO Enterprise B1)
+
+네트워크 불안정으로 `POST /sync/upload`가 재전송되거나 arq 잡이 재시도돼도 **한 대화 턴은 정확히 한 번만** 적재된다. 별도 ULID 컬럼을 두지 않고 온디바이스가 이미 보내는 `(session_id, turn_id)`(대화 세션 식별자·턴 번호, schema.md v1.3)를 멱등성 키로 쓴다 — 클라이언트 계약 변경 없음.
+
+| 계층 | 방어 | 대상 |
+|---|---|---|
+| 1. arq 잡 id | `_job_id = "upload:{user_id}:{session_id}:{turn_id}"` 고정 — 폴링 창(30초×10분) 안의 재전송은 같은 잡을 중복 enqueue하지 못한다 | 잡이 아직 큐/실행 중일 때 |
+| 2. 파이프라인 사전 확인 | `UploadPipelineService`가 처리 전에 `conversation_chunks`에 같은 `(user_id, session_id, turn_id)` 행이 있으면 STT·임베딩·**챕터 윤문(save_draft가 version을 올리며 본문을 덧붙임)**을 건너뛰고 기존 청크 반환 | 잡이 이미 완료돼 큐에서 빠진 뒤의 재전송 |
+| 3. DB 제약 | 부분 유니크 인덱스 `uq_conversation_chunks_turn (user_id, session_id, turn_id) WHERE session_id IS NOT NULL AND turn_id IS NOT NULL`(마이그레이션 0004) — 동시 실행되던 두 잡의 경쟁 상황을 IntegrityError로 차단, repository가 기존 행으로 회복 | 진짜 동시성 |
+
+- `session_id`/`turn_id`가 둘 다 없는 비대화형/레거시 업로드는 멱등 보장 밖(부분 인덱스에서 제외) — 해당 경로가 생기면 별도 키 정의 필요.
+
 ---
 
 ## 3. 엔티티별 충돌정책 (Server-Wins 전면적용 폐기)
@@ -74,7 +86,7 @@ Auth: Device Token
 | `conversation_chunks` | **Append-Only, 충돌 없음** | 매 발화가 새 행으로 생성되므로 갱신 충돌 자체가 발생하지 않음 |
 | `chapters` (본문·귀속) | **Server-Wins** | 서버 vLLM 윤문·가족 감수를 거친 버전이 항상 최신 정본 |
 | `chapter_revisions` | **Server-Only(쓰기 자체가 서버 전용)** | §7 감수 워크플로우에서만 생성, 온디바이스는 쓰기 권한 없음 |
-| `schedule_items.completed_at` 등 **로컬 완료 표시** | **Device-Wins(필드 단위 병합)** | 어르신이 단말에서 "복약 완료"를 눌렀는데 서버 값으로 덮이면 실제 수행 여부가 유실됨. `due_at`/`description` 등 콘텐츠 필드는 Server-Wins, `completed_at`/`skipped_reason`만 Device-Wins로 필드 단위 분리 |
+| `schedule_items.completed_at` 등 **로컬 완료 표시** | **Device-Wins(필드 단위 병합)** | 어르신이 단말에서 "복약 완료"를 눌렀는데 서버 값으로 덮이면 실제 수행 여부가 유실됨. `due_at`/`description` 등 콘텐츠 필드는 Server-Wins, `completed_at`/`skipped_reason`만 Device-Wins로 필드 단위 분리. **구현(v0.5)**: 배치 sync 병합 로직 대신 전용 엔드포인트 `POST /schedule-items/{id}/respond`(status/decline_reason)로 실현 — 단말이 응답을 직접 push하고, `GET /sync/download`는 `status=pending`만 내려주므로(§5) 응답된 항목은 자연히 재하달에서 빠진다. 사실상 필드 병합과 동치이며 배치 파이프라인에 별도 병합 코드가 없다 |
 | `conversations.response_latency_ms` (로컬 전용 성능 로그) | **Device-Only(서버에 대응 컬럼 없음, 업로드 시 `conversation_chunks` 메타에 병합 저장)** | §2.12 SLM 벤치마크(#27) 데이터 수집 경로 확보 — L-8 정정 |
 | `device_state` | **Device-Wins(서버는 참고용 스냅샷만 수신)** | 단말 자체 상태이므로 서버가 권위를 가질 이유가 없음 |
 | `photos` (배치·설명 텍스트) | **Server-Wins, 단 `placement_status=proposed`는 가족 확정 전까지 계속 제안 상태 유지** | AI 제안은 항상 초안(decisions.md #11) |
@@ -166,3 +178,4 @@ design.md §4.1의 표준 에러 코드에 아래 2종을 추가한다 (L-12):
 | 0.2 | 2026-09-08 | photos 모듈 실제 구현 중 발견 — §4 1단계 요청 예시에 `user_id`/`uploader_type` 보강(photos.user_id NOT NULL이라 서버가 반드시 알아야 하는데 원래 예시엔 빠져 있었음, schema.md v1.6과 함께) | NUBiz AX Initiative |
 | 0.3 | 2026-09-08 | `GET /sync/download` 실제 구현 중 발견 — §5에 `device_id` 필수 쿼리 파라미터 신규(호출 주체 식별 수단이 원문에 없었음), 엔티티별 워터마크 방식이 실제로는 다르다는 것을 명시(chapters=updated_at, questions=created_at 근사, schedule_items=pending 상태 전체), chapter_updates의 summary/keywords가 Compaction Engine 미구현으로 body_text 원문/빈 배열 대체임을 문서화 | NUBiz AX Initiative |
 | 0.4 | 2026-09-08 | photos orphan cleanup 배치 실제 구현 — §4에 구현 상세 반영(`worker.py`의 arq cron job, 매시 정각 실행, MinIO 삭제는 best-effort). 실 Postgres+MinIO로 3가지 케이스(오브젝트 있는 채로 방치/오브젝트 없이 방치/최근 생성) 검증 | NUBiz AX Initiative |
+| 0.5 | 2026-09-09 | §2.3 신설 — 업로드 멱등성 3계층(arq `_job_id` / 파이프라인 사전 확인 / 부분 유니크 인덱스 `uq_conversation_chunks_turn`), CTO B1 미해소분 반영. 멱등성 키는 별도 ULID 컬럼이 아니라 기존 `(session_id, turn_id)`. §3 `schedule_items` 행에 "필드 병합 = `/schedule-items/{id}/respond` 엔드포인트로 실현(배치 병합 코드 없음)" 명시. 마이그레이션 `0004` | NUBiz AX Initiative |

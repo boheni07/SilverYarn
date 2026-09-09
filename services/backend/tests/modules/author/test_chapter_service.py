@@ -83,6 +83,7 @@ class FakeChapterRepository:
 class FakeChapterRevisionRepository:
     def __init__(self) -> None:
         self.revisions: list[ChapterRevision] = []
+        self.last_owner_id: uuid.UUID | None = None
 
     async def list_by_chapter(self, chapter_id: uuid.UUID) -> list[ChapterRevision]:
         return [r for r in self.revisions if r.chapter_id == chapter_id]
@@ -90,12 +91,14 @@ class FakeChapterRevisionRepository:
     async def create(
         self,
         chapter_id: uuid.UUID,
+        user_id: uuid.UUID,
         version: int,
         body_text_snapshot: str,
         reviewer_id: uuid.UUID | None,
         review_comment: str | None,
         action: RevisionAction,
     ) -> ChapterRevision:
+        self.last_owner_id = user_id
         revision = ChapterRevision(
             id=uuid.uuid4(),
             chapter_id=chapter_id,
@@ -175,6 +178,8 @@ async def test_review_chapter_approved_creates_revision_and_confirms(
     assert saved[0].action == RevisionAction.APPROVED
     assert saved[0].body_text_snapshot == "본문"
     assert saved[0].reviewer_id == reviewer_id
+    # body_text_snapshot 암호화용 DEK 소유자(챕터 주인)가 repository로 전달돼야 한다
+    assert revisions.last_owner_id == user_id
 
 
 async def test_review_chapter_rejected_sets_rejected_status(service: ChapterService) -> None:

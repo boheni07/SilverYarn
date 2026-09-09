@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core_service.core.auth import AuthContext, require_auth
+from core_service.core.auth import AuthContext, authorize_user_access, require_auth
 from core_service.core.db import get_db
 from core_service.modules.care.application.conversation_chunk_service import (
     ConversationChunkService,
@@ -79,8 +79,9 @@ async def list_conversation_chunks(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     service: ConversationChunkService = Depends(_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[list[ConversationChunkResponse]]:
+    authorize_user_access(ctx, user_id)
     chunks = await service.list_chunks_for_user(user_id, limit=limit, offset=offset)
     return DataResponse(data=[_to_response(c) for c in chunks])
 
@@ -93,9 +94,10 @@ async def search_conversation_chunks(
     user_id: uuid.UUID,
     keyword: str = Query(min_length=1),
     service: ConversationChunkService = Depends(_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[list[ConversationChunkResponse]]:
-    """⚠️ 임시 ILIKE 검색 — 실제 하이브리드 서치(Qdrant, design.md §2.4)로 교체 예정."""
+    """⚠️ 임시 검색 — 실제 하이브리드 서치(Qdrant, design.md §2.4)로 교체 예정."""
+    authorize_user_access(ctx, user_id)
     chunks = await service.search_chunks(user_id, keyword)
     return DataResponse(data=[_to_response(c) for c in chunks])
 
@@ -104,7 +106,8 @@ async def search_conversation_chunks(
 async def get_conversation_chunk(
     chunk_id: uuid.UUID,
     service: ConversationChunkService = Depends(_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[ConversationChunkResponse]:
     chunk = await service.get_chunk(chunk_id)
+    authorize_user_access(ctx, chunk.user_id)
     return DataResponse(data=_to_response(chunk))

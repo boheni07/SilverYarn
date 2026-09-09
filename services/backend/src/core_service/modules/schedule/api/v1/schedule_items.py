@@ -11,7 +11,14 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core_service.core.auth import AuthContext, require_auth
+from core_service.core.auth import (
+    WRITE_ELDER_DATA_ROLES,
+    AuthContext,
+    Principal,
+    authorize_user_access,
+    require_auth,
+    require_principal,
+)
 from core_service.core.db import get_db
 from core_service.modules.schedule.application.schedule_item_service import ScheduleItemService
 from core_service.modules.schedule.domain.schedule_item import ScheduleKind, ScheduleStatus
@@ -80,9 +87,10 @@ def _to_response(item) -> ScheduleItemResponse:  # noqa: ANN001 — ScheduleItem
 async def list_schedule_items(
     user_id: uuid.UUID,
     service: ScheduleItemService = Depends(_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[list[ScheduleItemResponse]]:
     """design.md §4.2 — 일정/복약 목록 조회(L-12)."""
+    authorize_user_access(ctx, user_id)
     items = await service.list_schedule_items_for_user(user_id)
     return DataResponse(data=[_to_response(i) for i in items])
 
@@ -94,8 +102,9 @@ async def create_schedule_item(
     user_id: uuid.UUID,
     body: ScheduleItemCreateRequest,
     service: ScheduleItemService = Depends(_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[ScheduleItemResponse]:
+    authorize_user_access(ctx, user_id, allowed_roles=WRITE_ELDER_DATA_ROLES)
     item = await service.create_schedule_item(
         user_id=user_id,
         kind=body.kind,
@@ -111,9 +120,10 @@ async def create_schedule_item(
 async def get_schedule_item(
     schedule_item_id: uuid.UUID,
     service: ScheduleItemService = Depends(_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[ScheduleItemResponse]:
     item = await service.get_schedule_item(schedule_item_id)
+    authorize_user_access(ctx, item.user_id)
     return DataResponse(data=_to_response(item))
 
 
@@ -122,9 +132,14 @@ async def respond_schedule_item(
     schedule_item_id: uuid.UUID,
     body: ScheduleItemRespondRequest,
     service: ScheduleItemService = Depends(_service),
-    _ctx: AuthContext = Depends(require_auth),
+    principal: Principal = Depends(require_principal),
 ) -> DataResponse[ScheduleItemResponse]:
-    """확정(confirmed)/누락(missed)/거절(declined) 응답 — pending 상태만 가능."""
+    """확정(confirmed)/누락(missed)/거절(declined) 응답 — pending 상태만 가능.
+
+    어르신이 기기에서 리마인더에 응답하거나(Device Token) 가족이 웹에서 대신 처리한다.
+    """
+    item = await service.get_schedule_item(schedule_item_id)
+    authorize_user_access(principal, item.user_id)
     item = await service.respond(
         schedule_item_id=schedule_item_id, status=body.status, decline_reason=body.decline_reason
     )
@@ -139,7 +154,9 @@ async def schedule_next_reminder(
     schedule_item_id: uuid.UUID,
     body: ScheduleItemReminderRequest,
     service: ScheduleItemService = Depends(_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[ScheduleItemResponse]:
+    item = await service.get_schedule_item(schedule_item_id)
+    authorize_user_access(ctx, item.user_id, allowed_roles=WRITE_ELDER_DATA_ROLES)
     item = await service.schedule_next_reminder(schedule_item_id, body.next_remind_at)
     return DataResponse(data=_to_response(item))

@@ -16,7 +16,13 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core_service.core.auth import AuthContext, require_auth, require_auth_or_device_token
+from core_service.core.auth import (
+    AuthContext,
+    Principal,
+    authorize_user_access,
+    require_auth,
+    require_principal,
+)
 from core_service.core.clients.storage_client import StorageClient
 from core_service.core.db import get_db
 from core_service.modules.photo_requests.application.photo_request_service import PhotoRequestService
@@ -24,6 +30,7 @@ from core_service.modules.photo_requests.deps import get_photo_request_service
 from core_service.modules.photos.application.photo_service import PhotoService
 from core_service.modules.photos.domain.photo import UploaderType
 from core_service.modules.photos.infrastructure.photo_repository import PhotoRepository
+from core_service.shared.domain_enums import FamilyRole
 from core_service.shared.schemas import DataResponse
 
 router = APIRouter(tags=["photos"])
@@ -73,14 +80,19 @@ def _service(session: AsyncSession = Depends(get_db)) -> PhotoService:
     return PhotoService(PhotoRepository(session), StorageClient())
 
 
+# design.md §7.1 — 사진 업로드는 family/caregiver/admin (또는 어르신 본인 기기).
+_UPLOAD_ROLES = frozenset({FamilyRole.FAMILY, FamilyRole.CAREGIVER, FamilyRole.ADMIN})
+
+
 @router.post("/photos/upload-url", response_model=DataResponse[PhotoUploadUrlResponse], status_code=200)
 async def request_upload_url(
     body: PhotoUploadUrlRequest,
     service: PhotoService = Depends(_service),
-    _ctx: AuthContext | str = Depends(require_auth_or_device_token),
+    principal: Principal = Depends(require_principal),
 ) -> DataResponse[PhotoUploadUrlResponse]:
     """sync-contract.md §4 1단계 — MinIO Presigned PUT URL 발급, `photos` 행을
     status=pending_upload로 함께 생성한다."""
+    authorize_user_access(principal, body.user_id, allowed_roles=_UPLOAD_ROLES)
     photo, upload_url, expires_at = await service.request_upload_url(
         user_id=body.user_id,
         uploader_type=body.uploader_type,
@@ -97,7 +109,7 @@ async def complete_upload(
     photo_id: uuid.UUID,
     service: PhotoService = Depends(_service),
     photo_request_service: PhotoRequestService = Depends(get_photo_request_service),
-    _ctx: AuthContext | str = Depends(require_auth_or_device_token),
+    principal: Principal = Depends(require_principal),
 ) -> DataResponse[PhotoCompleteResponse]:
     """sync-contract.md §4 3단계 — 클라이언트가 MinIO에 직접 PUT을 마친 뒤 보내는
     확인 콜백. 멱등하다(이미 uploaded여도 성공).
@@ -109,6 +121,7 @@ async def complete_upload(
     모든 요청에 대한 응답으로 해석한다(photo_request_service.py 참조).
     """
     photo = await service.complete_upload(photo_id)
+    authorize_user_access(principal, photo.user_id, allowed_roles=_UPLOAD_ROLES)
     await photo_request_service.fulfill_pending_for_user(photo.user_id)
     return DataResponse(data=PhotoCompleteResponse(photo_id=photo.id, status=photo.status.value))
 
@@ -117,9 +130,10 @@ async def complete_upload(
 async def list_user_photos(
     user_id: uuid.UUID,
     service: PhotoService = Depends(_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[list[PhotoResponse]]:
     """design.md §4.2 — 사진 목록 조회."""
+    authorize_user_access(ctx, user_id)
     photos = await service.list_photos_for_user(user_id)
     return DataResponse(
         data=[

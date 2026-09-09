@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.16 (apps/web 사진 요청 화면 반영)
+> **Version**: 0.20 (동기화 멱등성 + `GET /users/{userId}/questions` 구현)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -201,6 +201,8 @@ Idle → Listening(웨이크워드 또는 마이크 버튼 탭 — M2 화면과 
   → 개인정보 수집 동의(consent_logs) → 가족 계정 웹 콘솔 초대(invitations 생성·토큰 발송)
   → 가족이 초대 수락(status='accepted') → 최초 Wi-Fi 동기화 → 첫 구술 인터뷰 시작
 ```
+
+> **구현 상태 (v0.18)**: 서버측 consent 모듈(`POST/GET /users/{userId}/consent-logs`, `/consent-state`) 구현 완료. 모바일은 서버 계약(`apps/mobile/.../onboarding/OnboardingApi.kt` — `createUser`→`recordConsent`)까지 고정, 온보딩 화면 흐름(네비게이션·상태)은 후속. `actor`(self/proxy)는 `granted_by` 유무에서 파생 — CTO 검토 B2가 권고한 명시적 enum(self/proxy/**legal_guardian**)·`data_subject` RBAC 행은 성년후견 대리동의 법적 근거가 법무 검토 대기라 미도입([decisions.md #12](../../01-plan/decisions/silveryarn-platform.decisions.md)).
 
 ### 2.10 에이전트 페르소나 정의 — 신규 v0.2
 
@@ -441,8 +443,10 @@ interface ConsentLog {
   id: string;
   userId: string;
   consentType: "data_collection" | "external_tts_optin" | "external_llm_optin";
-  granted: boolean;
-  grantedBy?: string;
+  granted: boolean;              // false = 철회 (동의/철회 모두 새 행으로 append)
+  grantedBy?: string;            // 없으면 어르신 본인(self), 있으면 가족 대리(proxy)
+  actor: "self" | "proxy";      // v0.18 신규 — grantedBy 유무에서 서버가 파생(CTO B2). 저장 컬럼 아님
+  grantedAt: string;            // v0.18 신규 — 실 응답엔 있었으나 이 인터페이스에 누락돼 있던 것을 consent 모듈 구현 중 발견
 }
 
 interface NotificationSetting {  // v1.1 신규
@@ -539,11 +543,14 @@ interface Publication {         // v1.1 신규
 | PUT | /api/v1/family-members/{id}/notification-settings | 알림 수신 채널·항목 설정 | 2FA + Role(family) |
 | POST | /api/v1/invitations | 가족 구성원 초대 | 2FA + Role(family) |
 | POST | /api/v1/users/{userId}/publications | 인쇄/출판 요청 | 2FA + Role |
-| GET | /api/v1/users/{userId}/devices | 기기 사양·설치모드 조회 (관리자, 조회 전용) — *(v0.6: `/devices/{userId}` → 소유자 중첩 규칙에 맞게 정정, M-8)* | Admin |
+| POST | /api/v1/devices | 설치 시점 1회 기기 등록(F-3 예외, 부트스트랩 — 인증 없음). 응답에 **Device Token 1회 발급**(v0.19, decisions.md #47 — 이후 `/sync/*`는 이 토큰을 `X-Device-Token`으로 제시) | 없음(부트스트랩) |
+| GET | /api/v1/users/{userId}/devices | 기기 사양·설치모드 조회 (관리자, 조회 전용) — *(v0.6: `/devices/{userId}` → 소유자 중첩 규칙에 맞게 정정, M-8)* | Admin (role 강제, v0.19) |
 | GET | /api/v1/users?page={page}&pageSize={pageSize}&name={name} | 전체 사용자 목록 조회, 페이지네이션(신규 0.8) + 이름 부분일치 검색(신규 0.12) — F-3 예외(사전에 소유자를 특정할 수 없는 전역 조회) | Admin |
-| GET | /api/v1/users/{userId}/questions | 회고 질문 큐 조회 (신규, L-12) | 2FA + Role |
+| GET | /api/v1/users/{userId}/questions | 회고 질문 큐 조회 (L-12, 구현 v0.20 — `answered` 필터 옵션. sync/download의 `priority_questions`와 달리 필터 없이 큐 전체) | 2FA + Role |
 | GET | /api/v1/users/{userId}/schedule-items | 일정/복약 목록 조회 (신규, L-12) | 2FA + Role |
+| POST | /api/v1/users/{userId}/consent-logs | 개인정보 수집 동의/철회 1건 기록 (신규 0.18 — §2.9 온보딩 흐름이 이미 전제하던 '동의 기록' 경로가 §4.2에 없던 갭). 응답 `actor`(self/proxy) 파생 | 2FA + Role(family) 또는 Device Token |
 | GET | /api/v1/users/{userId}/consent-logs | 동의 이력 조회 (신규, L-12) | 2FA + Role |
+| GET | /api/v1/users/{userId}/consent-state | 유형별 현재 동의 상태(최신 행 기준) — 온보딩 완료 게이트·RBAC "동의 시" 조건용 (신규 0.18) | 2FA + Role |
 
 > 구독/결제 엔드포인트는 스코프 아웃([decisions.md #18](../../01-plan/decisions/silveryarn-platform.decisions.md)) — 포함하지 않음.
 > 동기화·업로드 관련 상세 계약(비동기 처리, 충돌정책, Presigned URL, 증분 다운로드)의 SoR은 [sync-contract.md](../sync-contract.md)이며, 이 표는 요약만 담는다.
@@ -617,7 +624,7 @@ interface Publication {         // v1.1 신규
 
 ## 7. Security Considerations
 
-- [ ] DB 암호화(AES-256) 및 전송구간 암호화(TLS 1.3) — 온디바이스 로컬 캐시도 동일 수준
+- [ ] DB 암호화(AES-256) 및 전송구간 암호화(TLS 1.3) — 온디바이스 로컬 캐시도 동일 수준. **PII 자유텍스트 컬럼의 앱 레이어 필드 암호화는 §7.3 참조(1차 구현 완료)**
 - [ ] 웹 콘솔 2FA, 역할별 차등 열람 권한(가족/복지사/관리자) — §7.1 RBAC 매트릭스 참조
 - [ ] 외부 연계(3.4절) 시 PII 마스킹 전처리 + 동의 로그 필수, 미동의 시 전량 온프레미스 경로
 - [ ] Wi-Fi 동기화는 등록된 신뢰 네트워크에서만 수행 — 등록 정보는 온디바이스 로컬 전용 저장([decisions.md #22](../../01-plan/decisions/silveryarn-platform.decisions.md))
@@ -643,6 +650,38 @@ interface Publication {         // v1.1 신규
 ### 7.2 백업 정책 (신규 v0.2, design-validator E-9)
 
 기획서 6장 "JSON·마크다운 상시 백업" — 자서전 챕터(`chapters`, `chapter_revisions`)는 확정 시점마다 JSON/Markdown 스냅샷을 Object Storage(MinIO)에 별도 보관한다. 백업 주기·보존기간은 Do 단계에서 인프라 설계와 함께 확정.
+
+> ⚠️ 백업 스냅샷도 `body_text`/`body_text_snapshot` 원문을 담으므로 §7.3의 암호화 대상이다 — MinIO 객체 자체를 SSE로 암호화하거나 스냅샷 생성 시 앱 레이어 암호문을 그대로 직렬화한다(Do 단계 구현 시 확정).
+
+### 7.3 PII 필드 암호화 (신규 v0.17, Do 단계 — [decisions.md #45](../../01-plan/decisions/silveryarn-platform.decisions.md), CTO 검토 B4)
+
+CTO 보안 검토 B4가 "스키마 결정, Do 단계 이연 불가"로 지목한 항목. `pgcrypto`는 미채택(키 유출·인덱스 불가)하고 **애플리케이션 레벨 필드 암호화 + 사용자별 DEK** 구조를 채택했다.
+
+| 요소 | 1차 (코드 반영 완료) | 2차 (예정) |
+|---|---|---|
+| 대상 컬럼 | `chapters.body_text`, `chapter_revisions.body_text_snapshot`, `conversation_chunks.{transcript_on_device, transcript_server, assistant_response}` | `users.name`(부분검색 재설계 선행), `family_members.contact`·`invitations.contact`(blind index), `users.birth_date`(DATE→BYTEA) |
+| 방식 | Fernet(AES-128-CBC+HMAC), 토큰 접두 `pii.v1.` | 결정적 암호화/토큰 인덱스, HMAC-SHA256 blind index |
+| 키 | 사용자별 DEK(`user_encryption_keys`에 KEK 랩핑), KEK = env `PII_KEK`(임시, Vault 이전 대상) | KEK 회전 절차(`key_version`), Vault transit 엔진 |
+| 경계 | repository 계층 투명 암복호화 (`core/crypto.py`) — application/domain은 평문만 | 동일 |
+
+- **crypto-shredding**: 사용자 파기 = `user_encryption_keys` 행 삭제 → 그 사용자의 PII 자유텍스트 전량 복호화 불가. B3(보유기간·파기정책) 파기 수단 후보 — 법무 회신(원문 검토항목 5) 대기.
+- **Qdrant 벡터**: B4가 "최고위험"으로 지목(embedding inversion). payload에 원문 미저장 원칙은 `upload_pipeline_service`에서 이미 준수(payload는 `user_id`만). 벡터 자체 격리·네트워크 통제는 인프라 설계 과제로 유지.
+- **임시 검색 영향**: `transcript_server` 암호화로 `conversation_chunks` ILIKE 검색이 앱 레이어 복호화 필터로 바뀜(이미 rag-core 하이브리드 서치로 교체 예정이던 임시 메서드).
+
+### 7.4 인증·인가 (신규 v0.19, Do 단계 — [decisions.md #47](../../01-plan/decisions/silveryarn-platform.decisions.md), CTO 검토 B5)
+
+원본 프로세스흐름도 §4.1: 모든 요청은 게이트웨이에서 Keycloak SSO 인증/인가를 거친다. `core/auth.py` 스텁을 실 검증으로 교체했다.
+
+| 주체 | 방식 | principal |
+|---|---|---|
+| 웹 콘솔 사용자(가족/복지사/관리자) | `Authorization: Bearer` — Keycloak 액세스 토큰 RS256 검증(JWKS 캐시, iss/aud/exp). `sub` → `family_members.keycloak_sub`(다중 행 가능) → `AuthContext(memberships, is_2fa)` | `AuthContext` |
+| 모바일 기기 | `X-Device-Token` — `POST /devices` 응답으로 1회 발급, 서버는 SHA-256 해시만 보관(`device_credentials`). 검증 시 (기기 → 소속 어르신)까지 해석 | `DeviceIdentity` |
+
+- **2FA**(기획서 6장 "웹 콘솔 접근 시 2단계 인증"): 토큰 `amr` claim으로 판정(`AUTH_2FA_AMR_VALUES`). 쓰기·감수 작업은 `require_2fa=True`.
+- **인가(RBAC + IDOR 방지)**: `authorize_user_access(principal, target_user_id, allowed_roles, require_2fa)` — 대상 어르신에 대한 membership·role·2FA를 검사(admin은 우회, device는 소속 어르신만). §7.1 매트릭스 기준. **이번 라운드 적용 범위**: chapters(조회·감수)·photos(조회·업로드)·consent(전체)·schedule(조회·생성·응답)·conversation-chunks(조회)·users(`GET /users`=admin, `GET /users/{id}`=연결된 가족/admin)·devices(조회=admin)·sync(`/sessions` 목록=admin, device 엔드포인트는 device_id 일치 검사). family_members·invitations·photo_requests는 인증만, 인가 확대는 후속.
+- **감사로그**: `access_logs` — `main.py` HTTP 미들웨어가 `/api/v1/*` 요청 처리 후 best-effort 1행 적재(제8조).
+- **fail closed**: `AUTH_ISSUER_URL` 미설정 시 웹 콘솔 인증이 첫 호출에서 RuntimeError. 앱/워커 기동·CI(HTTP 미경유 단위 테스트)에는 영향 없음.
+- **감수 서명자**: `POST /chapters/{id}/review`의 `reviewer_id`는 이제 토큰에서 파생(하위호환용 요청 필드는 유지하되 호출자 본인 구성원 id만 허용).
 
 ---
 
@@ -767,3 +806,7 @@ silveryarn/
 | 0.16 | 2026-09-08 | apps/web `(family)/photo-requests` 사진 요청 화면 신규 — photo_requests API를 소비하는 첫 화면(생성/조회/닫기). §3.1 `PhotoRequest` 인터페이스에 `createdAt`/`fulfilledAt` 보강(실 응답엔 있었으나 누락) | NUBiz AX Initiative |
 | 0.15 | 2026-09-08 | apps/web `(user)/photos` 사진 갤러리 화면 신규 — §5.1 화면 인벤토리의 "사진·타임라인 갤러리" 최초 구현, sync-contract.md §4 Presigned URL 흐름을 처음 소비하는 웹 화면. §3.1 `Photo` 인터페이스에 `status`(schema.md v1.6엔 있었으나 누락)·`viewUrl`(신규, MinIO presigned GET URL — storageRef는 내부 키라 브라우저가 못 열어서 추가) 보강. `GET /users/{userId}/photos`에 `view_url` 필드 추가(`PhotoService.get_view_url`, 실 MinIO로 검증) | NUBiz AX Initiative |
 | 0.14 | 2026-09-08 | `GET /sync/download` 실제 구현(§4.2, sync-contract.md v0.3) — `deviceId` 필수 파라미터 신규(원문엔 없었으나 Device Token 스텁이라 호출 주체 식별 수단이 필요했음). author 모듈에 `questions` 도메인/리포지토리/서비스 신규(schema.md §3.9 테이블은 있었으나 코드가 없었던 갭, photo_requests와 동일 패턴), schedule 모듈에 `deps.py` 신규. chapter_updates의 summary/keywords는 §2.11 Compaction Engine 미구현으로 body_text 원문/빈 배열 대체. §4.3 예시에 `priority_questions.linked_chapter_id` 보강(questions 엔티티엔 있는 실 데이터인데 원래 예시에 빠져 있었음) — 상세는 sync-contract.md §5 | NUBiz AX Initiative |
+| 0.17 | 2026-09-09 | Do 단계 — §7.3 신설(PII 필드 암호화). CTO 보안 검토 B4 "Do 단계 이연 불가" 항목 착수: `chapters.body_text`·`chapter_revisions.body_text_snapshot`·`conversation_chunks.{transcript_on_device, transcript_server, assistant_response}` 5개 컬럼에 애플리케이션 레벨 필드 암호화 + 사용자별 DEK 적용([decisions.md #45](../../01-plan/decisions/silveryarn-platform.decisions.md), schema.md v1.7). `name`/`contact`/`birth_date`는 2차 라운드. §7.2 백업 스냅샷 암호화 경고 추가 | NUBiz AX Initiative |
+| 0.19 | 2026-09-09 | Do 단계 — 실 인증. §7.4 신설(Keycloak JWKS RS256 검증, Device Token=`device_credentials` SHA-256, `authorize_user_access` RBAC+IDOR, `access_logs` 미들웨어). `core/auth.py` 스텁 교체. `POST /devices` 응답에 `device_token` 1회 발급. `POST /chapters/{id}/review`의 `reviewer_id`를 토큰 파생으로 전환. schema.md v1.8(keycloak_sub·device_credentials·access_logs), erd.md §11(3종 반영), decisions.md #47 | NUBiz AX Initiative |
+| 0.20 | 2026-09-09 | Do 단계 — 동기화 계약 잔여분. ① 업로드 멱등성 3계층(arq `_job_id`·파이프라인 사전 확인·부분 유니크 인덱스, sync-contract.md §2.3, schema.md v1.9, 마이그레이션 0004). ② `GET /users/{userId}/questions` 실제 구현(§4.2 — `questions` 모듈에 라우터·`list_by_user` 추가, `answered` 필터). ③ `schedule_items` Device-Wins 필드 병합이 `/schedule-items/{id}/respond` 엔드포인트로 이미 실현됨을 sync-contract.md §3에 명시(배치 병합 코드 불필요) | NUBiz AX Initiative |
+| 0.18 | 2026-09-09 | Do 단계 — `consent` 모듈 신설. §4.2에 `POST /users/{userId}/consent-logs`(§2.9 온보딩이 전제하던 '동의 기록' 경로가 표에 없던 갭)·`GET .../consent-state` 추가. §3.1 `ConsentLog`에 `actor`(self/proxy, `granted_by` 파생 — CTO B2)·`grantedAt`(실 응답엔 있었으나 누락) 보강. §2.9에 구현 상태·B2 미도입 사유 명시. 모바일 `OnboardingApi.kt`(createUser→recordConsent 계약) 추가, 화면 흐름은 후속 | NUBiz AX Initiative |

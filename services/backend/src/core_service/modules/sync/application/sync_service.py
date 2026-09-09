@@ -35,6 +35,13 @@ class SyncService:
         session = await self._repo.create(
             device_id=device_id, direction=SyncDirection.UPLOAD, checksum=checksum
         )
+        # 멱등성 1차(sync-contract.md §2): 대화형 업로드는 (user, 세션, 턴)으로 arq
+        # 잡 id를 고정해, 폴링 창(WorkManager 30초×최대 10분) 안의 재전송이 같은 잡을
+        # 중복 enqueue하지 못하게 한다. 잡이 이미 완료돼 큐에서 빠진 뒤의 재전송은
+        # 2차 방어(UploadPipelineService.find_existing_turn + uq 인덱스)가 막는다.
+        arq_job_id: str | None = None
+        if device_session_id is not None and turn_id is not None:
+            arq_job_id = f"upload:{user_id}:{device_session_id}:{turn_id}"
         job = await self._pool.enqueue_job(
             "process_upload",
             session_id=str(session.id),
@@ -44,10 +51,11 @@ class SyncService:
             mode=mode,
             device_session_id=device_session_id,
             turn_id=turn_id,
+            _job_id=arq_job_id,
         )
-        # job이 None이면 arq의 잡 중복제거(_job_id 미사용 시 거의 발생 안 함)로 이미
-        # 같은 잡이 큐에 있다는 뜻 — 이 경우도 세션은 이미 만들어졌으니 실패로 보지 않는다.
-        job_id = job.job_id if job is not None else f"dedup_{session.id}"
+        # job이 None이면 arq가 같은 _job_id의 잡이 이미 있다고 판단한 것 — 세션은 이미
+        # 만들어졌으니 실패로 보지 않고, 클라이언트엔 그 잡을 가리키는 id를 돌려준다.
+        job_id = job.job_id if job is not None else (arq_job_id or f"dedup_{session.id}")
         return session, job_id
 
     async def get_session_status(self, session_id: uuid.UUID) -> SyncSession:

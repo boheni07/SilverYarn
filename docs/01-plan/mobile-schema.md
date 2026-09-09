@@ -4,7 +4,7 @@
 >
 > **Project**: 은빛실타래 (SilverYarn)
 > **Date**: 2026-09-07
-> **Version**: 0.5 (apps/mobile — device_state.last_sync_version 신규)
+> **Version**: 0.6 (apps/mobile — Device Token은 EncryptedSharedPreferences, Room 아님)
 > **Status**: Draft — Do 단계에서 Room Entity로 구현 시 최종 확정
 
 > 서버 `schema.md`가 SoR(전체 마스터 데이터)이며, 본 문서는 온디바이스가 오프라인 동작을 위해 로컬에 보관하는 **서브셋**을 정의한다. 컬럼명은 서버와의 동기화 페이로드 매핑을 쉽게 하기 위해 서버 필드명을 최대한 따른다.
@@ -111,6 +111,8 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 | last_sync_at | INTEGER NULL | |
 | last_sync_version | TEXT NULL | `GET /sync/download` 응답의 `sync_version`을 그대로 저장 — 다음 호출의 `since` 파라미터로 되돌려 보내는 불투명 커서(sync-contract.md §5). *(v0.5 신규 — SyncWorker 실제 다운로드 구현 중 발견: `last_sync_at`(epoch ms)만으로는 서버가 발급한 `sync_version` 문자열을 재구성할 수 없다 — 클라이언트는 서버 형식을 몰라도 되게 받은 값을 그대로 저장했다 되돌려주는 게 맞다)* |
 
+> **Device Token(구현 v0.6)**: 서버가 `POST /devices` 응답으로 평문 토큰을 1회 발급한다([decisions.md #47](./decisions/silveryarn-platform.decisions.md), `device_credentials`). 이 토큰은 자격증명이므로 **Room `device_state`가 아니라 Android Keystore 기반 `EncryptedSharedPreferences`**(`auth/DeviceCredentialStore.kt`)에 저장하고 모든 `/sync/*` 호출의 `X-Device-Token` 헤더로 보낸다. 등록 orchestration은 `onboarding/DeviceRegistrar.kt`(`POST /devices` → 토큰 저장 + `device_state.device_id`/`install_mode` 갱신). 온보딩 화면에서 `DeviceRegistrar.register()`를 호출하는 흐름 연결은 후속(OnboardingScreen.kt).
+
 ---
 
 ## 3. Retention & Cleanup Job
@@ -140,3 +142,4 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 | 0.3 | 2026-09-07 | 3차 design-validator 검증 반영 — L-7: §2.6 "§9.3"/"design.md §2.10" 문서명 없는·부정확한 인용을 decisions.md #5/design.md §2.11로 정정. L-8: `response_latency_ms`의 서버 미대응 문제를 sync-contract.md §3(Device-Only, conversation_chunks 메타 병합)으로 해소 | NUBiz AX Initiative |
 | 0.4 | 2026-09-08 | Do 단계 — apps/mobile 스캐폴딩(Room Entity 구현) 중 발견: `device_state`에 `device_id`를 저장할 컬럼이 없어 등록(`POST /devices`) 이후 어떤 동기화 호출도 자기 device_id를 알 수 없었다. §2.6에 `device_id` 컬럼 신규 — 이 문서 서두가 "Room Entity로 구현 시 최종 확정" 상태라고 명시해 둔 대로 실제 구현 중 확정한 항목 | NUBiz AX Initiative |
 | 0.5 | 2026-09-08 | `GET /sync/download` 실제 연동(SyncWorker) 구현 중 발견 — §2.6에 `last_sync_version` 컬럼 신규. 기존 `last_sync_at`(epoch ms)만으로는 서버가 다음 `since` 파라미터로 요구하는 `sync_version` 문자열(sync-contract.md §5, 서버 발급 형식)을 재구성할 수 없어, 받은 값을 그대로 저장해 두는 컬럼이 필요했다 | NUBiz AX Initiative |
+| 0.6 | 2026-09-09 | Device Token 배선 구현 — 토큰은 자격증명이라 Room `device_state`가 아니라 `EncryptedSharedPreferences`(`auth/DeviceCredentialStore.kt`)에 저장하기로 확정(§2.6 하단 노트). `onboarding/DeviceRegistrar.kt`(POST /devices → 토큰 저장 + device_state 갱신), `SyncWorker`가 저장소에서 토큰을 읽어 `X-Device-Token`으로 전송·원본 오디오 SHA-256 checksum 계산. `androidx.security:security-crypto` 의존성 추가 | NUBiz AX Initiative |

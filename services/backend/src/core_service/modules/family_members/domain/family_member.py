@@ -25,4 +25,5 @@ class FamilyMember:
     name: str
     contact: str
     two_factor_enabled: bool
+    keycloak_sub: str | None
     created_at: datetime
