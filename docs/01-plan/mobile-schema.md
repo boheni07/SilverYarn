@@ -4,7 +4,7 @@
 >
 > **Project**: 은빛실타래 (SilverYarn)
 > **Date**: 2026-09-07
-> **Version**: 0.7 (apps/mobile — 온보딩 화면 흐름 연결: OnboardingScreen → Coordinator → device_state)
+> **Version**: 0.8 (apps/mobile — 앱 시작 게이트: device_state.device_id로 온보딩 스킵, install_mode 분기, 최초 동기화 화면)
 > **Status**: Draft — Do 단계에서 Room Entity로 구현 시 최종 확정
 
 > 서버 `schema.md`가 SoR(전체 마스터 데이터)이며, 본 문서는 온디바이스가 오프라인 동작을 위해 로컬에 보관하는 **서브셋**을 정의한다. 컬럼명은 서버와의 동기화 페이로드 매핑을 쉽게 하기 위해 서버 필드명을 최대한 따른다.
@@ -103,7 +103,7 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 
 | Column | Type | Description |
 |---|---|---|
-| device_id | TEXT NULL | 서버 `devices.id`(UUID) — `POST /devices` 등록 응답을 그대로 저장. `POST /sync/upload` 등 이후 모든 동기화 호출이 이 값을 device_id로 보낸다. *(v0.4 신규 — Room Entity 구현 중 발견: 이 값을 저장할 컬럼이 없으면 등록 이후 어떤 동기화 요청도 자신의 device_id를 알 수 없다는 걸 뒤늦게 발견)* |
+| device_id | TEXT NULL | 서버 `devices.id`(UUID) — `POST /devices` 등록 응답을 그대로 저장. `POST /sync/upload` 등 이후 모든 동기화 호출이 이 값을 device_id로 보낸다. *(v0.4 신규 — Room Entity 구현 중 발견: 이 값을 저장할 컬럼이 없으면 등록 이후 어떤 동기화 요청도 자신의 device_id를 알 수 없다는 걸 뒤늦게 발견)* **v0.8: 앱 시작 시 이 값의 non-null 여부가 온보딩 스킵 판정 기준**(`presentation/AppEntry.kt`) — 있으면 온보딩·최초 동기화를 건너뛰고 바로 홈. |
 | install_mode | TEXT | `kiosk` \| `normal` — 설치 시 고정, 서버 `devices.install_mode`와 동기화(조회용) |
 | registered_wifi_ssid | TEXT NULL | **로컬 전용, 서버 미전송** ([decisions.md #22](./decisions/silveryarn-platform.decisions.md)) |
 | slm_model_version | TEXT NULL | 탑재된 온디바이스 SLM 버전 — 서버 `devices.slm_model_version`과 동기화(schema.md v1.3), 프롬프트팩 정의는 [design.md §2.11 4단계](../02-design/features/silveryarn-platform.design.md)(Compaction Engine) 참조 *(v0.3: "design.md §2.10"은 에이전트 페르소나 정의 절이라 오참조였던 것을 정정, L-7)* |
@@ -144,3 +144,4 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 | 0.5 | 2026-09-08 | `GET /sync/download` 실제 연동(SyncWorker) 구현 중 발견 — §2.6에 `last_sync_version` 컬럼 신규. 기존 `last_sync_at`(epoch ms)만으로는 서버가 다음 `since` 파라미터로 요구하는 `sync_version` 문자열(sync-contract.md §5, 서버 발급 형식)을 재구성할 수 없어, 받은 값을 그대로 저장해 두는 컬럼이 필요했다 | NUBiz AX Initiative |
 | 0.6 | 2026-09-09 | Device Token 배선 구현 — 토큰은 자격증명이라 Room `device_state`가 아니라 `EncryptedSharedPreferences`(`auth/DeviceCredentialStore.kt`)에 저장하기로 확정(§2.6 하단 노트). `onboarding/DeviceRegistrar.kt`(POST /devices → 토큰 저장 + device_state 갱신), `SyncWorker`가 저장소에서 토큰을 읽어 `X-Device-Token`으로 전송·원본 오디오 SHA-256 checksum 계산. `androidx.security:security-crypto` 의존성 추가 | NUBiz AX Initiative |
 | 0.7 | 2026-09-09 | 온보딩 화면 흐름 구현 — `presentation/onboarding/OnboardingScreen.kt`(상태 호이스팅: sealed `OnboardingStep` + `when`, nav 프레임워크·ViewModel 미도입 결정) + `onboarding/OnboardingCoordinator.kt`(createUser → DeviceRegistrar.register → recordConsent 3연쇄). `MainActivity`가 완료 시 홈 전환. `device_state`는 이 흐름에서 처음 채워진다. `DeviceCapabilityReader.totalRamGb()` public화 | NUBiz AX Initiative |
+| 0.8 | 2026-09-10 | 앱 시작 게이트 — `presentation/AppEntry.kt`가 `device_state` 조회로 시작 목적지 결정: `device_id` 있음 → 온보딩 스킵·바로 홈, 없음 → 온보딩 → **최초 동기화 화면**(`presentation/sync/FirstSyncScreen.kt`, design.md §2.9 마지막 단계) → 홈. `install_mode` 분기: `MainActivity`가 확정 모드를 받아 `installmode/KioskController.kt`로 `kiosk`면 lockTask 진입(decisions.md #6, Device Owner 아니면 무시). 동기화 로직은 `SyncWorker.doWork()`에서 `sync/SyncRunner.kt`로 분리(Worker와 최초 동기화 화면이 공유). 가족 초대 화면은 이번 트랙 제외(갓 온보딩한 Device Token은 `POST /invitations` 불가 — 별도 설계 결정 대기) | NUBiz AX Initiative |
