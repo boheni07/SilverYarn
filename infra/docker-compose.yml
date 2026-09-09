@@ -68,6 +68,21 @@ services:
     volumes:
       - minio_data:/data
 
+  keycloak:
+    # AUTH_ — Keycloak SSO (decisions.md #17). 로컬 개발 전용 realm을
+    # infra/keycloak/import/silveryarn-realm.json 에서 --import-realm 으로 올린다.
+    # ⚠️ start-dev·admin/admin·hardcoded amr mapper는 전부 로컬 전용이다 —
+    # 온프레미스 배포는 별도 realm 관리(infra-architect 상담 대기).
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev --import-realm --http-port=8080
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - "9678:8080"
+    volumes:
+      - ./keycloak/import:/opt/keycloak/data/import:ro
+
 volumes:
   postgres_data:
   qdrant_data:

@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.25 (모바일 온보딩 화면 흐름 구현 — 상태 호이스팅)
+> **Version**: 0.26 (Keycloak 로컬 realm 추가 — 인증·RBAC·2FA 실 인프라 e2e)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -687,7 +687,8 @@ CTO 보안 검토 B4가 "스키마 결정, Do 단계 이연 불가"로 지목한
 - **social_worker fail-closed (v0.24)**: 복지사의 어르신 데이터 조회는 `READ_ELDER_DATA_ROLES`에서 제외(family/caregiver/admin만). RBAC §7.1의 "동의 시"를 표현할 전용 consent 유형이 없고 제3자제공 법무 판단 대기(CTO B2, decisions.md #12/#46 관련). 전용 유형 확정 시 그 동의 상태를 게이트로 복지사를 다시 포함.
 - **미적용(후속)**: `emotion_alerts`/`emotion_scores` 엔드포인트(피처플래그 OFF).
 - **감사로그**: `access_logs` — `main.py` HTTP 미들웨어가 `/api/v1/*` 요청 처리 후 best-effort 1행 적재(제8조).
-- **fail closed**: `AUTH_ISSUER_URL` 미설정 시 웹 콘솔 인증이 첫 호출에서 RuntimeError. 앱/워커 기동·CI(HTTP 미경유 단위 테스트)에는 영향 없음.
+- **fail closed**: `AUTH_ISSUER_URL` 미설정 시 웹 콘솔 인증이 요청에서 401(토큰 없음) 또는 500(토큰 있는데 verifier 미구성). 앱/워커 기동·CI(HTTP 미경유 단위 테스트)에는 영향 없음.
+- **실 인프라 e2e 검증(v0.26, 2026-09-09)**: 로컬 Keycloak(`infra/keycloak/`, realm 자동 임포트)으로 `services/backend/scripts/e2e_keycloak_check.py` — JWKS RS256 검증·`sub`→`family_members` 매핑·`authorize_user_access`·social_worker fail-closed·2FA(`amr`) 게이팅 **9/9 PASS**. PII 암복호화·멱등성·access_logs는 `e2e_pii_auth_check.py`(17/17)·`e2e_http_smoke.py`(13/13).
 - **감수 서명자**: `POST /chapters/{id}/review`의 `reviewer_id`는 이제 토큰에서 파생(하위호환용 요청 필드는 유지하되 호출자 본인 구성원 id만 허용).
 
 ---
@@ -815,6 +816,7 @@ silveryarn/
 | 0.14 | 2026-09-08 | `GET /sync/download` 실제 구현(§4.2, sync-contract.md v0.3) — `deviceId` 필수 파라미터 신규(원문엔 없었으나 Device Token 스텁이라 호출 주체 식별 수단이 필요했음). author 모듈에 `questions` 도메인/리포지토리/서비스 신규(schema.md §3.9 테이블은 있었으나 코드가 없었던 갭, photo_requests와 동일 패턴), schedule 모듈에 `deps.py` 신규. chapter_updates의 summary/keywords는 §2.11 Compaction Engine 미구현으로 body_text 원문/빈 배열 대체. §4.3 예시에 `priority_questions.linked_chapter_id` 보강(questions 엔티티엔 있는 실 데이터인데 원래 예시에 빠져 있었음) — 상세는 sync-contract.md §5 | NUBiz AX Initiative |
 | 0.17 | 2026-09-09 | Do 단계 — §7.3 신설(PII 필드 암호화). CTO 보안 검토 B4 "Do 단계 이연 불가" 항목 착수: `chapters.body_text`·`chapter_revisions.body_text_snapshot`·`conversation_chunks.{transcript_on_device, transcript_server, assistant_response}` 5개 컬럼에 애플리케이션 레벨 필드 암호화 + 사용자별 DEK 적용([decisions.md #45](../../01-plan/decisions/silveryarn-platform.decisions.md), schema.md v1.7). `name`/`contact`/`birth_date`는 2차 라운드. §7.2 백업 스냅샷 암호화 경고 추가 | NUBiz AX Initiative |
 | 0.19 | 2026-09-09 | Do 단계 — 실 인증. §7.4 신설(Keycloak JWKS RS256 검증, Device Token=`device_credentials` SHA-256, `authorize_user_access` RBAC+IDOR, `access_logs` 미들웨어). `core/auth.py` 스텁 교체. `POST /devices` 응답에 `device_token` 1회 발급. `POST /chapters/{id}/review`의 `reviewer_id`를 토큰 파생으로 전환. schema.md v1.8(keycloak_sub·device_credentials·access_logs), erd.md §11(3종 반영), decisions.md #47 | NUBiz AX Initiative |
+| 0.26 | 2026-09-09 | Do 단계 — `infra/docker-compose.yml`에 Keycloak(로컬, port 9678) + `infra/keycloak/import/silveryarn-realm.json`(--import-realm 자동). §7.4에 실 인프라 e2e 결과 추가: `e2e_keycloak_check.py` 9/9(JWKS·RBAC·social_worker fail-closed·2FA amr), `e2e_pii_auth_check.py` 17/17, `e2e_http_smoke.py` 13/13. 버그 수정: 무인증 요청 401(500 아님) | NUBiz AX Initiative |
 | 0.25 | 2026-09-09 | Do 단계 — 모바일 온보딩 화면 흐름 구현(§2.9 구현 상태). 상태 호이스팅(sealed `OnboardingStep` + `when`, **Navigation/ViewModel 프레임워크 미도입 확정** — 선형 흐름엔 과함, 화면 늘면 재검토). `OnboardingScreen`(이름→동의→완료) + `OnboardingCoordinator`(createUser→POST /devices→recordConsent 3연쇄). mobile-schema.md v0.7 | NUBiz AX Initiative |
 | 0.24 | 2026-09-09 | Do 단계 — social_worker fail-closed. `READ_ELDER_DATA_ROLES`에서 social_worker 제외(family/caregiver/admin만). RBAC §7.1 "동의 시"를 표현할 consent 유형이 없고 제3자제공 법무 판단 대기라 안전 측으로 조회 자체를 막음. 전용 유형 확정 시 재포함. decisions.md 0.16 | NUBiz AX Initiative |
 | 0.23 | 2026-09-09 | Do 단계 — PII 2차(decisions.md #45 2차, schema.md v1.11, 마이그레이션 0006). `family_members.contact`·`invitations.contact` 암호문 + `contact_bidx`(HMAC 동등검색), `users.birth_date` 앱 레이어 암호화(DATE→VARCHAR), **`name` 평문 유지 확정**. §7.3 표를 1/2/3차로 재구성. `invitations`가 `contact_bidx`로 중복 초대 차단. `core/crypto.py`에 `blind_index` 추가, user/family_member/invitation repo에 `PiiFieldEncryptor` 주입 | NUBiz AX Initiative |
