@@ -193,3 +193,4 @@
 | 0.10 | 2026-09-09 | Do 단계 — consent 모듈 구현. §3에 #46(가족 대리동의 법적 근거 — CTO B2, `actor` 임시 파생 구현만) 추가. design.md v0.18(§2.9·§3.1·§4.2) 동반 갱신 | NUBiz AX Initiative |
 | 0.11 | 2026-09-09 | Do 단계 — 실 인증 구현. §2.8 신설, #47(Keycloak JWKS 검증 + erd.md §11 스키마 3종 반영: keycloak_sub·device_credentials·access_logs; organizations·retention은 보류) 추가. schema.md v1.8·erd.md §11·CONVENTIONS.md §4·design.md §7.4 동반 갱신 | NUBiz AX Initiative |
 | 0.12 | 2026-09-09 | Do 단계 — 동기화 계약 잔여분(멱등성·questions 조회·schedule 필드병합). 별도 ULID 컬럼 없이 기존 `(session_id, turn_id)`를 멱등성 키로 채택(sync-contract.md §2.3, schema.md v1.9). 새 결정 항목은 없음 — 기존 계약(CTO B1)의 구현 마감 | NUBiz AX Initiative |
+| 0.13 | 2026-09-09 | Do 단계 — 인가 확대(family-members·invitations·photo-requests). #47의 "나머지 엔드포인트" 후속. `POST /invitations/{token}/accept`가 수락자 토큰 `sub`를 `family_members.keycloak_sub`에 연결하도록 수정(계정 연결 갭). social_worker "동의 시 챕터 조회"(RBAC §7.1)는 전용 consent 유형 enum 결정이 필요해 #46 관련 항목으로 유예. design.md v0.21 | NUBiz AX Initiative |

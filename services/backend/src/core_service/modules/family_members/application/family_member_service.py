@@ -23,11 +23,22 @@ class FamilyMemberService:
         return await self._repo.list_by_user(user_id)
 
     async def create_family_member(
-        self, user_id: uuid.UUID, role: FamilyRole, name: str, contact: str
+        self,
+        user_id: uuid.UUID,
+        role: FamilyRole,
+        name: str,
+        contact: str,
+        keycloak_sub: str | None = None,
     ) -> FamilyMember:
-        """임시 직접생성 경로 — 정식은 invitations 수락 흐름(모듈 __init__ TODO 참조)."""
+        """초대 수락(invitations) 또는 임시 직접생성 경로.
+
+        `keycloak_sub`: 수락 흐름에서 넘어온다 — 이 값이 있어야 이후 `require_family`가
+        그 사람의 토큰 `sub`로 이 행을 찾아 로그인시킬 수 있다(없으면 계정 연결이 안 됨).
+        """
         if not name or len(name) > 100:
             raise ApiError("VALIDATION_ERROR", "name은 1~100자여야 합니다.")
         if not contact or len(contact) > 100:
             raise ApiError("VALIDATION_ERROR", "contact는 1~100자여야 합니다.")
-        return await self._repo.create(user_id=user_id, role=role, name=name, contact=contact)
+        return await self._repo.create(
+            user_id=user_id, role=role, name=name, contact=contact, keycloak_sub=keycloak_sub
+        )

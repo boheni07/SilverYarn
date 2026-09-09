@@ -150,6 +150,33 @@ async def test_verifier_accepts_valid_token(
     assert claims["sub"] == "user-123"
 
 
+async def test_require_verified_subject_returns_sub_without_membership(
+    verifier_and_key: tuple[KeycloakVerifier, rsa.RSAPrivateKey],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """초대 수락 부트스트랩: family_member 연결이 없어도 토큰만 검증해 sub를 준다."""
+    import core_service.core.auth as auth_mod
+    from core_service.core.auth import require_verified_subject
+
+    verifier, key = verifier_and_key
+    monkeypatch.setattr(auth_mod, "_verifier", verifier)
+    token = jwt.encode(
+        {
+            "sub": "new-caregiver-42",
+            "iss": "https://kc.example/realms/silveryarn",
+            "aud": "silveryarn-backend",
+            "exp": int(time.time()) + 300,
+            "amr": ["mfa"],
+        },
+        _pem(key),
+        algorithm="RS256",
+        headers={"kid": "test-key"},
+    )
+    result = await require_verified_subject(f"Bearer {token}")
+    assert result.subject == "new-caregiver-42"
+    assert result.is_2fa is True
+
+
 async def test_verifier_rejects_wrong_audience(
     verifier_and_key: tuple[KeycloakVerifier, rsa.RSAPrivateKey],
 ) -> None:

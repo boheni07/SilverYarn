@@ -24,6 +24,10 @@ class PhotoRequestService:
     async def list_requests_for_user(self, user_id: uuid.UUID) -> list[PhotoRequest]:
         return await self._repo.list_by_user(user_id)
 
+    async def get_request(self, request_id: uuid.UUID) -> PhotoRequest:
+        """인가(소유 어르신 확인) 등에서 dismiss 전에 요청을 조회할 때 사용."""
+        return await self._get_or_404(request_id)
+
     async def dismiss_request(self, request_id: uuid.UUID) -> PhotoRequest:
         request = await self._get_or_404(request_id)
         try:

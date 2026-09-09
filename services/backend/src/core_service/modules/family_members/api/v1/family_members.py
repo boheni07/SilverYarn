@@ -11,7 +11,12 @@ from datetime import datetime
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from core_service.core.auth import AuthContext, require_auth
+from core_service.core.auth import (
+    WRITE_ELDER_DATA_ROLES,
+    AuthContext,
+    authorize_user_access,
+    require_auth,
+)
 from core_service.modules.family_members.application.family_member_service import (
     FamilyMemberService,
 )
@@ -54,8 +59,10 @@ def _to_response(member) -> FamilyMemberResponse:  # noqa: ANN001 — FamilyMemb
 async def list_family_members(
     user_id: uuid.UUID,
     service: FamilyMemberService = Depends(get_family_member_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[list[FamilyMemberResponse]]:
+    # 다른 구성원의 contact(전화번호)가 담기므로 family/admin만 (design.md §7.1 "가족구성원 설정").
+    authorize_user_access(ctx, user_id, allowed_roles=WRITE_ELDER_DATA_ROLES)
     members = await service.list_family_members_for_user(user_id)
     return DataResponse(data=[_to_response(m) for m in members])
 
@@ -65,9 +72,13 @@ async def create_family_member(
     user_id: uuid.UUID,
     body: FamilyMemberCreateRequest,
     service: FamilyMemberService = Depends(get_family_member_service),
-    _ctx: AuthContext = Depends(require_auth),
+    ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[FamilyMemberResponse]:
-    """임시 직접생성 — 정식 경로(초대 수락)는 invitations 모듈 구현 후 대체 예정."""
+    """임시 직접생성 — 정식 경로(초대 수락)는 invitations 모듈 구현 후 대체 예정.
+
+    구성원 추가는 곧 접근 권한 부여이므로 family/admin + 2FA만.
+    """
+    authorize_user_access(ctx, user_id, allowed_roles=WRITE_ELDER_DATA_ROLES)
     member = await service.create_family_member(
         user_id=user_id, role=body.role, name=body.name, contact=body.contact
     )
