@@ -17,7 +17,7 @@ import retrofit2.http.Query
 interface SyncApi {
     /** POST /devices — 설치 시 1회 등록(인증 없는 부트스트랩). 응답의 `deviceToken`은
      *  이 호출에서만 평문으로 내려온다(서버는 SHA-256 해시만 보관, decisions.md #47) —
-     *  이후 모든 `/sync/*` 호출의 `X-Device-Token` 헤더에 쓴다. 안전한 저장소(Keystore
+     *  이후 모든 sync 요청의 `X-Device-Token` 헤더에 쓴다. 안전한 저장소(Keystore
      *  기반 EncryptedSharedPreferences 등)에 보관해야 한다 — 후속 과제. */
     @POST("devices")
     suspend fun registerDevice(

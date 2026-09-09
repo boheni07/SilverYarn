@@ -19,9 +19,7 @@ import com.silveryarn.mobile.sync.RetrofitClient
  * (OnboardingScreen.kt)이 아직 없어 이 클래스를 부르는 곳은 없다 — 서버 계약을 실제로
  * 소비하는 코드까지 완성해 두고 화면 연결만 후속으로 남긴다.
  */
-class DeviceRegistrar(
-    private val context: Context,
-) {
+class DeviceRegistrar(private val context: Context) {
     /**
      * @param userId  온보딩에서 만든 어르신(1차 사용자) 계정 id
      * @param displayId 표시용 기기 ID(예: "MB-1042") — 발급 규칙은 운영 정책, 지금은 호출자가 결정
