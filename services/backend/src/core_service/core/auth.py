@@ -303,6 +303,25 @@ def authorize_user_access(
         raise ApiError("FORBIDDEN", "이 작업에는 2단계 인증이 필요합니다.")
 
 
+def authorize_own_family_member(
+    ctx: AuthContext,
+    family_member_id: uuid.UUID,
+    *,
+    require_2fa: bool = True,
+) -> None:
+    """`family_member_id`가 호출자 **본인의** 구성원 행인지 검증(admin은 우회).
+
+    design.md §7.1 "알림 수신 설정 변경 = 본인 것만" 같은, 어르신 데이터가 아니라
+    구성원 자신의 설정을 다루는 엔드포인트용.
+    """
+    if ctx.is_admin:
+        return
+    if family_member_id not in {m.family_member_id for m in ctx.memberships}:
+        raise ApiError("FORBIDDEN", "본인의 구성원 설정만 변경할 수 있습니다.")
+    if require_2fa and not ctx.is_2fa:
+        raise ApiError("FORBIDDEN", "이 작업에는 2단계 인증이 필요합니다.")
+
+
 def require_roles(*roles: FamilyRole, require_2fa: bool = True):  # noqa: ANN201 (FastAPI 의존성 팩토리)
     """어르신에 종속되지 않는 엔드포인트(관리자 콘솔 등)용 — 토큰 소유자가 어딘가에서
     지정 역할 중 하나를 갖는지만 본다."""

@@ -4,7 +4,7 @@
 
 **Project**: 은빛실타래 (SilverYarn)
 **Date**: 2026-09-07
-**Version**: 1.9 (Do 단계 — 동기화 멱등성: conversation_chunks 부분 유니크 인덱스)
+**Version**: 1.10 (Do 단계 — notification_settings: 채널 UNIQUE + 정서알림 기본 opt-in)
 **Source**: Design 문서 §3 Data Model 초안 + UI/UX 화면설계서 필드 단위 대조 결과 반영
 **용어 정의**: [glossary.md](./glossary.md) 참조
 
@@ -19,6 +19,8 @@
 > **v1.5 변경 요약** (Do 단계, 2026-09-08): apps/admin "전체 기기 통합 모니터링" 화면용 `idx_sync_started_at ON sync_sessions(started_at DESC)` 인덱스 신규 — 기기로 필터하지 않는 전역 정렬 쿼리는 기존 `idx_sync_device(device_id, started_at DESC)`를 못 쓰기 때문(선두 컬럼 불일치).
 >
 > **v1.6 변경 요약** (Do 단계 — photos 모듈 완성, 2026-09-08): `photos`에 `status` 컬럼 신규(`pending_upload`/`uploaded`, 기본값 `pending_upload`) — [sync-contract.md §4](../02-design/sync-contract.md#4-사진-업로드--presigned-url-흐름-be-b2)의 "3단계 확인 콜백이 없으면 `photos` 행은 `status=pending_upload`로 남고" 문장이 이미 전제하고 있던 컬럼인데 §3.6 속성 표에는 빠져 있던 걸 실제 구현 중 발견 — 문서가 이미 확정해 둔 흐름을 코드로 옮기며 정정했다.
+>
+> **v1.10 변경 요약** (Do 단계 — notification_settings 모듈, 2026-09-09): ① `receives_emotion_alerts` 기본값 `true`→`false` (CTO 검토 B1 — 정서/민감정보 인접 알림은 opt-out 아닌 opt-in). ② `UNIQUE (family_member_id, channel)` 신설 (한 구성원 = 채널당 최대 1개 설정). 마이그레이션 `0005_notification_settings.py`. API: `GET/PUT /family-members/{id}/notification-settings` (PUT은 전체 교체).
 >
 > **v1.9 변경 요약** (Do 단계 — 동기화 업로드 멱등성, 2026-09-09): `conversation_chunks`에 **부분 유니크 인덱스** `uq_conversation_chunks_turn (user_id, session_id, turn_id) WHERE session_id IS NOT NULL AND turn_id IS NOT NULL` — 재전송/잡 재시도 시 한 대화 턴이 한 행만 되도록(sync-contract.md §2.3, CTO B1). 컬럼 추가 없음. 마이그레이션 `0004_sync_idempotency.py`.
 >
@@ -339,10 +341,12 @@
 | id | UUID | Y | PK |
 | family_member_id | UUID | Y | FK → family_members.id |
 | channel | enum(`sms`,`email`,`push`) | Y | 수신 채널 |
-| receives_emotion_alerts | boolean | Y | 정서 알림 수신 여부, 기본값 true |
+| receives_emotion_alerts | boolean | Y | 정서 알림 수신 여부. **v1.10: 기본값 true → false** (CTO 검토 B1 — 민감정보 인접 알림은 opt-in) |
 | receives_chapter_updates | boolean | Y | 챕터 갱신 알림 수신 여부, 기본값 true |
 | receives_sync_issues | boolean | Y | 동기화 이상 알림 수신 여부, 기본값 false |
 | updated_at | timestamptz | Y | 수정 시각 |
+
+**Constraints**: v1.10 — `UNIQUE (family_member_id, channel)` (한 구성원이 같은 채널로 2개 설정 불가). API는 `PUT /family-members/{id}/notification-settings`가 이 구성원의 설정 전체를 통째로 교체(delete→insert).
 
 ---
 
@@ -660,11 +664,13 @@ CREATE TABLE notification_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   family_member_id UUID NOT NULL REFERENCES family_members(id) ON DELETE CASCADE,
   channel notify_channel NOT NULL,
-  receives_emotion_alerts BOOLEAN NOT NULL DEFAULT true,
+  receives_emotion_alerts BOOLEAN NOT NULL DEFAULT false,  -- v1.10: true→false (CTO B1, opt-in)
   receives_chapter_updates BOOLEAN NOT NULL DEFAULT true,
   receives_sync_issues BOOLEAN NOT NULL DEFAULT false,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE UNIQUE INDEX uq_notification_settings_member_channel  -- v1.10 (마이그레이션 0005)
+  ON notification_settings (family_member_id, channel);
 
 CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'expired');
 CREATE TABLE invitations (
