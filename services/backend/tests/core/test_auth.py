@@ -54,16 +54,22 @@ def test_family_needs_membership_for_that_elder() -> None:
         authorize_user_access(ctx, elder_b)
 
 
-def test_role_not_in_allowed_set_is_forbidden() -> None:
+def test_caregiver_can_read_but_not_write() -> None:
     elder = uuid.uuid4()
-    ctx = _ctx(_member(elder, FamilyRole.SOCIAL_WORKER))
-    # 읽기는 허용
-    authorize_user_access(ctx, elder)
-    # 쓰기(family/admin만)는 금지
+    ctx = _ctx(_member(elder, FamilyRole.CAREGIVER))
+    authorize_user_access(ctx, elder)  # 읽기 허용
     from core_service.core.auth import WRITE_ELDER_DATA_ROLES
 
     with pytest.raises(ApiError, match="역할"):
         authorize_user_access(ctx, elder, allowed_roles=WRITE_ELDER_DATA_ROLES)
+
+
+def test_social_worker_is_fail_closed_on_elder_data() -> None:
+    """복지사는 매트릭스상 '동의 시' 열람인데 그 consent 유형이 없어 fail-closed."""
+    elder = uuid.uuid4()
+    ctx = _ctx(_member(elder, FamilyRole.SOCIAL_WORKER))
+    with pytest.raises(ApiError, match="역할"):
+        authorize_user_access(ctx, elder)  # 읽기도 금지
 
 
 def test_missing_2fa_is_forbidden_when_required() -> None:

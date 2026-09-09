@@ -142,6 +142,7 @@
 | 14 | Phase 1~3 착수 일정·예산·인력 | 경영진 승인 사항 (§1 참조) | ⚖️ 별도 검토 필요 |
 | 23 | 구독·결제 PG사·요금제 | #18에서 Phase 1 스코프 아웃은 확정했으나, 실제 결제 도메인 설계 자체는 B2C/B2G 과금 방식이 정해져야 가능 (경영/법무 결정 사항) | ⚖️ 별도 검토 필요 |
 | 46 | 가족 대리동의의 법적 근거 + 정보주체(어르신) 권리행사 모델 | CTO 검토 [B2](../../02-design/cto-review-2026-09-05.md) — 성년후견 미개시 어르신에 대한 가족 대리동의 유효성·본인동의 필수범위가 법무 확정 대기. **Do 단계 임시 구현(2026-09-09)**: `consent_logs.granted_by` 유무로 `actor`(self/proxy)를 파생만 하고, CTO 권고인 명시적 enum(self/proxy/**legal_guardian**)·`data_subject` RBAC 행은 도입하지 않음 — `legal_guardian`을 코드가 임의 정의하면 안 되므로. 법무 회신 후 스키마 컬럼(`actor` enum)·RBAC 반영 | ⚖️ 별도 검토 필요 (임시 구현 존재) |
+| 48 | 복지사(social_worker)의 어르신 데이터 열람 근거 | CTO 검토 B2 — "가족·복지사 열람이 제17조 제3자제공인가, 제26조 위탁범위 내 이용인가". 이걸 표현할 consent 유형(`third_party_access` 등)·범위가 법무 확정 대기. **Do 단계 임시 구현(2026-09-09, 0.16)**: `READ_ELDER_DATA_ROLES`에서 social_worker 제외해 **fail-closed**(챕터·사진·대화·일정 조회 차단, 정서 알림·본인 알림설정은 유지). 법무 확정 후 전용 consent 유형 신설 + 그 동의 상태를 게이트로 복지사 재포함 | ⚖️ 별도 검토 필요 (fail-closed 구현) |
 
 > 12번 항목에 대해 초안 성격의 시작점을 제안할 수는 있으나(예: 1차 알림은 가족에게만, 복지사는 가족 동의 시에만, 무응답 시 단계적 에스컬레이션), **이를 정식 기준으로 채택하는 것은 법무·윤리 검토 이후에만 가능**하다.
 
@@ -193,6 +194,7 @@
 | 0.10 | 2026-09-09 | Do 단계 — consent 모듈 구현. §3에 #46(가족 대리동의 법적 근거 — CTO B2, `actor` 임시 파생 구현만) 추가. design.md v0.18(§2.9·§3.1·§4.2) 동반 갱신 | NUBiz AX Initiative |
 | 0.11 | 2026-09-09 | Do 단계 — 실 인증 구현. §2.8 신설, #47(Keycloak JWKS 검증 + erd.md §11 스키마 3종 반영: keycloak_sub·device_credentials·access_logs; organizations·retention은 보류) 추가. schema.md v1.8·erd.md §11·CONVENTIONS.md §4·design.md §7.4 동반 갱신 | NUBiz AX Initiative |
 | 0.12 | 2026-09-09 | Do 단계 — 동기화 계약 잔여분(멱등성·questions 조회·schedule 필드병합). 별도 ULID 컬럼 없이 기존 `(session_id, turn_id)`를 멱등성 키로 채택(sync-contract.md §2.3, schema.md v1.9). 새 결정 항목은 없음 — 기존 계약(CTO B1)의 구현 마감 | NUBiz AX Initiative |
+| 0.16 | 2026-09-09 | Do 단계 — social_worker 어르신 데이터 조회 **fail-closed** 확정(사용자 결정). RBAC §7.1의 복지사 "동의 시" 열람을 표현할 전용 consent 유형은 만들지 않고, 제3자제공 법무 판단(CTO B2, #12 관련)까지 조회 자체를 차단한다. `core/auth.py` `READ_ELDER_DATA_ROLES`에서 social_worker 제외. design.md v0.24 | NUBiz AX Initiative |
 | 0.15 | 2026-09-09 | Do 단계 — PII 2차 확정·구현. `contact`(family_members·invitations) = 사용자별 DEK 암호문 + `contact_bidx`(HMAC-SHA256, 동등검색). `birth_date` = 앱 레이어 암호화(DATE→VARCHAR). **`name`은 평문 유지** — 사용자 결정(부분검색 UX·낮은 민감도). blind index 키는 `PII_KEK` 첫 키에서 유도(임시). schema.md v1.11·design.md v0.23·마이그레이션 0006 | NUBiz AX Initiative |
 | 0.14 | 2026-09-09 | Do 단계 — `notifications` 모듈. CTO 검토 B1 부수결함 수정: `notification_settings.receives_emotion_alerts` 기본값 opt-out(true)→opt-in(false). `(family_member_id, channel)` UNIQUE 신설. schema.md v1.10·design.md v0.22·마이그레이션 0005. 새 결정 항목 없음 | NUBiz AX Initiative |
 | 0.13 | 2026-09-09 | Do 단계 — 인가 확대(family-members·invitations·photo-requests). #47의 "나머지 엔드포인트" 후속. `POST /invitations/{token}/accept`가 수락자 토큰 `sub`를 `family_members.keycloak_sub`에 연결하도록 수정(계정 연결 갭). social_worker "동의 시 챕터 조회"(RBAC §7.1)는 전용 consent 유형 enum 결정이 필요해 #46 관련 항목으로 유예. design.md v0.21 | NUBiz AX Initiative |

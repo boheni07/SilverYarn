@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.23 (PII 2차 — contact 암호문+blind index, birth_date 암호화, name 평문 확정)
+> **Version**: 0.24 (social_worker 어르신 데이터 조회 fail-closed — §7.1)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -635,10 +635,12 @@ interface Publication {         // v1.1 신규
 ### 7.1 RBAC 권한 매트릭스 (신규 v0.2, design-validator E-8)
 
 > 기획서 6장 "역할별 차등 권한" 요구를 구체화. 세부 조정은 Do 단계.
+>
+> **v0.24 구현 상태**: social_worker의 "동의 시" 열람은 그 동의를 표현할 consent 유형이 없고 CTO B2가 제3자제공 여부를 법무 질문으로 지목한 상태라, **fail-closed로 구현**했다 — 전용 consent 유형이 확정될 때까지 복지사는 어르신 데이터(챕터·사진·대화·일정) 조회에서 제외된다(정서 알림·본인 알림설정은 유지). `core/auth.py`의 `READ_ELDER_DATA_ROLES` = {family, caregiver, admin}.
 
 | 리소스 | family | caregiver | social_worker | admin |
 |---|:-:|:-:|:-:|:-:|
-| 챕터 조회 | ✅ | ✅ | ✅(동의 시) | ✅ |
+| 챕터 조회 | ✅ | ✅ | ⏸️(동의 시 — fail-closed, 미도입) | ✅ |
 | 챕터 감수(승인/반려) | ✅ | ❌ | ❌ | ✅ |
 | 사진 업로드 | ✅ | ✅ | ❌ | ✅ |
 | 정서 알림 조회 | ✅ | ✅ | ✅ | ✅ |
@@ -682,7 +684,8 @@ CTO 보안 검토 B4가 "스키마 결정, Do 단계 이연 불가"로 지목한
 - **2FA**(기획서 6장 "웹 콘솔 접근 시 2단계 인증"): 토큰 `amr` claim으로 판정(`AUTH_2FA_AMR_VALUES`). 쓰기·감수 작업은 `require_2fa=True`.
 - **인가(RBAC + IDOR 방지)**: `authorize_user_access(principal, target_user_id, allowed_roles, require_2fa)` — 대상 어르신에 대한 membership·role·2FA를 검사(admin은 우회, device는 소속 어르신만). §7.1 매트릭스 기준. **적용 범위**(v0.19 + v0.21): chapters(조회·감수)·photos(조회·업로드)·consent(전체)·schedule(조회·생성·응답)·conversation-chunks(조회)·users(`GET /users`=admin, `GET /users/{id}`=연결된 가족/admin)·devices(조회=admin)·sync(`/sessions` 목록=admin, device 엔드포인트는 device_id 일치)·**family-members**(조회·생성=family/admin+2FA, contact가 PII)·**invitations**(생성=family/admin+2FA, `invited_by`는 호출자 본인 구성원)·**photo-requests**(생성=family/admin, 조회·닫기=Device 또는 가족).
 - **초대 수락 → 계정 연결**: `POST /invitations/{token}/accept`는 아직 family_member에 매핑 안 된 계정이라 `require_verified_subject`(토큰만 검증, membership 미확인)를 쓴다. 수락자 토큰 `sub`를 새 `family_members.keycloak_sub`에 박아넣어야 이후 `require_family`가 그 사람을 로그인시킬 수 있다(이게 없으면 수락 후에도 앱을 못 씀). `GET /invitations/{token}`은 계속 무인증(토큰 자체가 접근 권한).
-- **미적용(후속)**: `notification_settings`(모듈 미구현), social_worker "동의 시 챕터 조회"(§7.1) — 전용 consent 유형(`caregiver_access` 등)이 필요한데 이는 enum 결정 사항이라 미도입.
+- **social_worker fail-closed (v0.24)**: 복지사의 어르신 데이터 조회는 `READ_ELDER_DATA_ROLES`에서 제외(family/caregiver/admin만). RBAC §7.1의 "동의 시"를 표현할 전용 consent 유형이 없고 제3자제공 법무 판단 대기(CTO B2, decisions.md #12/#46 관련). 전용 유형 확정 시 그 동의 상태를 게이트로 복지사를 다시 포함.
+- **미적용(후속)**: `emotion_alerts`/`emotion_scores` 엔드포인트(피처플래그 OFF).
 - **감사로그**: `access_logs` — `main.py` HTTP 미들웨어가 `/api/v1/*` 요청 처리 후 best-effort 1행 적재(제8조).
 - **fail closed**: `AUTH_ISSUER_URL` 미설정 시 웹 콘솔 인증이 첫 호출에서 RuntimeError. 앱/워커 기동·CI(HTTP 미경유 단위 테스트)에는 영향 없음.
 - **감수 서명자**: `POST /chapters/{id}/review`의 `reviewer_id`는 이제 토큰에서 파생(하위호환용 요청 필드는 유지하되 호출자 본인 구성원 id만 허용).
@@ -812,6 +815,7 @@ silveryarn/
 | 0.14 | 2026-09-08 | `GET /sync/download` 실제 구현(§4.2, sync-contract.md v0.3) — `deviceId` 필수 파라미터 신규(원문엔 없었으나 Device Token 스텁이라 호출 주체 식별 수단이 필요했음). author 모듈에 `questions` 도메인/리포지토리/서비스 신규(schema.md §3.9 테이블은 있었으나 코드가 없었던 갭, photo_requests와 동일 패턴), schedule 모듈에 `deps.py` 신규. chapter_updates의 summary/keywords는 §2.11 Compaction Engine 미구현으로 body_text 원문/빈 배열 대체. §4.3 예시에 `priority_questions.linked_chapter_id` 보강(questions 엔티티엔 있는 실 데이터인데 원래 예시에 빠져 있었음) — 상세는 sync-contract.md §5 | NUBiz AX Initiative |
 | 0.17 | 2026-09-09 | Do 단계 — §7.3 신설(PII 필드 암호화). CTO 보안 검토 B4 "Do 단계 이연 불가" 항목 착수: `chapters.body_text`·`chapter_revisions.body_text_snapshot`·`conversation_chunks.{transcript_on_device, transcript_server, assistant_response}` 5개 컬럼에 애플리케이션 레벨 필드 암호화 + 사용자별 DEK 적용([decisions.md #45](../../01-plan/decisions/silveryarn-platform.decisions.md), schema.md v1.7). `name`/`contact`/`birth_date`는 2차 라운드. §7.2 백업 스냅샷 암호화 경고 추가 | NUBiz AX Initiative |
 | 0.19 | 2026-09-09 | Do 단계 — 실 인증. §7.4 신설(Keycloak JWKS RS256 검증, Device Token=`device_credentials` SHA-256, `authorize_user_access` RBAC+IDOR, `access_logs` 미들웨어). `core/auth.py` 스텁 교체. `POST /devices` 응답에 `device_token` 1회 발급. `POST /chapters/{id}/review`의 `reviewer_id`를 토큰 파생으로 전환. schema.md v1.8(keycloak_sub·device_credentials·access_logs), erd.md §11(3종 반영), decisions.md #47 | NUBiz AX Initiative |
+| 0.24 | 2026-09-09 | Do 단계 — social_worker fail-closed. `READ_ELDER_DATA_ROLES`에서 social_worker 제외(family/caregiver/admin만). RBAC §7.1 "동의 시"를 표현할 consent 유형이 없고 제3자제공 법무 판단 대기라 안전 측으로 조회 자체를 막음. 전용 유형 확정 시 재포함. decisions.md 0.16 | NUBiz AX Initiative |
 | 0.23 | 2026-09-09 | Do 단계 — PII 2차(decisions.md #45 2차, schema.md v1.11, 마이그레이션 0006). `family_members.contact`·`invitations.contact` 암호문 + `contact_bidx`(HMAC 동등검색), `users.birth_date` 앱 레이어 암호화(DATE→VARCHAR), **`name` 평문 유지 확정**. §7.3 표를 1/2/3차로 재구성. `invitations`가 `contact_bidx`로 중복 초대 차단. `core/crypto.py`에 `blind_index` 추가, user/family_member/invitation repo에 `PiiFieldEncryptor` 주입 | NUBiz AX Initiative |
 | 0.22 | 2026-09-09 | Do 단계 — `notifications` 모듈 신설. `GET/PUT /family-members/{id}/notification-settings`(§4.2) — WF5 알림 설정. PUT은 이 구성원 설정 전체 교체(delete→insert). 인가는 `authorize_own_family_member`(신규 — "본인 것만", RBAC §7.1) + 2FA. CTO B1 반영: `receives_emotion_alerts` 기본값 opt-in(false), `(family_member_id, channel)` UNIQUE. schema.md v1.10, 마이그레이션 0005 | NUBiz AX Initiative |
 | 0.21 | 2026-09-09 | Do 단계 — 인가(RBAC/IDOR) 확대. §7.4에 family-members·invitations·photo-requests 적용 추가. `POST /invitations/{token}/accept`가 `require_verified_subject`(신규 — 토큰만 검증)로 수락자 `sub`를 `family_members.keycloak_sub`에 연결(없으면 수락 후 로그인 불가였던 갭). `create_family_member`에 `keycloak_sub` 파라미터. social_worker "동의 시 조회"는 전용 consent 유형 결정 필요로 미도입 | NUBiz AX Initiative |

@@ -264,9 +264,14 @@ require_auth_or_device_token = require_principal
 # --------------------------------------------------------------------------- #
 # 인가 헬퍼
 # --------------------------------------------------------------------------- #
-# design.md §7.1 RBAC 매트릭스 — 어르신 데이터(챕터·사진·대화·일정·동의) 조회 기본 허용 역할.
+# design.md §7.1 RBAC 매트릭스 — 어르신 데이터(챕터·사진·대화·일정·동의) 조회 허용 역할.
+#
+# ⚠️ social_worker(복지사)는 매트릭스상 "동의 시" 열람인데, 그 '동의'를 표현할 consent
+# 유형이 아직 없고 CTO B2가 "가족·복지사 열람이 제17조 제3자제공인가"를 법무 질문으로
+# 지목했다(decisions.md #12/#46 관련). 그래서 **fail-closed** — 전용 consent 유형이
+# 확정될 때까지 social_worker는 이 목록에서 제외한다(정서 알림 조회 등 다른 경로는 유지).
 READ_ELDER_DATA_ROLES: frozenset[FamilyRole] = frozenset(
-    {FamilyRole.FAMILY, FamilyRole.CAREGIVER, FamilyRole.SOCIAL_WORKER, FamilyRole.ADMIN}
+    {FamilyRole.FAMILY, FamilyRole.CAREGIVER, FamilyRole.ADMIN}
 )
 # 감수·설정 변경 등 쓰기 작업 — 가족/관리자만.
 WRITE_ELDER_DATA_ROLES: frozenset[FamilyRole] = frozenset({FamilyRole.FAMILY, FamilyRole.ADMIN})
