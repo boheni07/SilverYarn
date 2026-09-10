@@ -136,3 +136,4 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 | #16 | Critic Agent (§2.11 3단계) — `questions` 큐에 생성 경로 신설, vLLM 서사 갭 분석 → 심층 질문 Top-3 | — |
 | #17 | apps/web 알림 수신 설정 화면 (notifications 모듈 첫 웹 소비자) | — |
 | #18 | apps/web Keycloak 로그인 연동 (Auth.js/NextAuth v5, decisions #49) — 웹 화면 전체가 실 Bearer로 동작 | — |
+| #19 | apps/admin Keycloak 로그인 연동 (동일 Auth.js 방식) | — |

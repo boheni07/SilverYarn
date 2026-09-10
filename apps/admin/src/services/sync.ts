@@ -27,8 +27,6 @@ export async function listSyncSessions(params: {
   if (params.deviceId) query.set("device_id", params.deviceId);
   if (params.status) query.set("status", params.status);
 
-  const { data, pagination } = await apiClient.getPaginated<SyncSession>(`/sync/sessions?${query}`, {
-    authToken: "dev",
-  });
+  const { data, pagination } = await apiClient.getPaginated<SyncSession>(`/sync/sessions?${query}`);
   return { sessions: data, pagination };
 }

@@ -7,7 +7,7 @@ import type { User } from "@/types";
 export type { Pagination };
 
 export async function getUser(userId: string): Promise<User> {
-  return apiClient.get<User>(`/users/${userId}`, { authToken: "dev" });
+  return apiClient.get<User>(`/users/${userId}`);
 }
 
 /** GET /users?page=&page_size=&name= — apps/admin 사용자 목록 화면(신규 2026-09-08,
@@ -23,8 +23,6 @@ export async function listUsers(params: {
   });
   if (params.name) query.set("name", params.name);
 
-  const { data, pagination } = await apiClient.getPaginated<User>(`/users?${query}`, {
-    authToken: "dev",
-  });
+  const { data, pagination } = await apiClient.getPaginated<User>(`/users?${query}`);
   return { users: data, pagination };
 }

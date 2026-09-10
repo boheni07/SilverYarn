@@ -12,7 +12,7 @@
 
 | 요소 | 용도 |
 |---|---|
-| client `silveryarn-web` (public, direct grants) | SPA + e2e 패스워드 그랜트 |
+| client `silveryarn-web` (public, direct grants) | apps/web(3000)·apps/admin(3001) Auth.js 로그인 + e2e 패스워드 그랜트. `redirectUris`에 `localhost:3000/*`·`localhost:3001/*` |
 | client `silveryarn-backend` (confidential) | 토큰 `aud` 대상 (리소스 서버) |
 | `silveryarn-web` 매퍼 `backend-audience` | 액세스 토큰 `aud`에 `silveryarn-backend` 추가 |
 | `silveryarn-web` 매퍼 `dev-amr` (**dev 전용 hardcoded**) | `amr: ["pwd","mfa"]` 주입 — 2FA 경로 e2e용. 운영 realm에는 넣지 않는다 |
