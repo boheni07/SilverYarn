@@ -1,9 +1,7 @@
-export { auth as proxy } from "@/auth";
+export { proxy } from "@silveryarn/web-shared/proxy";
 
-/**
- * Next.js 16 Proxy(구 middleware) — 로그인 안 된 요청은 Auth.js `authorized`
- * 콜백(auth.ts)이 `/login`으로 보낸다. `/login`·Auth.js API·정적 자원은 제외한다.
- */
+// Next는 `config.matcher`를 정적 리터럴로만 읽는다(import·변수 불가) — 공유 핸들러
+// (@silveryarn/web-shared/proxy)와 달리 matcher만 각 앱에 인라인으로 둔다.
 export const config = {
   matcher: ["/((?!login|api/auth|_next/static|_next/image|favicon.ico).*)"],
 };

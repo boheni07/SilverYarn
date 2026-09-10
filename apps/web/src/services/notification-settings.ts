@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { apiClient } from "@silveryarn/web-shared/api";
 import type { ChannelPreference, NotificationSetting } from "@/types";
 
 /** design.md §4.2 GET /family-members/{id}/notification-settings — WF5 화면을 그리는 데 필요. */

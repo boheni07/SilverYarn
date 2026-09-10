@@ -1,0 +1,33 @@
+{
+  "name": "@silveryarn/web-shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "apps/web·apps/admin 공유 코드 — Keycloak 인증(Auth.js), API 클라이언트, UI 프리미티브. TS 소스를 그대로 노출하고 각 앱이 next.config `transpilePackages`로 트랜스파일한다.",
+  "type": "module",
+  "exports": {
+    "./auth": "./src/auth.ts",
+    "./proxy": "./src/proxy.ts",
+    "./auth-route": "./src/auth-route.ts",
+    "./api": "./src/api/index.ts",
+    "./errors": "./src/errors.ts",
+    "./ui": "./src/ui/index.ts",
+    "./app-header": "./src/components/AppHeader.tsx"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "next": ">=15",
+    "next-auth": "^5.0.0-beta.0",
+    "react": ">=19"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "next": "16.3.4",
+    "next-auth": "^5.0.0-beta.32",
+    "react": "19.2.8",
+    "typescript": "^5"
+  }
+}

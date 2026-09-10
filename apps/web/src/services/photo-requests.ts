@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { apiClient } from "@silveryarn/web-shared/api";
 import type { PhotoRequest } from "@/types";
 
 export async function listPhotoRequests(userId: string): Promise<PhotoRequest[]> {

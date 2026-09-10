@@ -1,5 +1,5 @@
-import { apiClient } from "@/lib/api/client";
-import type { Pagination } from "@/lib/api/client";
+import { apiClient } from "@silveryarn/web-shared/api";
+import type { Pagination } from "@silveryarn/web-shared/api";
 import type { SyncSession, SyncStatus } from "@/types";
 
 // Presentation이 lib/api를 직접 import할 수 없으므로(eslint import/no-restricted-paths)

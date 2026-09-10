@@ -1,0 +1,14 @@
+{
+  "name": "silveryarn-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "은빛실타래 (SilverYarn) — JS/TS 워크스페이스 루트. apps/web·apps/admin·packages/*.",
+  "workspaces": [
+    "apps/web",
+    "apps/admin",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  }
+}

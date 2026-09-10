@@ -73,9 +73,13 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: apps/web/package-lock.json
+          cache-dependency-path: package-lock.json # npm 워크스페이스 루트(decisions #50)
 
+      # 워크스페이스 루트에서 한 번 설치 — apps/web·apps/admin·packages/web-shared 전부.
       - run: npm ci
+        working-directory: .
+      - run: npm run type-check -w @silveryarn/web-shared # 공유 패키지 격리 검사
+        working-directory: .
       - run: npm run lint
       - run: npm run type-check
       - run: npm run build
@@ -125,9 +129,10 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: apps/admin/package-lock.json
+          cache-dependency-path: package-lock.json # npm 워크스페이스 루트(decisions #50)
 
       - run: npm ci
+        working-directory: .
       - run: npm run lint
       - run: npm run type-check
       - run: npm run build

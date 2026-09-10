@@ -8,12 +8,13 @@ Next.js(App Router) + TypeScript + Tailwind CSS v4. apps/web과 같은 스택·�
 - `(admin)/` 라우트 그룹을 쓴다 — structure.md §5 화면 인벤토리가 지정한
   `sync-monitor/`, `devices/`, 그리고 실질적 진입점인 `users/`(§5 표에는 없지만
   본문에 언급된 "사용자 관리"에 해당, 아래 참조).
-- apps/web과 완전히 동일한 계층 규율(`lib/api`→`services`→`app`/`components`/`features`,
-  ESLint `import/no-restricted-paths`)과 디자인 토큰(`globals.css`)을 쓴다.
-  `packages/design-tokens/`(structure.md v1.3 제안) 같은 공유 패키지는 아직
-  스캐폴딩 전이라, 지금은 apps/web과 apps/admin이 `lib/api`·`types`·일부 `components/ui`
-  파일을 각자 복사해 들고 있다 — 중복이 실제로 아플 때(3번째 앱이 생기거나 토큰이
-  자주 바뀌기 시작할 때) 공유 패키지로 추출하는 게 낫다고 판단했다.
+- apps/web과 완전히 동일한 계층 규율(`@silveryarn/web-shared/api`→`services`→
+  `app`/`components`/`features`, ESLint `no-restricted-imports`)과 디자인 토큰(`globals.css`)을 쓴다.
+- **공유 코드는 `packages/web-shared`(`@silveryarn/web-shared`)에 있다** (decisions #50):
+  Keycloak 인증(`auth.ts`·`proxy`·`auth-route`), API 클라이언트(`api/`), UI 프리미티브
+  (`ui/` Button·Card), `AppHeader`. Next 16 `src/proxy.ts`·`app/api/auth/[...nextauth]/route.ts`는
+  이 앱 루트에 얇은 재노출 shim만 둔다. `types/*`는 앱별로 유지한다(design.md §3.1 SoR
+  미러 — 각 앱이 쓰는 필드 부분집합만; 향후 OpenAPI codegen으로 통합).
 - 관리자 화면도 고령자 대상이 아니므로 apps/web의 `(family)` 그룹처럼
   `text-body-compact`(16px)를 기본으로 쓴다.
 

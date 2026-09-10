@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Serif_KR } from "next/font/google";
-import { AppHeader } from "@/components/AppHeader";
+import { AppHeader } from "@silveryarn/web-shared/app-header";
 import "./globals.css";
 
 // apps/web과 동일한 서체 구성 — 관리자 화면은 --font-editorial을 거의 쓰지 않지만
@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko" className={notoSerifKr.variable}>
       <body className="min-h-screen font-ui text-body-compact text-ink">
-        <AppHeader />
+        <AppHeader brand="은빛실타래 관리자" />
         {children}
       </body>
     </html>

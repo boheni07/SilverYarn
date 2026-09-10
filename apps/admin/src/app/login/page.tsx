@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { auth, signIn } from "@/auth";
+import { auth, signIn } from "@silveryarn/web-shared/auth";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 

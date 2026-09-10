@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { apiClient } from "@silveryarn/web-shared/api";
 import type { Chapter, ChapterRevision, RevisionAction } from "@/types";
 
 export async function listChapters(userId: string): Promise<Chapter[]> {
