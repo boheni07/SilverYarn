@@ -69,6 +69,8 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 
 ## 5. 미해결 / 다음 사이클 이월
 
+> 상세·회신 관리는 **[`docs/03-check/blocked-decisions-tracker.md`](../../03-check/blocked-decisions-tracker.md)** (살아있는 트래커).
+
 ### 외부 결정 대기 (착수 불가)
 
 | 항목 | 블로커 | 대기 대상 |
