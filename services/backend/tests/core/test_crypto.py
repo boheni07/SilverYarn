@@ -68,7 +68,9 @@ def test_blind_index_is_deterministic_and_normalized(crypto: PiiCrypto) -> None:
     assert a == crypto.blind_index("010-1234-5678")
     assert a != crypto.blind_index("010-9999-0000")
     assert len(a) == 64  # sha256 hex
-    assert "1234" not in a  # 원문 노출 없음
+    # 원문 노출 없음 — 정규화된 전체 값이 다이제스트에 그대로 들어 있지 않다.
+    # (짧은 4자리 부분문자열 "1234"는 hex 다이제스트에 우연히 나타날 수 있어 검사 대상이 아니다.)
+    assert "010-1234-5678" not in a
 
 
 def test_blind_index_case_folded(crypto: PiiCrypto) -> None:
