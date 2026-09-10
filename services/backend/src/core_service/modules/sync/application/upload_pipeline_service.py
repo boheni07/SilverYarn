@@ -27,6 +27,7 @@ from core_service.core.clients.llm_client import LLMClient
 from core_service.core.clients.stt_client import STTClient
 from core_service.core.clients.vectordb_client import VectorDBClient
 from core_service.modules.author.application.chapter_service import ChapterService
+from core_service.modules.author.application.question_service import QuestionService
 from core_service.modules.author.domain.chapter import ChapterPeriod
 from core_service.modules.care.application.conversation_chunk_service import (
     ConversationChunkService,
@@ -71,6 +72,7 @@ class UploadPipelineService:
         self,
         chunk_service: ConversationChunkService,
         chapter_service: ChapterService,
+        question_service: QuestionService,
         stt_client: STTClient,
         embedding_client: EmbeddingClient,
         llm_client: LLMClient,
@@ -79,6 +81,7 @@ class UploadPipelineService:
     ):
         self._chunks = chunk_service
         self._chapters = chapter_service
+        self._questions = question_service
         self._stt = stt_client
         self._embedding = embedding_client
         self._llm = llm_client
@@ -207,6 +210,7 @@ class UploadPipelineService:
             return
 
         await self._safe_compact_chapter(chapter.id)
+        await self._safe_generate_questions(user_id, chapter.id, chapter.body_text, transcript)
 
     async def _safe_compact_chapter(self, chapter_id: uuid.UUID) -> None:
         """design §2.11 4단계 — 저장된 챕터를 온디바이스 FTS5용 요약·키워드로 압축.
@@ -216,3 +220,13 @@ class UploadPipelineService:
             await self._chapters.compact_chapter(chapter_id, self._llm)
         except Exception:
             logger.warning("챕터 Compaction 실패 — 이전 요약 유지. chapter_id=%s", chapter_id)
+
+    async def _safe_generate_questions(
+        self, user_id: uuid.UUID, chapter_id: uuid.UUID, chapter_body: str, transcript: str
+    ) -> None:
+        """design §2.11 3단계 Critic Agent — 챕터 갱신 후 심층 회고 질문 Top-3을 큐에 넣는다.
+        vLLM 미가동/파싱 실패 시 질문 없이 파이프라인을 계속한다(다음 턴에 다시 시도)."""
+        try:
+            await self._questions.generate_followups(user_id, chapter_id, chapter_body, transcript, self._llm)
+        except Exception:
+            logger.warning("Critic Agent 질문 생성 실패 — 건너뜀. chapter_id=%s", chapter_id)

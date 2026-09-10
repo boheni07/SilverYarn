@@ -9,7 +9,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from core_service.modules.author.application.question_service import QuestionService
-from core_service.modules.author.domain.question import Question, QuestionType
+from core_service.modules.author.domain.question import GeneratedQuestion, Question, QuestionType
 
 
 class FakeQuestionRepository:
@@ -18,6 +18,30 @@ class FakeQuestionRepository:
 
     async def get_by_id(self, question_id: uuid.UUID) -> Question | None:
         return next((q for q in self.questions if q.id == question_id), None)
+
+    async def count_unanswered_by_user(self, user_id: uuid.UUID) -> int:
+        return sum(1 for q in self.questions if q.user_id == user_id and not q.answered)
+
+    async def create_many(
+        self,
+        user_id: uuid.UUID,
+        linked_chapter_id: uuid.UUID | None,
+        items: list[GeneratedQuestion],
+    ) -> list[Question]:
+        created = [
+            Question(
+                id=uuid.uuid4(),
+                user_id=user_id,
+                linked_chapter_id=linked_chapter_id,
+                text=it.text,
+                type=it.type,
+                answered=False,
+                created_at=datetime.now(UTC),
+            )
+            for it in items
+        ]
+        self.questions.extend(created)
+        return created
 
     async def list_unanswered_by_user(
         self, user_id: uuid.UUID, since: datetime | None = None
@@ -108,3 +132,73 @@ async def test_list_questions_for_user_answered_filter() -> None:
 
     assert [q.text for q in await service.list_questions_for_user(user_id, answered=False)] == ["미답변"]
     assert [q.text for q in await service.list_questions_for_user(user_id, answered=True)] == ["답변됨"]
+
+
+# --- Critic Agent (generate_followups) ---
+
+
+class _FakeCritic:
+    def __init__(self, out: list[tuple[str, str]]) -> None:
+        self._out = out
+        self.calls = 0
+        self.last_existing: list[str] = []
+
+    async def critique_and_generate_questions(
+        self, chapter_body: str, latest_transcript: str, existing_question_texts: list[str]
+    ) -> list[tuple[str, str]]:
+        self.calls += 1
+        self.last_existing = existing_question_texts
+        return self._out
+
+
+async def test_generate_followups_inserts_up_to_three_typed_questions() -> None:
+    repo = FakeQuestionRepository()
+    service = QuestionService(repo)  # type: ignore[arg-type]
+    user_id, chapter_id = uuid.uuid4(), uuid.uuid4()
+    critic = _FakeCritic(
+        [
+            ("첫 월급으로 무엇을 하셨어요?", "follow_up"),
+            ("그 시절 친구분들 이야기를 들려주세요.", "new_topic"),
+            ("공장 일은 힘들지 않으셨나요?", "follow_up"),
+            ("네 번째 질문(버려짐)", "follow_up"),
+        ]
+    )
+
+    created = await service.generate_followups(user_id, chapter_id, "본문", "구술", critic)
+
+    assert len(created) == 3
+    assert all(q.linked_chapter_id == chapter_id and not q.answered for q in created)
+    assert {q.type for q in created} == {QuestionType.FOLLOW_UP, QuestionType.NEW_TOPIC}
+
+
+async def test_generate_followups_skips_duplicates_and_bad_types() -> None:
+    repo = FakeQuestionRepository()
+    service = QuestionService(repo)  # type: ignore[arg-type]
+    user_id = uuid.uuid4()
+    repo.questions.append(_make_question(user_id, "이미 있는 질문입니다"))
+    critic = _FakeCritic(
+        [
+            ("  이미 있는 질문입니다 ", "follow_up"),  # 공백만 다름 → 중복
+            ("유효한 새 질문", "unknown_type"),  # 알 수 없는 type → 버림
+            ("진짜 새 질문", "new_topic"),
+        ]
+    )
+
+    created = await service.generate_followups(user_id, uuid.uuid4(), "본문", "구술", critic)
+
+    assert [q.text for q in created] == ["진짜 새 질문"]
+    assert "이미 있는 질문입니다" in critic.last_existing  # 컨텍스트로 넘겨줌
+
+
+async def test_generate_followups_skips_when_queue_full() -> None:
+    repo = FakeQuestionRepository()
+    service = QuestionService(repo)  # type: ignore[arg-type]
+    user_id = uuid.uuid4()
+    for i in range(8):
+        repo.questions.append(_make_question(user_id, f"대기 질문 {i}"))
+    critic = _FakeCritic([("새 질문", "new_topic")])
+
+    created = await service.generate_followups(user_id, uuid.uuid4(), "본문", "구술", critic)
+
+    assert created == []
+    assert critic.calls == 0  # 큐가 꽉 찼으면 LLM 호출조차 안 함
