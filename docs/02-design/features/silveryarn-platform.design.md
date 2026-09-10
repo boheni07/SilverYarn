@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.34 (apps/web Keycloak 로그인 연동 — Auth.js/NextAuth v5, decisions #49. 웹 화면 전체가 실 Bearer로 동작)
+> **Version**: 0.35 (apps/admin Keycloak 로그인 연동 — apps/web과 동일 Auth.js 방식, decisions #49)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -610,7 +610,7 @@ interface Publication {         // v1.1 신규
 | 웹·가족 | 가족 대시보드(오늘의 기억 리포트), 원고 감수·대조편집 ✅, 사진 업로드·타임라인 배치(사진 요청 ✅), 정서 모니터링 상세(⚖️ 정서 파이프라인 OFF), 알림·가족구성원 설정 ✅(`(family)/notification-settings`) |
 | 웹·관리자 | 관리자 대시보드, 사용자 관리 ✅, Wi-Fi 동기화 모니터링 ✅, 정서 알림 이력 관리(⚖️ OFF), 시스템 설정·리소스 모니터링, 기기 관리 ✅ |
 
-> **인증 상태**: **apps/web은 Keycloak 로그인 연동 완료**(Auth.js, decisions #49) — 모든 웹 화면이 실 백엔드(§7.4)에 실 Bearer 토큰으로 동작한다. **apps/admin은 아직 `Bearer dev` 스텁** — 같은 방식(Auth.js) 이식 필요.
+> **인증 상태**: **apps/web·apps/admin 모두 Keycloak 로그인 연동 완료**(Auth.js, decisions #49) — 모든 웹 화면이 실 백엔드(§7.4)에 실 Bearer 토큰으로 동작한다. 두 앱이 같은 `silveryarn-web` 클라이언트(web 3000 / admin 3001).
 
 ### 5.2 Page UI Checklist
 
@@ -701,7 +701,7 @@ CTO 보안 검토 B4가 "스키마 결정, Do 단계 이연 불가"로 지목한
 - **감사로그**: `access_logs` — `main.py` HTTP 미들웨어가 `/api/v1/*` 요청 처리 후 best-effort 1행 적재(제8조).
 - **fail closed**: `AUTH_ISSUER_URL` 미설정 시 웹 콘솔 인증이 요청에서 401(토큰 없음) 또는 500(토큰 있는데 verifier 미구성). 앱/워커 기동·CI(HTTP 미경유 단위 테스트)에는 영향 없음.
 - **실 인프라 e2e 검증(v0.26, 2026-09-09)**: 로컬 Keycloak(`infra/keycloak/`, realm 자동 임포트)으로 `services/backend/scripts/e2e_keycloak_check.py` — JWKS RS256 검증·`sub`→`family_members` 매핑·`authorize_user_access`·social_worker fail-closed·2FA(`amr`) 게이팅 **9/9 PASS**. PII 암복호화·멱등성·access_logs는 `e2e_pii_auth_check.py`(17/17)·`e2e_http_smoke.py`(13/13).
-- **웹 콘솔 로그인(v0.34, decisions #49)**: apps/web은 **Auth.js(NextAuth v5) + Keycloak provider**. `silveryarn-web`(public client) auth code flow + PKCE. `lib/api/client.ts`가 `import "server-only"` — 서버에서만 실행되며 `auth()` 세션의 액세스 토큰을 백엔드 `Authorization: Bearer`로 전달(브라우저 노출 없음). 클라이언트 폼 제출은 Server Action(`features/*/actions.ts`) 경유. Next.js 16 `proxy.ts`(구 middleware)가 미로그인 요청을 `/login`으로. 로컬 실 flow 검증(로그인→세션→실 Bearer로 조회·PUT→DB 반영). **apps/admin은 아직 미연동**(`Bearer dev`).
+- **웹 콘솔 로그인(v0.34~v0.35, decisions #49)**: apps/web·apps/admin **둘 다 Auth.js(NextAuth v5) + Keycloak provider**. `silveryarn-web`(public client) auth code flow + PKCE, realm `redirectUris`에 `localhost:3000/*`(web)·`localhost:3001/*`(admin). `lib/api/client.ts`가 `import "server-only"` — 서버에서만 실행되며 `auth()` 세션의 액세스 토큰을 백엔드 `Authorization: Bearer`로 전달(브라우저 노출 없음). web의 클라이언트 폼 제출은 Server Action(`features/*/actions.ts`) 경유; admin은 GET 전용이라 불필요. admin 화면은 백엔드 `require_roles(admin)`이 다시 검사(프론트는 유효 세션만). Next.js 16 `proxy.ts`(구 middleware)가 미로그인 요청을 `/login`으로. 양쪽 앱 로컬 실 flow 브라우저 검증(로그인→세션→실 Bearer로 조회·PUT→반영).
 - **감수 서명자**: `POST /chapters/{id}/review`의 `reviewer_id`는 이제 토큰에서 파생(하위호환용 요청 필드는 유지하되 호출자 본인 구성원 id만 허용).
 
 ---
@@ -847,6 +847,7 @@ silveryarn/
 | 0.32 | 2026-09-10 | Do 단계 — Critic Agent(§2.11 3단계) 구현. `questions` 큐에 생성 경로 신설(이전엔 read-only). `LLMClient.critique_and_generate_questions`(vLLM, Fact/Emotion/Relation/Reflection 4축) + `QuestionService.generate_followups`(큐 범람 방지 8개 상한, 중복·잘못된 type 제거) + 업로드 파이프라인 best-effort 호출. `questions.count_unanswered_by_user`/`create_many` 신규. 실 DB로 삽입·카운트 검증. 유닛테스트 8건 추가(155개). 4축 점수 저장·노출은 미구현 | NUBiz AX Initiative |
 | 0.33 | 2026-09-11 | Do 단계 — apps/web `(family)/notification-settings` 화면 신규. `notifications` 모듈(PR #3, `GET/PUT /family-members/{id}/notification-settings`)의 첫 웹 소비자 — 3채널(push/email/sms) × 3항목(챕터갱신/동기화문제/정서알림) 그리드, PUT 전체 교체. `types/notification-setting.ts`(구 `consent-log.ts`의 스테일 `NotificationSetting` 대체), `services/notification-settings.ts`, `features/notification-settings/NotificationSettingsForm.tsx`. §5.1 인벤토리에 구현 상태(✅/스텁/OFF) 표기 + 웹 콘솔 Keycloak 로그인 연동이 선결이라는 공통 미완 명시 | NUBiz AX Initiative |
 | 0.34 | 2026-09-11 | Do 단계 — apps/web Keycloak 로그인 연동(decisions #49, 사용자 결정: Auth.js/NextAuth v5). §7.4에 웹 콘솔 로그인 항목 추가, §5.1 인벤토리에서 "Bearer dev 공통 미완" 해소(web은 실 Bearer 동작, admin만 미연동). `silveryarn-web` public client + PKCE, `lib/api/client.ts` server-only + Server Action 경로, Next.js 16 `proxy.ts`. 로컬 실 flow(Keycloak 로그인 → 세션 → 백엔드 조회·PUT → DB) 브라우저 검증 | NUBiz AX Initiative |
+| 0.35 | 2026-09-11 | Do 단계 — apps/admin Keycloak 로그인 연동(decisions #49, apps/web과 동일 Auth.js). §5.1·§7.4에 admin도 완료 반영. realm `silveryarn-web` `redirectUris`에 `localhost:3001/*` 추가(`infra/keycloak/import/silveryarn-realm.json`·README). admin은 GET 전용이라 Server Action 없이 `lib/api/client.ts` server-only만. 브라우저 flow 검증(로그인 → `require_roles(admin)` 통과 → 사용자·동기화 목록 조회) | NUBiz AX Initiative |
 | 0.1 | 2026-09-05 | Plan/ 폴더 원본 문서 4종 기반 Design 초안 등록 | NUBiz AX Initiative |
 | 0.2 | 2026-09-05 | design-validator 검증 반영 — RAG/정서모니터링/출판/온보딩/상태전이/Diff처리/페르소나 절 신설(§2.4~2.10), API 표준화(§4), RBAC·백업정책 추가(§7), 데이터모델 v1.1 동기화(§3), Domain 레이어 위치 정정(§9) | NUBiz AX Initiative |
 | 0.3 | 2026-09-06 | 사용자 제안 "Closed-Loop Architecture" 보고서 검토 반영 — §2.11 신설(Opus/WorkManager/Whisper Large-v3/Neo4j/Critic Agent/Compaction Engine 구체화), 컴포넌트 다이어그램·의존성표에 Neo4j 추가, §4.3에 sync/download 응답 예시 추가. 외부 GPT-4o/Claude 제안은 미채택(온프레미스 vLLM 유지, decisions #26) | NUBiz AX Initiative (사용자 제안 반영) |

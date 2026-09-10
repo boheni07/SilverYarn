@@ -7,5 +7,5 @@ import type { Device } from "@/types";
  * 사용자 단위로만 조회 가능(README "아직 안 된 것" 참조).
  */
 export async function listUserDevices(userId: string): Promise<Device[]> {
-  return apiClient.get<Device[]>(`/users/${userId}/devices`, { authToken: "dev" });
+  return apiClient.get<Device[]>(`/users/${userId}/devices`);
 }

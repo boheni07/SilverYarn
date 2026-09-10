@@ -1,11 +1,17 @@
+import "server-only";
+
 /**
  * 서버 API 클라이언트 — Infrastructure 레이어(CONVENTIONS §3.2). `services/`만 이 파일을
  * import한다(app/·components/·features/에서 직접 쓰지 않음 — eslint.config.mjs의
  * import/no-restricted-paths로 강제).
  *
+ * **server-only**: 서버(Server Component·Server Action·Route Handler)에서만 실행되며,
+ * Keycloak 액세스 토큰을 세션(httpOnly 쿠키, `@/auth`, decisions #49)에서 읽어 백엔드
+ * `Authorization: Bearer`로 실어 보낸다. apps/web과 동일 패턴.
+ *
  * design.md §4.1 표준 응답 포맷을 그대로 따른다: { data } | { data, pagination } | { error }.
- * apps/web/src/lib/api/client.ts와 동일 — 공유 패키지가 아직 없어 두 앱이 각자 들고 있다.
  */
+import { auth } from "@/auth";
 import { keysToCamel, keysToSnake } from "./case";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -38,15 +44,16 @@ interface ApiEnvelope<T> {
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
-  /** 인증 스텁 — core/auth.py가 아직 미검증이라 지금은 아무 값이나 통과한다.
-   * TODO: Keycloak 연동 후 실제 관리자 세션 토큰으로 교체. */
+  /** 명시하면 세션 토큰 대신 이 값을 Bearer로 쓴다(테스트·특수 경로용). */
   authToken?: string;
   deviceToken?: string;
 }
 
 async function fetchEnvelope(path: string, options: RequestOptions): Promise<ApiEnvelope<unknown>> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (options.authToken) headers["Authorization"] = `Bearer ${options.authToken}`;
+
+  const bearer = options.authToken ?? (await auth())?.accessToken;
+  if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
   if (options.deviceToken) headers["X-Device-Token"] = options.deviceToken;
 
   const response = await fetch(`${API_BASE_URL}${API_PREFIX}${path}`, {

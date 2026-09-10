@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Serif_KR } from "next/font/google";
+import { AppHeader } from "@/components/AppHeader";
 import "./globals.css";
 
 // apps/web과 동일한 서체 구성 — 관리자 화면은 --font-editorial을 거의 쓰지 않지만
@@ -19,7 +20,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko" className={notoSerifKr.variable}>
-      <body className="min-h-screen font-ui text-body-compact text-ink">{children}</body>
+      <body className="min-h-screen font-ui text-body-compact text-ink">
+        <AppHeader />
+        {children}
+      </body>
     </html>
   );
 }
