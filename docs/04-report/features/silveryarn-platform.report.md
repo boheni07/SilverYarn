@@ -69,6 +69,7 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 
 ## 5. 미해결 / 다음 사이클 이월
 
+> 이 보고서는 PR #1~11 시점 기준이다. 이후 진행분(#12~19)은 부록 PR 목록과 각 설계문서 버전 로그, PDCA Check #2(`docs/03-check/gap-analysis-2026-09-11.md`) 참조.
 > 상세·회신 관리는 **[`docs/03-check/blocked-decisions-tracker.md`](../../03-check/blocked-decisions-tracker.md)** (살아있는 트래커).
 
 ### 외부 결정 대기 (착수 불가)
