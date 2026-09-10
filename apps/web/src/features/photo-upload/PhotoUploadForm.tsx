@@ -3,8 +3,8 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { requestPhotoUploadUrl, uploadFileToPresignedUrl, completePhotoUpload } from "@/services/photos";
-import { ApiError } from "@/services/errors";
+import { uploadFileToPresignedUrl } from "@/lib/upload";
+import { finalizeUpload, getUploadUrl } from "./actions";
 
 // photo_service.py _ALLOWED_CONTENT_TYPES와 동일 — 서버 왕복 전에 미리 걸러 UX 개선.
 const ACCEPTED_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -30,17 +30,21 @@ export function PhotoUploadForm({ userId }: { userId: string }) {
     setPending(true);
     setError(null);
     try {
-      const { photoId, uploadUrl } = await requestPhotoUploadUrl({
+      const urlResult = await getUploadUrl({
         userId,
         uploaderType: "family",
         contentType: file.type,
         fileSize: file.size,
       });
-      await uploadFileToPresignedUrl(uploadUrl, file);
-      await completePhotoUpload(photoId);
+      if (!urlResult.ok) throw new Error(urlResult.error);
+
+      await uploadFileToPresignedUrl(urlResult.uploadUrl, file);
+
+      const done = await finalizeUpload(urlResult.photoId);
+      if (!done.ok) throw new Error(done.error);
       router.refresh();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "사진 업로드 중 오류가 발생했습니다.");
+      setError(e instanceof Error ? e.message : "사진 업로드 중 오류가 발생했습니다.");
     } finally {
       setPending(false);
       if (inputRef.current) inputRef.current.value = "";

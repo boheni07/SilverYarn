@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { createPhotoRequest } from "@/services/photo-requests";
-import { ApiError } from "@/services/errors";
+import { submitPhotoRequest } from "./actions";
 import type { FamilyMember } from "@/types";
 
 /**
@@ -21,18 +20,17 @@ export function PhotoRequestForm({ userId, requesters }: { userId: string; reque
   async function handleSubmit() {
     setPending(true);
     setError(null);
-    try {
-      await createPhotoRequest({
-        userId,
-        requestedBy: requestedBy || undefined,
-        message: message.trim() || undefined,
-      });
+    const result = await submitPhotoRequest({
+      userId,
+      requestedBy: requestedBy || undefined,
+      message: message.trim() || undefined,
+    });
+    setPending(false);
+    if (result.ok) {
       setMessage("");
       router.refresh();
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "요청 생성 중 오류가 발생했습니다.");
-    } finally {
-      setPending(false);
+    } else {
+      setError(result.error);
     }
   }
 

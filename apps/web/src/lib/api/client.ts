@@ -1,10 +1,18 @@
+import "server-only";
+
 /**
  * 서버 API 클라이언트 — Infrastructure 레이어(CONVENTIONS §3.2). `services/`만 이 파일을
  * import한다(app/·components/·features/에서 직접 쓰지 않음 — eslint.config.mjs의
  * import/no-restricted-paths로 강제).
  *
+ * **server-only**: 이 모듈은 서버(Server Component·Server Action·Route Handler)에서만
+ * 실행된다. Keycloak 액세스 토큰을 세션(httpOnly 쿠키, `@/auth`)에서 읽어 백엔드
+ * `Authorization: Bearer`로 실어 보낸다 — 토큰이 브라우저 번들에 들어가지 않게 하려는
+ * 것. 클라이언트 컴포넌트의 변경(폼 제출 등)은 Server Action을 거쳐 이 모듈에 도달한다.
+ *
  * design.md §4.1 표준 응답 포맷을 그대로 따른다: { data } | { data, pagination } | { error }.
  */
+import { auth } from "@/auth";
 import { keysToCamel, keysToSnake } from "./case";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -31,15 +39,16 @@ interface ApiEnvelope<T> {
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
-  /** 인증 스텁 — core/auth.py가 아직 미검증이라 지금은 아무 값이나 통과한다.
-   * TODO: Keycloak 연동 후 실제 세션 토큰으로 교체. */
+  /** 명시하면 세션 토큰 대신 이 값을 Bearer로 쓴다(테스트·특수 경로용). */
   authToken?: string;
   deviceToken?: string;
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (options.authToken) headers["Authorization"] = `Bearer ${options.authToken}`;
+
+  const bearer = options.authToken ?? (await auth())?.accessToken;
+  if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
   if (options.deviceToken) headers["X-Device-Token"] = options.deviceToken;
 
   const response = await fetch(`${API_BASE_URL}${API_PREFIX}${path}`, {

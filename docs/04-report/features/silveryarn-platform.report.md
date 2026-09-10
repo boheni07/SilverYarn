@@ -134,3 +134,5 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 | #14 | 법무·인프라 결정 대기 트래커 | — |
 | #15 | 챕터 Compaction Engine (§2.11 4단계 요약·키워드) — `sync/download`가 요약 내려보냄 | 0007 |
 | #16 | Critic Agent (§2.11 3단계) — `questions` 큐에 생성 경로 신설, vLLM 서사 갭 분석 → 심층 질문 Top-3 | — |
+| #17 | apps/web 알림 수신 설정 화면 (notifications 모듈 첫 웹 소비자) | — |
+| #18 | apps/web Keycloak 로그인 연동 (Auth.js/NextAuth v5, decisions #49) — 웹 화면 전체가 실 Bearer로 동작 | — |

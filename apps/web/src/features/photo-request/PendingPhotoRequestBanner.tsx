@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { dismissPhotoRequest } from "@/services/photo-requests";
-import { ApiError } from "@/services/errors";
+import { dismissRequest } from "./actions";
 import type { PhotoRequest } from "@/types";
 
 /**
@@ -21,14 +20,10 @@ export function PendingPhotoRequestBanner({ requests }: { requests: PhotoRequest
   async function handleDismiss(requestId: string) {
     setDismissingId(requestId);
     setError(null);
-    try {
-      await dismissPhotoRequest(requestId);
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "요청을 닫는 중 오류가 발생했습니다.");
-    } finally {
-      setDismissingId(null);
-    }
+    const result = await dismissRequest(requestId);
+    setDismissingId(null);
+    if (result.ok) router.refresh();
+    else setError(result.error);
   }
 
   if (requests.length === 0) return null;

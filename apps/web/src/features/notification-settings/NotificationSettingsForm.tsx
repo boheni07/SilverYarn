@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { replaceNotificationSettings } from "@/services/notification-settings";
-import { ApiError } from "@/services/errors";
+import { saveNotificationSettings } from "./actions";
 import {
   NOTIFY_CHANNELS,
   NOTIFY_CHANNEL_LABEL,
@@ -42,14 +41,16 @@ export function NotificationSettingsForm({
   async function handleSave() {
     setPending(true);
     setError(null);
-    try {
-      await replaceNotificationSettings(familyMemberId, NOTIFY_CHANNELS.map((c) => prefs[c]));
+    const result = await saveNotificationSettings(
+      familyMemberId,
+      NOTIFY_CHANNELS.map((c) => prefs[c]),
+    );
+    setPending(false);
+    if (result.ok) {
       setSavedAt(new Date().toLocaleTimeString("ko-KR"));
       router.refresh();
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "저장 중 오류가 발생했습니다.");
-    } finally {
-      setPending(false);
+    } else {
+      setError(result.error);
     }
   }
 

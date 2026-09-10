@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { reviewChapter } from "@/services/chapters";
-import { ApiError } from "@/services/errors";
+import { submitReview } from "./actions";
 import { CHAPTER_PERIOD_LABEL } from "@/types";
 import type { Chapter, FamilyMember } from "@/types";
 
@@ -30,18 +29,14 @@ export function ChapterReviewPanel({
   async function handleReview(action: "approved" | "rejected") {
     setPending(true);
     setError(null);
-    try {
-      await reviewChapter(chapter.id, {
-        action,
-        reviewComment: comment.trim() || undefined,
-        reviewerId: reviewerId || undefined,
-      });
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "감수 처리 중 오류가 발생했습니다.");
-    } finally {
-      setPending(false);
-    }
+    const result = await submitReview(chapter.id, {
+      action,
+      reviewComment: comment.trim() || undefined,
+      reviewerId: reviewerId || undefined,
+    });
+    setPending(false);
+    if (result.ok) router.refresh();
+    else setError(result.error);
   }
 
   return (

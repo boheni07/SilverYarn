@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Serif_KR } from "next/font/google";
+import { AppHeader } from "@/components/AppHeader";
 import "./globals.css";
 
 // Pretendard(UI 서체)는 Google Fonts에 없어 npm 패키지로 자체 호스팅한다(globals.css에서
@@ -20,7 +21,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko" className={notoSerifKr.variable}>
-      <body className="min-h-screen">{children}</body>
+      <body className="min-h-screen">
+        <AppHeader />
+        {children}
+      </body>
     </html>
   );
 }
