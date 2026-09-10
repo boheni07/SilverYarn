@@ -124,4 +124,4 @@ design §4.2 Endpoint List에 있으나 미구현:
 1. ~~import-linter 도입 (G2)~~ — **완료** (`chore/import-linter-module-boundaries`).
 2. **모바일 앱 흐름 완성** — 온보딩 재시작 스킵(`device_state.device_id`), install_mode 기반 진입 분기(키오스크 lockTask), 최초 동기화 화면: **완료** (`feat/mobile-app-entry-first-sync`). 가족 초대 수락 화면은 첫 가족 연결 경로 설계 결정 대기라 제외.
 3. **`core/auth.py` → 모듈 infrastructure 결합 제거** — core에 리포지토리 포트(Protocol) 정의 후 주입. 현재 import-linter contract 4에 예외 2건으로 고정돼 있음.
-4. **PDCA Report 생성** — Do 단계 전체(PR #1~10 + Check) 종합.
+4. ~~PDCA Report 생성~~ — **완료** (`docs/04-report/features/silveryarn-platform.report.md`, PR #1~11 + Check 종합).
