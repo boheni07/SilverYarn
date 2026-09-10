@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.32 (Critic Agent — §2.11 3단계, `questions` 큐에 생성 경로 신설: 챕터 갱신 후 vLLM이 서사 갭 분석 → 심층 질문 Top-3 삽입)
+> **Version**: 0.33 (apps/web 알림 수신 설정 화면 — `(family)/notification-settings`, PR #3 백엔드의 첫 웹 소비자. §5.1 인벤토리에 구현 상태 표기)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -601,12 +601,16 @@ interface Publication {         // v1.1 신규
 
 ### 5.1 Screen Inventory
 
+> ✅ = apps/web·apps/mobile·apps/admin에 구현됨. 나머지는 미착수 또는 외부 결정 대기.
+
 | 영역 | 화면 |
 |---|---|
-| 모바일앱(당사자) | 온보딩·동의, 홈·음성대화, 자서전 작가모드 인터뷰, 말벗돌봄 대화, 비서모드 일정·복약, 설정·동기화 상태, 사진 추가하기 |
-| 웹·자서전 사용자 | 로그인·대시보드, 자서전 뷰어, 사진·타임라인 갤러리, ~~구독·결제 관리~~(스코프 아웃, decisions.md #18), 계정 설정 |
-| 웹·가족 | 가족 대시보드(오늘의 기억 리포트), 원고 감수·대조편집, 사진 업로드·타임라인 배치, 정서 모니터링 상세, 알림·가족구성원 설정 |
-| 웹·관리자 | 관리자 대시보드, 사용자 관리, Wi-Fi 동기화 모니터링, 정서 알림 이력 관리, 시스템 설정·리소스 모니터링, 기기 관리(설치모드/사양) |
+| 모바일앱(당사자) | 온보딩·동의 ✅, 홈·음성대화(셸만), 자서전 작가모드 인터뷰(스텁), 말벗돌봄 대화(스텁), 비서모드 일정·복약(스텁), 설정·동기화 상태(최초 동기화 ✅), 사진 추가하기 |
+| 웹·자서전 사용자 | 로그인·대시보드(임시 진입점만), 자서전 뷰어 ✅, 사진·타임라인 갤러리 ✅, ~~구독·결제 관리~~(스코프 아웃, decisions.md #18), 계정 설정 |
+| 웹·가족 | 가족 대시보드(오늘의 기억 리포트), 원고 감수·대조편집 ✅, 사진 업로드·타임라인 배치(사진 요청 ✅), 정서 모니터링 상세(⚖️ 정서 파이프라인 OFF), **알림·가족구성원 설정 ✅**(`(family)/notification-settings`, v0.33) |
+| 웹·관리자 | 관리자 대시보드, 사용자 관리 ✅, Wi-Fi 동기화 모니터링 ✅, 정서 알림 이력 관리(⚖️ OFF), 시스템 설정·리소스 모니터링, 기기 관리 ✅ |
+
+> **공통 미완**: apps/web·apps/admin은 인증이 스텁이던 시절 만들어져 `Authorization: Bearer dev`를 보낸다 — Keycloak 실 인증(§7.4) 도입 후 실 백엔드에는 401이므로, **웹 콘솔 Keycloak 로그인 연동이 선결**돼야 화면들이 실제로 동작한다(별도 작업).
 
 ### 5.2 Page UI Checklist
 
@@ -840,6 +844,7 @@ silveryarn/
 | 0.30 | 2026-09-10 | Do 단계 — `core/auth.py` 순수화. import-linter contract ④의 예외였던 auth→모듈 infrastructure 결합 2건 제거. `core/auth.py`는 순수(토큰 검증·인가 규칙·조회 포트 Protocol), 리포지토리 조립 FastAPI 의존성은 `core_service/auth_deps.py`(최상위 조립 모듈)로 이동, 13개 라우터가 `auth_deps`에서 인증 심볼 import. `e2e_keycloak_check.py` cleanup FK 순서 버그도 수정. 실 인프라 e2e 17/17·13/13·9/9 재확인 | NUBiz AX Initiative |
 | 0.31 | 2026-09-10 | Do 단계 — 챕터 Compaction Engine(§2.11 4단계) 요약·키워드 부분 구현. `LLMClient.compact_chapter`(vLLM) + `ChapterService.compact_chapter`(stale 판정 `compacted_version != version`) + 업로드 파이프라인 best-effort 호출. `chapters`에 `compaction_summary`/`compaction_keywords`/`compacted_version` 컬럼(마이그레이션 0007). `GET /sync/download`가 `body_text` 원문 대신 요약(없으면 앞 200자)을 내려보냄. 페르소나 JSON 룰셋(§2.10 연동)은 미구현. schema.md v1.12, sync-contract.md §5 | NUBiz AX Initiative |
 | 0.32 | 2026-09-10 | Do 단계 — Critic Agent(§2.11 3단계) 구현. `questions` 큐에 생성 경로 신설(이전엔 read-only). `LLMClient.critique_and_generate_questions`(vLLM, Fact/Emotion/Relation/Reflection 4축) + `QuestionService.generate_followups`(큐 범람 방지 8개 상한, 중복·잘못된 type 제거) + 업로드 파이프라인 best-effort 호출. `questions.count_unanswered_by_user`/`create_many` 신규. 실 DB로 삽입·카운트 검증. 유닛테스트 8건 추가(155개). 4축 점수 저장·노출은 미구현 | NUBiz AX Initiative |
+| 0.33 | 2026-09-11 | Do 단계 — apps/web `(family)/notification-settings` 화면 신규. `notifications` 모듈(PR #3, `GET/PUT /family-members/{id}/notification-settings`)의 첫 웹 소비자 — 3채널(push/email/sms) × 3항목(챕터갱신/동기화문제/정서알림) 그리드, PUT 전체 교체. `types/notification-setting.ts`(구 `consent-log.ts`의 스테일 `NotificationSetting` 대체), `services/notification-settings.ts`, `features/notification-settings/NotificationSettingsForm.tsx`. §5.1 인벤토리에 구현 상태(✅/스텁/OFF) 표기 + 웹 콘솔 Keycloak 로그인 연동이 선결이라는 공통 미완 명시 | NUBiz AX Initiative |
 | 0.1 | 2026-09-05 | Plan/ 폴더 원본 문서 4종 기반 Design 초안 등록 | NUBiz AX Initiative |
 | 0.2 | 2026-09-05 | design-validator 검증 반영 — RAG/정서모니터링/출판/온보딩/상태전이/Diff처리/페르소나 절 신설(§2.4~2.10), API 표준화(§4), RBAC·백업정책 추가(§7), 데이터모델 v1.1 동기화(§3), Domain 레이어 위치 정정(§9) | NUBiz AX Initiative |
 | 0.3 | 2026-09-06 | 사용자 제안 "Closed-Loop Architecture" 보고서 검토 반영 — §2.11 신설(Opus/WorkManager/Whisper Large-v3/Neo4j/Critic Agent/Compaction Engine 구체화), 컴포넌트 다이어그램·의존성표에 Neo4j 추가, §4.3에 sync/download 응답 예시 추가. 외부 GPT-4o/Claude 제안은 미채택(온프레미스 vLLM 유지, decisions #26) | NUBiz AX Initiative (사용자 제안 반영) |

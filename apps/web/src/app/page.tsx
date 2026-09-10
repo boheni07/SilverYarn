@@ -55,6 +55,9 @@ export default function HomePage() {
           <Button variant="secondary" onClick={() => goTo("/photo-requests")}>
             사진 요청 관리로 이동
           </Button>
+          <Button variant="secondary" onClick={() => goTo("/notification-settings")}>
+            알림 수신 설정으로 이동
+          </Button>
         </div>
       </Card>
     </main>
