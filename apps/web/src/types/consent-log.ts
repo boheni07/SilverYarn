@@ -1,20 +1,12 @@
-/** design.md §3.1 ConsentLog/NotificationSetting/Publication — 아직 백엔드 모듈 미구현.
- * schema.md `consent_logs`/`notification_settings`/`publications` 매핑. */
+/** design.md §3.1 ConsentLog/Publication — `consent_logs`는 백엔드 구현됨(consent 모듈),
+ * `publications`는 테이블만 있고 API 미구현(Phase 3). `NotificationSetting`은 백엔드
+ * 구현이 끝나 별도 파일(`notification-setting.ts`)로 옮겼다 — 여기 두면 안 됨. */
 export interface ConsentLog {
   id: string;
   userId: string;
   consentType: "data_collection" | "external_tts_optin" | "external_llm_optin";
   granted: boolean;
   grantedBy?: string;
-}
-
-export interface NotificationSetting {
-  id: string;
-  familyMemberId: string;
-  channel: "sms" | "email" | "push";
-  receivesEmotionAlerts: boolean;
-  receivesChapterUpdates: boolean;
-  receivesSyncIssues: boolean;
 }
 
 export interface Publication {
