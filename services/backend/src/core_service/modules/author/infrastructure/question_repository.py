@@ -1,16 +1,16 @@
 """questions 테이블 SQLAlchemy 매핑 + Repository — schema.md §3.9 DDL과 1:1."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Text, select
+from sqlalchemy import Boolean, DateTime, ForeignKey, Text, func, select
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core_service.core.db import Base
-from core_service.modules.author.domain.question import Question, QuestionType
+from core_service.modules.author.domain.question import GeneratedQuestion, Question, QuestionType
 
 
 class QuestionModel(Base):
@@ -65,6 +65,39 @@ class QuestionRepository:
             .order_by(QuestionModel.answered, QuestionModel.created_at)
         )
         return [m.to_domain() for m in result.scalars().all()]
+
+    async def count_unanswered_by_user(self, user_id: uuid.UUID) -> int:
+        """Critic Agent가 큐를 넘치게 채우지 않도록 하는 상한 판정용."""
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(QuestionModel)
+            .where(QuestionModel.user_id == user_id, QuestionModel.answered.is_(False))
+        )
+        return int(result.scalar_one())
+
+    async def create_many(
+        self,
+        user_id: uuid.UUID,
+        linked_chapter_id: uuid.UUID | None,
+        items: list[GeneratedQuestion],
+    ) -> list[Question]:
+        """Critic Agent 산출물을 questions 큐에 넣는다 — `answered=False`, `created_at=now`."""
+        now = datetime.now(UTC)
+        models = [
+            QuestionModel(
+                id=uuid.uuid4(),
+                user_id=user_id,
+                linked_chapter_id=linked_chapter_id,
+                text=item.text,
+                type=item.type.value,
+                answered=False,
+                created_at=now,
+            )
+            for item in items
+        ]
+        self._session.add_all(models)
+        await self._session.flush()
+        return [m.to_domain() for m in models]
 
     async def list_unanswered_by_user(
         self, user_id: uuid.UUID, since: datetime | None = None

@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.31 (챕터 Compaction Engine — §2.11 4단계 요약·키워드 부분 구현, `sync/download`가 body_text 원문 대신 요약 내려보냄)
+> **Version**: 0.32 (Critic Agent — §2.11 3단계, `questions` 큐에 생성 경로 신설: 챕터 갱신 후 vLLM이 서사 갭 분석 → 심층 질문 Top-3 삽입)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -235,6 +235,8 @@ Idle → Listening(웨이크워드 또는 마이크 버튼 탭 — M2 화면과 
 - 관계·타임라인은 **Neo4j 지식그래프**에 노드/엣지로 적재, 원문 청크는 **Qdrant**에 BGE-M3 임베딩으로 색인 (하이브리드 서치는 §2.4 그대로)
 - 챕터 초안 윤문: 온프레미스 vLLM이 구술체를 문어체로 정제해 해당 챕터에 `draft`/`in_review` 상태로 저장 → 가족 웹 감수([workflow-diagrams.md §7](../workflow-diagrams.md), `chapter_revisions` 생성은 감수 시점에만) *(v0.6: §2.8은 동기화 Diff/멱등성 절이라 오참조였던 것을 정정, L-5)*
 - **Critic Agent 갭 분석**: 서버 측 평가 에이전트가 서사 완성도를 Fact/Emotion/Relation/Reflection 4대 축으로 채점, 부족 영역(예: "특정 시기의 감정 결손")을 식별해 `questions`에 맞춤형 심층 질문(Top-3)을 생성 — 기존 §2.1 "질문 이력 대조·신규 회고 질문 생성"의 구체화
+
+> **구현 상태 (v0.32)**: `questions`에 **생성 경로**가 생겼다(이전엔 read-only 큐). 업로드 파이프라인이 챕터 갱신 직후 `QuestionService.generate_followups()`를 best-effort로 호출 → `LLMClient.critique_and_generate_questions(chapter_body, latest_transcript, 기존_미답변_질문들)`(vLLM, `_CRITIC_SYSTEM_PROMPT`)이 4축 채점 후 질문 `[{text, type}]` Top-3을 반환, `questions` 큐에 `linked_chapter_id`와 함께 삽입. **큐 범람 방지**: 미답변 질문이 8개 이상이면 생성 스킵(기획서 4장 "한 번에 하나씩"), 기존 질문과 텍스트 중복(공백·대소문자 무시)이면 버림, 알 수 없는 `type`은 버림(코드가 임의 보정 안 함). `GET /sync/download`의 `priority_questions`가 이 큐를 그대로 내려보낸다 → §2.11 6단계 "진화된 재대화"의 재료. **4축 점수 자체를 저장·노출하는 경로는 미구현**(질문 생성에만 사용).
 
 **4단계 — 온디바이스 맞춤형 경량화 패키징 (Compaction Engine)**
 - 서버 확정 챕터 요약·핵심 키워드를 온디바이스 SQLite FTS5 테이블용 차분 데이터로 컴파일 (§2.4 "경량화 스냅샷 생성"의 구체 산출물)
@@ -837,6 +839,7 @@ silveryarn/
 | 0.29 | 2026-09-10 | Do 단계 — import-linter 도입(§11). CTO Enterprise B3 "import-linter로 CI에서 경계 차단" 권고 구현. `services/backend/pyproject.toml [tool.importlinter]` contract 4개(모듈 4계층 layers, domain 프레임워크 의존 금지, shared/·core/의 modules 의존 금지) + `ci.yml` backend job `lint-imports` 스텝. 도입 중 `modules/photo_requests/__init__.py` 누락 발견·수정(정적 도구가 패키지 인식 못 하던 결함, gap-analysis G6). `core/auth.py`→모듈 infrastructure 결합 2건은 예외로 고정(후속 리팩터링) | NUBiz AX Initiative |
 | 0.30 | 2026-09-10 | Do 단계 — `core/auth.py` 순수화. import-linter contract ④의 예외였던 auth→모듈 infrastructure 결합 2건 제거. `core/auth.py`는 순수(토큰 검증·인가 규칙·조회 포트 Protocol), 리포지토리 조립 FastAPI 의존성은 `core_service/auth_deps.py`(최상위 조립 모듈)로 이동, 13개 라우터가 `auth_deps`에서 인증 심볼 import. `e2e_keycloak_check.py` cleanup FK 순서 버그도 수정. 실 인프라 e2e 17/17·13/13·9/9 재확인 | NUBiz AX Initiative |
 | 0.31 | 2026-09-10 | Do 단계 — 챕터 Compaction Engine(§2.11 4단계) 요약·키워드 부분 구현. `LLMClient.compact_chapter`(vLLM) + `ChapterService.compact_chapter`(stale 판정 `compacted_version != version`) + 업로드 파이프라인 best-effort 호출. `chapters`에 `compaction_summary`/`compaction_keywords`/`compacted_version` 컬럼(마이그레이션 0007). `GET /sync/download`가 `body_text` 원문 대신 요약(없으면 앞 200자)을 내려보냄. 페르소나 JSON 룰셋(§2.10 연동)은 미구현. schema.md v1.12, sync-contract.md §5 | NUBiz AX Initiative |
+| 0.32 | 2026-09-10 | Do 단계 — Critic Agent(§2.11 3단계) 구현. `questions` 큐에 생성 경로 신설(이전엔 read-only). `LLMClient.critique_and_generate_questions`(vLLM, Fact/Emotion/Relation/Reflection 4축) + `QuestionService.generate_followups`(큐 범람 방지 8개 상한, 중복·잘못된 type 제거) + 업로드 파이프라인 best-effort 호출. `questions.count_unanswered_by_user`/`create_many` 신규. 실 DB로 삽입·카운트 검증. 유닛테스트 8건 추가(155개). 4축 점수 저장·노출은 미구현 | NUBiz AX Initiative |
 | 0.1 | 2026-09-05 | Plan/ 폴더 원본 문서 4종 기반 Design 초안 등록 | NUBiz AX Initiative |
 | 0.2 | 2026-09-05 | design-validator 검증 반영 — RAG/정서모니터링/출판/온보딩/상태전이/Diff처리/페르소나 절 신설(§2.4~2.10), API 표준화(§4), RBAC·백업정책 추가(§7), 데이터모델 v1.1 동기화(§3), Domain 레이어 위치 정정(§9) | NUBiz AX Initiative |
 | 0.3 | 2026-09-06 | 사용자 제안 "Closed-Loop Architecture" 보고서 검토 반영 — §2.11 신설(Opus/WorkManager/Whisper Large-v3/Neo4j/Critic Agent/Compaction Engine 구체화), 컴포넌트 다이어그램·의존성표에 Neo4j 추가, §4.3에 sync/download 응답 예시 추가. 외부 GPT-4o/Claude 제안은 미채택(온프레미스 vLLM 유지, decisions #26) | NUBiz AX Initiative (사용자 제안 반영) |

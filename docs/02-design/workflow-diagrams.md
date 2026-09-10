@@ -220,6 +220,8 @@ flowchart TD
 ```
 
 > ℹ️ **2차 검증 M-5 정정**: `chapter_revisions`(감수 이력)는 `action`(approved/rejected) 컬럼이 NOT NULL이라 **가족 감수 결과가 있어야만** 생성 가능하다. 위 작가 엔진 단계에서는 아직 감수 전이므로 `chapters`만 draft/in_review 상태로 저장하고, `chapter_revisions` 행은 실제 감수가 이뤄지는 §7(가족 협업·감수 워크플로우)에서 생성한다.
+>
+> ℹ️ **구현 상태 (2026-09-10)**: "질문 이력 대조 → 신규/꼬리질문 생성 → questions 큐 갱신"(위 I/J/QQ 노드)은 `QuestionService.generate_followups`로 구현됨(design §2.11 3단계 Critic Agent). 업로드 파이프라인이 챕터 갱신 후 vLLM으로 4축(Fact/Emotion/Relation/Reflection) 채점 → 질문 Top-3을 `questions`에 삽입(best-effort). 큐가 8개 이상이면 스킵, 중복·잘못된 type은 제거. "미응답 주제 존재?" 분기는 LLM 프롬프트가 통합 판단(별도 결정 노드로 분리 구현 안 함).
 
 ---
 

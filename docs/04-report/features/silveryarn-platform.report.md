@@ -109,7 +109,7 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 
 1. **법무 회신 취합** — B1(정서)·B2(대리동의)·B3(보유기간)·B5(제3자제공)가 한 묶음. 회신이 오면 retention 정책 + 파기 오케스트레이션이 가장 큰 단일 작업.
 2. **infra-architect 착수** — B6(egress), `organizations` 테넌시, `PII_KEK` Vault, GPU 토폴로지, 관측 스택(self-hosted). 온프레미스 배포 설계가 다음 병목.
-3. **Phase 1 MVP 마무리** — 온디바이스 SLM 모델 선정 벤치마크(decisions #27), 첫 구술 인터뷰 흐름, 페르소나 배포 경로. (Compaction Engine 요약·키워드는 PR #15에서 완료)
+3. **Phase 1 MVP 마무리** — 온디바이스 SLM 모델 선정 벤치마크(decisions #27), 첫 구술 인터뷰 흐름, 페르소나 배포 경로. (Compaction Engine 요약·키워드 = PR #15, Critic Agent 질문 생성 = PR #16 완료 — 서버측 클로즈드 루프 §2.11 3·4단계 채워짐)
 4. `core/auth.py` 포트 리팩터링 — 작지만 import-linter 예외를 없애는 깔끔한 정리.
 
 ---
@@ -133,3 +133,4 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 | #13 | `core/auth.py` 순수화 — 리포지토리 조립을 `auth_deps.py`로 분리 (import-linter 예외 2건 제거) | — |
 | #14 | 법무·인프라 결정 대기 트래커 | — |
 | #15 | 챕터 Compaction Engine (§2.11 4단계 요약·키워드) — `sync/download`가 요약 내려보냄 | 0007 |
+| #16 | Critic Agent (§2.11 3단계) — `questions` 큐에 생성 경로 신설, vLLM 서사 갭 분석 → 심층 질문 Top-3 | — |

@@ -18,7 +18,9 @@ from datetime import UTC, datetime
 import pytest
 
 from core_service.modules.author.application.chapter_service import ChapterService
+from core_service.modules.author.application.question_service import QuestionService
 from core_service.modules.author.domain.chapter import Chapter, ChapterCompaction, ChapterStatus
+from core_service.modules.author.domain.question import GeneratedQuestion, Question, QuestionType
 from core_service.modules.care.application.conversation_chunk_service import (
     ConversationChunkService,
 )
@@ -79,6 +81,33 @@ class FakeChapterRepository:
         chapter.compaction = ChapterCompaction(
             summary=summary, keywords=list(keywords), source_version=source_version
         )
+
+
+class FakeQuestionRepository:
+    def __init__(self) -> None:
+        self.rows: list[Question] = []
+
+    async def count_unanswered_by_user(self, user_id) -> int:
+        return sum(1 for q in self.rows if q.user_id == user_id and not q.answered)
+
+    async def list_by_user(self, user_id, answered=None) -> list[Question]:
+        return [q for q in self.rows if q.user_id == user_id and (answered is None or q.answered == answered)]
+
+    async def create_many(self, user_id, linked_chapter_id, items: list[GeneratedQuestion]):
+        created = [
+            Question(
+                id=uuid.uuid4(),
+                user_id=user_id,
+                linked_chapter_id=linked_chapter_id,
+                text=it.text,
+                type=it.type,
+                answered=False,
+                created_at=datetime.now(UTC),
+            )
+            for it in items
+        ]
+        self.rows.extend(created)
+        return created
 
 
 class FakeChapterRevisionRepository:
@@ -166,11 +195,13 @@ class FakeLLMClient:
         fail_extract: bool = False,
         fail_generate: bool = False,
         fail_compact: bool = False,
+        fail_critic: bool = False,
         knowledge: dict | None = None,
     ):
         self._fail_extract = fail_extract
         self._fail_generate = fail_generate
         self._fail_compact = fail_compact
+        self._fail_critic = fail_critic
         self._knowledge = knowledge if knowledge is not None else {}
 
     async def extract_knowledge(self, transcript: str) -> dict:
@@ -187,6 +218,16 @@ class FakeLLMClient:
         if self._fail_compact:
             raise RuntimeError("LLM Compaction 실패")
         return f"[요약] {body_text[:20]}", ["키워드1", "키워드2"]
+
+    async def critique_and_generate_questions(
+        self, chapter_body: str, latest_transcript: str, existing_question_texts: list[str]
+    ) -> list[tuple[str, str]]:
+        if self._fail_critic:
+            raise RuntimeError("LLM Critic 실패")
+        return [
+            ("그때 어떤 마음이셨어요?", "follow_up"),
+            ("그 무렵 형제분들과는 어떻게 지내셨나요?", "new_topic"),
+        ]
 
 
 class FakeEmbeddingClient:
@@ -224,6 +265,7 @@ def _build_pipeline(
     chunk_repo=None,
     chapter_repo=None,
     revision_repo=None,
+    question_repo=None,
     stt=None,
     embedding=None,
     llm=None,
@@ -233,9 +275,11 @@ def _build_pipeline(
     chunk_repo = chunk_repo or FakeConversationChunkRepository()
     chapter_repo = chapter_repo or FakeChapterRepository()
     revision_repo = revision_repo or FakeChapterRevisionRepository()
+    question_repo = question_repo or FakeQuestionRepository()
     pipeline = UploadPipelineService(
         chunk_service=ConversationChunkService(chunk_repo),
         chapter_service=ChapterService(chapter_repo, revision_repo),
+        question_service=QuestionService(question_repo),
         stt_client=stt or FakeSTTClient(),
         embedding_client=embedding or FakeEmbeddingClient(),
         llm_client=llm or FakeLLMClient(),
@@ -332,6 +376,34 @@ async def test_pipeline_compaction_failure_does_not_break_chunk_or_chapter() -> 
     assert await chunk_repo.get_by_id(chunk.id) is not None
     chapter = next(iter(chapter_repo.by_id.values()))
     assert chapter.compaction is None  # 요약 실패해도 챕터 자체는 저장됨
+
+
+async def test_pipeline_critic_agent_fills_question_queue() -> None:
+    """design §2.11 3단계 — 챕터 갱신 후 Critic Agent가 questions 큐를 채운다."""
+    chapter_repo = FakeChapterRepository()
+    question_repo = FakeQuestionRepository()
+    llm = FakeLLMClient(knowledge={"period": "youth"})
+    pipeline, _ = _build_pipeline(llm=llm, chapter_repo=chapter_repo, question_repo=question_repo)
+
+    user_id = uuid.uuid4()
+    await pipeline.run(_input(user_id=user_id))
+
+    assert len(question_repo.rows) == 2
+    types = {q.type for q in question_repo.rows}
+    assert QuestionType.FOLLOW_UP in types and QuestionType.NEW_TOPIC in types
+    chapter = next(iter(chapter_repo.by_id.values()))
+    assert all(q.linked_chapter_id == chapter.id for q in question_repo.rows)
+
+
+async def test_pipeline_critic_failure_does_not_break_pipeline() -> None:
+    question_repo = FakeQuestionRepository()
+    llm = FakeLLMClient(knowledge={"period": "youth"}, fail_critic=True)
+    pipeline, chunk_repo = _build_pipeline(llm=llm, question_repo=question_repo)
+
+    chunk = await pipeline.run(_input())
+
+    assert await chunk_repo.get_by_id(chunk.id) is not None
+    assert question_repo.rows == []  # 질문 생성 실패해도 청크·챕터는 정상
 
 
 async def test_chapter_generation_failure_falls_back_to_concatenation() -> None:

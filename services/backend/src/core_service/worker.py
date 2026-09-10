@@ -30,10 +30,12 @@ from core_service.core.clients.vectordb_client import VectorDBClient
 from core_service.core.config import get_settings
 from core_service.core.db import get_session_factory
 from core_service.modules.author.application.chapter_service import ChapterService
+from core_service.modules.author.application.question_service import QuestionService
 from core_service.modules.author.infrastructure.chapter_repository import ChapterRepository
 from core_service.modules.author.infrastructure.chapter_revision_repository import (
     ChapterRevisionRepository,
 )
+from core_service.modules.author.infrastructure.question_repository import QuestionRepository
 from core_service.modules.care.application.conversation_chunk_service import (
     ConversationChunkService,
 )
@@ -93,6 +95,7 @@ async def process_upload(
                 chapter_service=ChapterService(
                     ChapterRepository(db_session), ChapterRevisionRepository(db_session)
                 ),
+                question_service=QuestionService(QuestionRepository(db_session)),
                 stt_client=STTClient(),
                 embedding_client=EmbeddingClient(),
                 llm_client=LLMClient(),
