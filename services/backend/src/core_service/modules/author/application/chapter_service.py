@@ -9,6 +9,7 @@
 
 import uuid
 from datetime import datetime
+from typing import Protocol
 
 from core_service.core.errors import ApiError
 from core_service.modules.author.domain.chapter import (
@@ -22,6 +23,12 @@ from core_service.modules.author.infrastructure.chapter_repository import Chapte
 from core_service.modules.author.infrastructure.chapter_revision_repository import (
     ChapterRevisionRepository,
 )
+
+
+class ChapterCompactor(Protocol):
+    """design §2.11 4단계 — 확정 챕터 본문 → (요약, 키워드). `core.clients.LLMClient`가 구현."""
+
+    async def compact_chapter(self, body_text: str) -> tuple[str, list[str]]: ...
 
 
 class ChapterService:
@@ -66,6 +73,23 @@ class ChapterService:
         return await self._chapters.upsert_draft(
             user_id=user_id, chapter_no=chapter_no, title=title, period=period, body_text=body_text
         )
+
+    async def compact_chapter(
+        self, chapter_id: uuid.UUID, compactor: ChapterCompactor, *, force: bool = False
+    ) -> Chapter:
+        """design §2.11 4단계 — 챕터 본문을 온디바이스 FTS5용 요약·키워드로 압축·저장.
+
+        요약이 이미 현재 본문 버전에 대해 최신이면(`force`가 아니면) LLM을 호출하지
+        않고 그대로 돌려준다 — 파이프라인이 턴마다 호출해도 중복 작업이 없다.
+        """
+        chapter = await self.get_chapter(chapter_id)
+        if not force and not chapter.compaction_is_stale:
+            return chapter
+        summary, keywords = await compactor.compact_chapter(chapter.body_text)
+        await self._chapters.set_compaction(
+            chapter.id, summary=summary, keywords=keywords, source_version=chapter.version
+        )
+        return await self.get_chapter(chapter_id)
 
     async def list_revisions(self, chapter_id: uuid.UUID) -> list[ChapterRevision]:
         await self.get_chapter(chapter_id)  # 존재 확인

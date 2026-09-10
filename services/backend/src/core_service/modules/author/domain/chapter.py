@@ -38,6 +38,19 @@ class RevisionAction(StrEnum):
 REVIEWABLE_STATUSES = frozenset({ChapterStatus.DRAFT, ChapterStatus.IN_REVIEW})
 
 
+@dataclass(frozen=True)
+class ChapterCompaction:
+    """온디바이스 FTS5(`autobiography_fts`)로 내려보낼 챕터 요약·키워드 — design §2.11 4단계.
+
+    `source_version`은 이 요약이 어느 `Chapter.version`에서 만들어졌는지다. `Chapter.version`과
+    다르면 요약이 stale이므로 파이프라인이 재계산한다.
+    """
+
+    summary: str
+    keywords: list[str]
+    source_version: int
+
+
 @dataclass
 class Chapter:
     id: UUID
@@ -49,6 +62,12 @@ class Chapter:
     status: ChapterStatus
     version: int
     updated_at: datetime
+    compaction: ChapterCompaction | None = None
+
+    @property
+    def compaction_is_stale(self) -> bool:
+        """요약이 없거나 현재 본문 버전보다 뒤처졌으면 True."""
+        return self.compaction is None or self.compaction.source_version != self.version
 
     def ensure_reviewable(self) -> None:
         """비즈니스 규칙: draft/in_review 상태만 감수 가능(schema.md chapter_status)."""

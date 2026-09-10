@@ -195,7 +195,7 @@ class UploadPipelineService:
 
         title = existing.title if existing else f"{PERIOD_DISPLAY_NAME[period]} 기록"
         try:
-            await self._chapters.save_draft(
+            chapter = await self._chapters.save_draft(
                 user_id=user_id,
                 chapter_no=chapter_no,
                 title=title,
@@ -204,3 +204,15 @@ class UploadPipelineService:
             )
         except Exception:
             logger.exception("챕터 초안 저장 실패 — user_id=%s, chapter_no=%s", user_id, chapter_no)
+            return
+
+        await self._safe_compact_chapter(chapter.id)
+
+    async def _safe_compact_chapter(self, chapter_id: uuid.UUID) -> None:
+        """design §2.11 4단계 — 저장된 챕터를 온디바이스 FTS5용 요약·키워드로 압축.
+        vLLM 미가동/파싱 실패 시 이전 요약(또는 없음)을 유지하고 파이프라인은 계속한다 —
+        `GET /sync/download`가 요약이 없으면 body_text를 잘라서 임시로 내려보낸다."""
+        try:
+            await self._chapters.compact_chapter(chapter_id, self._llm)
+        except Exception:
+            logger.warning("챕터 Compaction 실패 — 이전 요약 유지. chapter_id=%s", chapter_id)

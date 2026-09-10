@@ -3,11 +3,13 @@
 vLLM의 OpenAI 호환 서버(`/v1/chat/completions`)를 그대로 쓴다고 가정한다 — 이
 부분은 vLLM 공식 배포 형태라 다른 클라이언트(STT/Embedding)보다 신뢰도가 높다.
 
-두 유스케이스만 지원한다:
+세 유스케이스만 지원한다:
 - `extract_knowledge`: 청크 1건에서 인물·시기·장소·감정을 JSON으로 추출
   (workflow-diagrams.md §3 "지식 추출")
 - `generate_chapter_draft`: 기존 챕터 본문 + 신규 구술을 문어체로 재구성
   (workflow-diagrams.md §3 "챕터 초안 윤문")
+- `compact_chapter`: 확정 챕터 본문 → 온디바이스 FTS5용 요약·키워드 JSON
+  (design.md §2.11 4단계 Compaction Engine)
 
 ⚠️ 둘 다 LLM에게 "JSON만 출력해라"/"문어체로 써라" 프롬프트로 요청하고 응답을
 파싱한다 — vLLM 서버가 `response_format` 강제(structured output)를 지원하는지는
@@ -32,6 +34,13 @@ _CHAPTER_SYSTEM_PROMPT = (
     "너는 어르신의 구술을 자서전 문어체로 정리하는 작가다. 기존 챕터 본문에 "
     "새 구술 내용을 자연스럽게 이어붙여 하나의 문어체 문단으로 재구성하라. "
     "구술체 표현(음, 그, 저기 등)은 제거하고 존댓말 대신 서술체로 쓴다."
+)
+
+_COMPACT_SYSTEM_PROMPT = (
+    "다음 자서전 챕터 본문을 온디바이스 검색용으로 압축해 JSON으로만 답하라. "
+    '형식: {"summary": "2문장 이내 한국어 요약", '
+    '"keywords": ["핵심어", ...]}. keywords는 5~10개, 인물·연도·장소·사건 위주로 '
+    "본문에 실제로 나온 표현을 쓴다."
 )
 
 
@@ -70,3 +79,17 @@ class LLMClient:
             f"[새 구술 내용]\n{new_transcript}"
         )
         return await self._chat(_CHAPTER_SYSTEM_PROMPT, user_content)
+
+    async def compact_chapter(self, body_text: str) -> tuple[str, list[str]]:
+        """확정 챕터 본문 → (요약, 키워드 목록). design.md §2.11 4단계.
+
+        실패(HTTP 오류·JSON 파싱 실패·형식 불일치) 시 예외를 던진다 — 호출자가
+        best-effort로 처리(파이프라인은 이전 요약 유지 또는 body_text 대체).
+        """
+        raw = await self._chat(_COMPACT_SYSTEM_PROMPT, body_text)
+        parsed = json.loads(raw)
+        summary = str(parsed["summary"]).strip()
+        keywords = [str(k).strip() for k in parsed["keywords"] if str(k).strip()]
+        if not summary:
+            raise ValueError("compact_chapter: summary가 비어 있습니다.")
+        return summary, keywords

@@ -111,6 +111,13 @@ def _new_sync_version() -> str:
     return datetime.now(UTC).strftime(_SYNC_VERSION_FORMAT)
 
 
+def _fallback_summary(body_text: str) -> str:
+    """Compaction Engine이 아직 요약하지 않은 챕터의 임시 summary — 본문 앞 200자.
+    온디바이스 FTS5 `summary` 컬럼은 검색 대상이므로 빈 값보다는 원문 일부가 낫다."""
+    text = " ".join(body_text.split())
+    return text[:200]
+
+
 def _parse_since(since: str | None) -> datetime | None:
     """`since`는 이전 응답의 `sync_version`을 그대로 돌려받는 불투명 커서다
     (sync-contract.md §5) — 이 서버가 발급하는 형식(`_SYNC_VERSION_FORMAT`)만
@@ -238,9 +245,9 @@ async def download(
     `device_id` 쿼리 파라미터(sync-contract.md v0.3)는 유지하되, 이제 Device Token이
     실제로 기기를 검증하므로 토큰이 해석한 기기와 일치하는지 확인한다(불일치 시 403).
 
-    chapter_updates의 summary/keywords는 design.md §2.11 Compaction Engine(AI
-    요약 파이프라인, 이 세션 스코프 밖)이 아직 없어 body_text 원문/빈 배열로
-    대체한다 — 실 파이프라인이 생기면 이 자리만 교체.
+    chapter_updates의 summary/keywords는 design.md §2.11 4단계 Compaction Engine이
+    채운다(`chapters.compaction_*`, 마이그레이션 0007). 아직 요약이 없는 챕터
+    (신규, 또는 vLLM 미가동)는 body_text 앞부분을 잘라 임시로 내려보낸다.
     """
     if device_id != _device.device_id:
         raise ApiError("FORBIDDEN", "요청한 device_id가 인증된 기기와 일치하지 않습니다.")
@@ -259,8 +266,8 @@ async def download(
                     chapter_id=c.id,
                     chapter_no=c.chapter_no,
                     period=c.period.value,
-                    summary=c.body_text,
-                    keywords=[],
+                    summary=c.compaction.summary if c.compaction else _fallback_summary(c.body_text),
+                    keywords=c.compaction.keywords if c.compaction else [],
                 )
                 for c in chapters
             ],

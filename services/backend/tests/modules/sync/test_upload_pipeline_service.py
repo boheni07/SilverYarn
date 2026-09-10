@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 import pytest
 
 from core_service.modules.author.application.chapter_service import ChapterService
-from core_service.modules.author.domain.chapter import Chapter, ChapterStatus
+from core_service.modules.author.domain.chapter import Chapter, ChapterCompaction, ChapterStatus
 from core_service.modules.care.application.conversation_chunk_service import (
     ConversationChunkService,
 )
@@ -73,6 +73,12 @@ class FakeChapterRepository:
         chapter = self.by_id[chapter_id]
         chapter.status = status
         return chapter
+
+    async def set_compaction(self, chapter_id, *, summary, keywords, source_version):
+        chapter = self.by_id[chapter_id]
+        chapter.compaction = ChapterCompaction(
+            summary=summary, keywords=list(keywords), source_version=source_version
+        )
 
 
 class FakeChapterRevisionRepository:
@@ -156,10 +162,15 @@ class FakeSTTClient:
 
 class FakeLLMClient:
     def __init__(
-        self, fail_extract: bool = False, fail_generate: bool = False, knowledge: dict | None = None
+        self,
+        fail_extract: bool = False,
+        fail_generate: bool = False,
+        fail_compact: bool = False,
+        knowledge: dict | None = None,
     ):
         self._fail_extract = fail_extract
         self._fail_generate = fail_generate
+        self._fail_compact = fail_compact
         self._knowledge = knowledge if knowledge is not None else {}
 
     async def extract_knowledge(self, transcript: str) -> dict:
@@ -171,6 +182,11 @@ class FakeLLMClient:
         if self._fail_generate:
             raise RuntimeError("LLM 윤문 실패")
         return f"[윤문됨] {new_transcript}"
+
+    async def compact_chapter(self, body_text: str) -> tuple[str, list[str]]:
+        if self._fail_compact:
+            raise RuntimeError("LLM Compaction 실패")
+        return f"[요약] {body_text[:20]}", ["키워드1", "키워드2"]
 
 
 class FakeEmbeddingClient:
@@ -290,6 +306,32 @@ async def test_chunk_creation_failure_raises() -> None:
 
     with pytest.raises(RuntimeError):
         await pipeline.run(_input())
+
+
+async def test_pipeline_compacts_chapter_after_save() -> None:
+    """design §2.11 4단계 — 챕터 저장 뒤 Compaction Engine이 요약·키워드를 채운다."""
+    chapter_repo = FakeChapterRepository()
+    llm = FakeLLMClient(knowledge={"period": "youth"})
+    pipeline, _ = _build_pipeline(llm=llm, chapter_repo=chapter_repo)
+
+    await pipeline.run(_input())
+
+    chapter = next(iter(chapter_repo.by_id.values()))
+    assert chapter.compaction is not None
+    assert chapter.compaction.keywords == ["키워드1", "키워드2"]
+    assert chapter.compaction.source_version == chapter.version
+
+
+async def test_pipeline_compaction_failure_does_not_break_chunk_or_chapter() -> None:
+    chapter_repo = FakeChapterRepository()
+    llm = FakeLLMClient(knowledge={"period": "youth"}, fail_compact=True)
+    pipeline, chunk_repo = _build_pipeline(llm=llm, chapter_repo=chapter_repo)
+
+    chunk = await pipeline.run(_input())
+
+    assert await chunk_repo.get_by_id(chunk.id) is not None
+    chapter = next(iter(chapter_repo.by_id.values()))
+    assert chapter.compaction is None  # 요약 실패해도 챕터 자체는 저장됨
 
 
 async def test_chapter_generation_failure_falls_back_to_concatenation() -> None:
