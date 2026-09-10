@@ -4,7 +4,7 @@
 >
 > **Project**: 은빛실타래 (SilverYarn)
 > **Date**: 2026-09-07
-> **Version**: 0.8 (apps/mobile — 앱 시작 게이트: device_state.device_id로 온보딩 스킵, install_mode 분기, 최초 동기화 화면)
+> **Version**: 0.9 (§2.2 — autobiography_fts의 summary/keywords가 서버 Compaction Engine 산출물임을 명시. 페이로드 형식 불변)
 > **Status**: Draft — Do 단계에서 Room Entity로 구현 시 최종 확정
 
 > 서버 `schema.md`가 SoR(전체 마스터 데이터)이며, 본 문서는 온디바이스가 오프라인 동작을 위해 로컬에 보관하는 **서브셋**을 정의한다. 컬럼명은 서버와의 동기화 페이로드 매핑을 쉽게 하기 위해 서버 필드명을 최대한 따른다.
@@ -57,6 +57,7 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 
 - 조회 예시: `SELECT chapter_id, summary FROM autobiography_fts WHERE autobiography_fts MATCH '비 OR 영암' ORDER BY bm25(autobiography_fts) LIMIT 1;`
 - 갱신: 서버 `GET /api/v1/sync/download` 응답의 `chapter_updates`(design.md §4.3)로 Upsert — 페이로드 필드(`chapter_id`/`chapter_no`/`period`/`keywords`/`summary`)를 그대로 컬럼에 대입
+- **v0.9**: `summary`/`keywords`는 서버 Compaction Engine(design §2.11 4단계, `chapters.compaction_*`)이 vLLM으로 만든 값이다. 아직 요약 안 된 챕터는 서버가 `body_text` 앞 200자를 `summary`에, 빈 배열을 `keywords`에 담아 내려주므로 온디바이스는 그대로 Upsert하면 된다(형식 불변)
 
 ### 2.3 `questions_cache` (회고 질문 큐 로컬 캐시)
 
@@ -145,3 +146,4 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 | 0.6 | 2026-09-09 | Device Token 배선 구현 — 토큰은 자격증명이라 Room `device_state`가 아니라 `EncryptedSharedPreferences`(`auth/DeviceCredentialStore.kt`)에 저장하기로 확정(§2.6 하단 노트). `onboarding/DeviceRegistrar.kt`(POST /devices → 토큰 저장 + device_state 갱신), `SyncWorker`가 저장소에서 토큰을 읽어 `X-Device-Token`으로 전송·원본 오디오 SHA-256 checksum 계산. `androidx.security:security-crypto` 의존성 추가 | NUBiz AX Initiative |
 | 0.7 | 2026-09-09 | 온보딩 화면 흐름 구현 — `presentation/onboarding/OnboardingScreen.kt`(상태 호이스팅: sealed `OnboardingStep` + `when`, nav 프레임워크·ViewModel 미도입 결정) + `onboarding/OnboardingCoordinator.kt`(createUser → DeviceRegistrar.register → recordConsent 3연쇄). `MainActivity`가 완료 시 홈 전환. `device_state`는 이 흐름에서 처음 채워진다. `DeviceCapabilityReader.totalRamGb()` public화 | NUBiz AX Initiative |
 | 0.8 | 2026-09-10 | 앱 시작 게이트 — `presentation/AppEntry.kt`가 `device_state` 조회로 시작 목적지 결정: `device_id` 있음 → 온보딩 스킵·바로 홈, 없음 → 온보딩 → **최초 동기화 화면**(`presentation/sync/FirstSyncScreen.kt`, design.md §2.9 마지막 단계) → 홈. `install_mode` 분기: `MainActivity`가 확정 모드를 받아 `installmode/KioskController.kt`로 `kiosk`면 lockTask 진입(decisions.md #6, Device Owner 아니면 무시). 동기화 로직은 `SyncWorker.doWork()`에서 `sync/SyncRunner.kt`로 분리(Worker와 최초 동기화 화면이 공유). 가족 초대 화면은 이번 트랙 제외(갓 온보딩한 Device Token은 `POST /invitations` 불가 — 별도 설계 결정 대기) | NUBiz AX Initiative |
+| 0.9 | 2026-09-10 | §2.2 `autobiography_fts` — `summary`/`keywords`가 서버 Compaction Engine(design §2.11 4단계, `chapters.compaction_*`, 마이그레이션 0007)이 vLLM으로 만든 값임을 명시. 요약 없는 챕터는 서버가 `body_text` 앞 200자로 대체해 내려주므로 온디바이스 Upsert 코드는 형식 불변(변경 없음) | NUBiz AX Initiative |

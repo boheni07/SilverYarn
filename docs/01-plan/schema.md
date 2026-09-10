@@ -4,7 +4,7 @@
 
 **Project**: 은빛실타래 (SilverYarn)
 **Date**: 2026-09-07
-**Version**: 1.11 (Do 단계 — PII 2차: contact 암호문+blind index, birth_date 암호화, name 평문)
+**Version**: 1.12 (Do 단계 — `chapters` Compaction Engine 컬럼 3종, 마이그레이션 0007)
 **Source**: Design 문서 §3 Data Model 초안 + UI/UX 화면설계서 필드 단위 대조 결과 반영
 **용어 정의**: [glossary.md](./glossary.md) 참조
 
@@ -19,6 +19,8 @@
 > **v1.5 변경 요약** (Do 단계, 2026-09-08): apps/admin "전체 기기 통합 모니터링" 화면용 `idx_sync_started_at ON sync_sessions(started_at DESC)` 인덱스 신규 — 기기로 필터하지 않는 전역 정렬 쿼리는 기존 `idx_sync_device(device_id, started_at DESC)`를 못 쓰기 때문(선두 컬럼 불일치).
 >
 > **v1.6 변경 요약** (Do 단계 — photos 모듈 완성, 2026-09-08): `photos`에 `status` 컬럼 신규(`pending_upload`/`uploaded`, 기본값 `pending_upload`) — [sync-contract.md §4](../02-design/sync-contract.md#4-사진-업로드--presigned-url-흐름-be-b2)의 "3단계 확인 콜백이 없으면 `photos` 행은 `status=pending_upload`로 남고" 문장이 이미 전제하고 있던 컬럼인데 §3.6 속성 표에는 빠져 있던 걸 실제 구현 중 발견 — 문서가 이미 확정해 둔 흐름을 코드로 옮기며 정정했다.
+>
+> **v1.12 변경 요약** (Do 단계 — Compaction Engine, 2026-09-10): `chapters`에 `compaction_summary VARCHAR(500)`·`compaction_keywords TEXT[]`·`compacted_version INTEGER` 3개 컬럼 추가(마이그레이션 `0007`). design §2.11 4단계 — vLLM이 확정 챕터 본문을 온디바이스 FTS5용 요약·키워드로 압축, `GET /sync/download`가 이 값을 내려보낸다(이전엔 `body_text` 원문/빈 배열). `compacted_version != version`이면 stale로 재계산. 평문 보관(PII 자유텍스트 5개 컬럼에 미포함)이나 인물명이 들어갈 수 있어 B3 파기 시 함께 삭제.
 >
 > **v1.11 변경 요약** (Do 단계 — PII 2차, 2026-09-09): decisions.md #45 2차 확정 반영(마이그레이션 `0006`). ① `family_members.contact`·`invitations.contact` → 암호문(VARCHAR(100)→255) + `contact_bidx VARCHAR(64)`(HMAC-SHA256, 동등검색 전용) + 인덱스. `invitations`는 이 bidx로 "같은 연락처 대기 중 초대" 중복을 막는다. ② `users.birth_date` → 앱 레이어 암호화(DATE→VARCHAR(200)). ③ **`name`은 평문 유지** — 부분검색 UX. blind index는 앱 레이어 HMAC(`core/crypto.py`)이라 pgcrypto 불필요.
 >
@@ -142,6 +144,9 @@
 | status | enum(`draft`,`in_review`,`rejected`,`confirmed`) | Y | *v1.1: `rejected`(반려) 상태 추가 — WF2 "수정 요청" 반려 루프 반영* |
 | version | integer | Y | 현재 버전 번호 |
 | updated_at | timestamptz | Y | 마지막 갱신 시각 |
+| compaction_summary | varchar(500) | N | **v1.12** — Compaction Engine 요약(design §2.11 4단계). 온디바이스 FTS5로 내려감. NULL이면 `sync/download`가 `body_text` 앞 200자로 대체 |
+| compaction_keywords | text[] | N | **v1.12** — 핵심 키워드 5~10개 |
+| compacted_version | integer | N | **v1.12** — 요약 생성 시점의 `version`. `version`과 다르면 stale → 파이프라인 재계산 |
 
 **Relationships**: 1:N → `photos`, `conversation_chunks`, `chapter_revisions`, `questions`(linked_chapter_id)
 
@@ -517,6 +522,10 @@ CREATE TABLE chapters (
   status chapter_status NOT NULL DEFAULT 'draft',
   version INTEGER NOT NULL DEFAULT 1,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- v1.12: Compaction Engine (design §2.11 4단계, 마이그레이션 0007) — 온디바이스 FTS5용
+  compaction_summary VARCHAR(500),      -- vLLM 요약 (없으면 sync/download가 body_text 앞 200자로 대체)
+  compaction_keywords TEXT[],           -- 핵심 키워드 5~10개
+  compacted_version INTEGER,            -- 요약 시점의 version. version과 다르면 stale → 재계산
   UNIQUE (user_id, chapter_no)
 );
 

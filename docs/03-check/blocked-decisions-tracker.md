@@ -155,7 +155,7 @@
 | 로컬 "최근 5일" 캐시 기준 | [#9](../01-plan/decisions/silveryarn-platform.decisions.md) | 저사양 키오스크 단말 저장용량 실측 | 벤치마크와 함께 |
 | 실시간 대화 파이프라인 수치 (RAM ~850MB, 첫음성 0.8~1.2s 등) | [#31](../01-plan/decisions/silveryarn-platform.decisions.md) | 벤치마크 검증 | 벤치마크와 함께 |
 | 모바일 첫 가족 구성원 연결 경로 | — | 제품 결정: 웹 콘솔/admin 경로 vs device-token 부트스트랩 엔드포인트 (design §2.9, mobile-schema v0.8) | 결정 즉시 화면 1건 |
-| Compaction Engine (design §2.11 — `sync/download`의 summary·keywords) | — | Phase 1 MVP 우선순위 | 언제든 |
+| ~~Compaction Engine (design §2.11 — `sync/download`의 summary·keywords)~~ | — | **완료 (PR #15)** — 요약·키워드 부분. 페르소나 JSON 룰셋(§2.10)만 남음 | — |
 
 ---
 

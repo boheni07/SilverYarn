@@ -7,7 +7,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, SmallInteger, String, Text, select
+from sqlalchemy import ARRAY, DateTime, ForeignKey, Integer, SmallInteger, String, Text, select
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +15,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from core_service.core.crypto import PiiFieldEncryptor, get_pii_encryptor
 from core_service.core.db import Base
-from core_service.modules.author.domain.chapter import Chapter, ChapterPeriod, ChapterStatus
+from core_service.modules.author.domain.chapter import (
+    Chapter,
+    ChapterCompaction,
+    ChapterPeriod,
+    ChapterStatus,
+)
 
 
 class ChapterModel(Base):
@@ -39,6 +44,12 @@ class ChapterModel(Base):
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # design §2.11 4단계 Compaction Engine — 온디바이스 FTS5용 요약·키워드 (마이그레이션 0007).
+    # 평문 보관: 원문(body_text)과 달리 요약·키워드는 PII 자유텍스트 5개 컬럼(decisions #45)에
+    # 포함되지 않는다 — 다만 인물명 등이 들어갈 수 있어, retention/파기(B3) 때 함께 지운다.
+    compaction_summary: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    compaction_keywords: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
+    compacted_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class ChapterRepository:
@@ -47,6 +58,13 @@ class ChapterRepository:
         self._pii = pii or get_pii_encryptor()
 
     async def _to_domain(self, model: ChapterModel) -> Chapter:
+        compaction: ChapterCompaction | None = None
+        if model.compaction_summary is not None and model.compacted_version is not None:
+            compaction = ChapterCompaction(
+                summary=model.compaction_summary,
+                keywords=list(model.compaction_keywords or []),
+                source_version=model.compacted_version,
+            )
         return Chapter(
             id=model.id,
             user_id=model.user_id,
@@ -57,7 +75,28 @@ class ChapterRepository:
             status=ChapterStatus(model.status),
             version=model.version,
             updated_at=model.updated_at,
+            compaction=compaction,
         )
+
+    async def set_compaction(
+        self,
+        chapter_id: uuid.UUID,
+        *,
+        summary: str,
+        keywords: list[str],
+        source_version: int,
+    ) -> None:
+        """Compaction Engine 산출물 저장. `source_version`은 요약이 만들어진 시점의
+        `chapters.version` — 이후 본문이 바뀌면(version 증가) stale로 간주된다.
+        `updated_at`은 건드리지 않는다: 요약 갱신만으로 `sync/download` 워터마크가
+        움직이면 온디바이스가 본문 변화 없이도 챕터를 다시 받게 된다."""
+        model = await self._session.get(ChapterModel, chapter_id)
+        if model is None:
+            raise LookupError(f"chapter {chapter_id} not found")
+        model.compaction_summary = summary[:500]
+        model.compaction_keywords = keywords
+        model.compacted_version = source_version
+        await self._session.flush()
 
     async def get_by_id(self, chapter_id: uuid.UUID) -> Chapter | None:
         model = await self._session.get(ChapterModel, chapter_id)

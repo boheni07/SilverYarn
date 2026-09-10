@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.30 (`core/auth.py` 순수화 — 리포지토리 조립을 `auth_deps.py`로 분리, import-linter 예외 2건 제거)
+> **Version**: 0.31 (챕터 Compaction Engine — §2.11 4단계 요약·키워드 부분 구현, `sync/download`가 body_text 원문 대신 요약 내려보냄)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -239,6 +239,8 @@ Idle → Listening(웨이크워드 또는 마이크 버튼 탭 — M2 화면과 
 **4단계 — 온디바이스 맞춤형 경량화 패키징 (Compaction Engine)**
 - 서버 확정 챕터 요약·핵심 키워드를 온디바이스 SQLite FTS5 테이블용 차분 데이터로 컴파일 (§2.4 "경량화 스냅샷 생성"의 구체 산출물)
 - 다음 대화용 "단기 압축 기억(Short-term Compressed Persona)" JSON 룰셋 생성 — §2.10 페르소나 정의와 연동
+
+> **구현 상태 (v0.31)**: 챕터 요약·키워드 부분 구현. 업로드 파이프라인(`upload_pipeline_service`)이 `save_draft` 직후 `ChapterService.compact_chapter()`를 best-effort로 호출한다 — `LLMClient.compact_chapter(body_text)`(vLLM, `_COMPACT_SYSTEM_PROMPT`)가 `{summary, keywords}` JSON을 반환하고 `chapters.compaction_summary`/`compaction_keywords`/`compacted_version`에 저장(마이그레이션 0007). `compacted_version != version`이면 stale로 보고 다음 턴에 재계산. `GET /sync/download`의 `chapter_updates.summary`/`keywords`가 이 값을 그대로 내려보내고, 아직 요약 안 된 챕터는 `body_text` 앞 200자로 임시 대체(이전엔 원문 전체/빈 배열). **"단기 압축 기억 JSON 룰셋"(페르소나, §2.10 연동)은 미구현** — 온디바이스 SLM/페르소나 배포 경로가 확정되면.
 
 **5단계 — 하향 동기화 및 반영, 6단계 — 진화된 재대화**
 - `GET /api/v1/sync/download` 응답 예시는 §4.3 참조. 로컬 SQLite에 Upsert(FTS5 인덱스, 우선순위 질문, 일정)되며, 다음 대화에서 온디바이스 SLM이 최신 맥락으로 더 깊은 꼬리질문을 구성한다.
@@ -834,6 +836,7 @@ silveryarn/
 | 0.28 | 2026-09-10 | Do 단계 — 모바일 앱 시작 게이트 구현(§2.9 구현 상태 v0.28). `presentation/AppEntry.kt`가 `device_state.device_id`로 온보딩 스킵 판정, 없으면 온보딩 → `presentation/sync/FirstSyncScreen.kt`(최초 Wi-Fi 동기화, §2.9 흐름의 마지막 단계) → 홈. `installmode/KioskController.kt`로 install_mode="kiosk" 시 lockTask 진입(decisions.md #6). `SyncWorker.doWork()`의 동기화 절차를 `sync/SyncRunner.kt`로 분리(Worker·화면 공유). 가족 초대 화면은 미포함(Device Token은 `POST /invitations` 권한 없음 — 첫 가족 연결 경로 별도 결정 대기). mobile-schema.md v0.8 | NUBiz AX Initiative |
 | 0.29 | 2026-09-10 | Do 단계 — import-linter 도입(§11). CTO Enterprise B3 "import-linter로 CI에서 경계 차단" 권고 구현. `services/backend/pyproject.toml [tool.importlinter]` contract 4개(모듈 4계층 layers, domain 프레임워크 의존 금지, shared/·core/의 modules 의존 금지) + `ci.yml` backend job `lint-imports` 스텝. 도입 중 `modules/photo_requests/__init__.py` 누락 발견·수정(정적 도구가 패키지 인식 못 하던 결함, gap-analysis G6). `core/auth.py`→모듈 infrastructure 결합 2건은 예외로 고정(후속 리팩터링) | NUBiz AX Initiative |
 | 0.30 | 2026-09-10 | Do 단계 — `core/auth.py` 순수화. import-linter contract ④의 예외였던 auth→모듈 infrastructure 결합 2건 제거. `core/auth.py`는 순수(토큰 검증·인가 규칙·조회 포트 Protocol), 리포지토리 조립 FastAPI 의존성은 `core_service/auth_deps.py`(최상위 조립 모듈)로 이동, 13개 라우터가 `auth_deps`에서 인증 심볼 import. `e2e_keycloak_check.py` cleanup FK 순서 버그도 수정. 실 인프라 e2e 17/17·13/13·9/9 재확인 | NUBiz AX Initiative |
+| 0.31 | 2026-09-10 | Do 단계 — 챕터 Compaction Engine(§2.11 4단계) 요약·키워드 부분 구현. `LLMClient.compact_chapter`(vLLM) + `ChapterService.compact_chapter`(stale 판정 `compacted_version != version`) + 업로드 파이프라인 best-effort 호출. `chapters`에 `compaction_summary`/`compaction_keywords`/`compacted_version` 컬럼(마이그레이션 0007). `GET /sync/download`가 `body_text` 원문 대신 요약(없으면 앞 200자)을 내려보냄. 페르소나 JSON 룰셋(§2.10 연동)은 미구현. schema.md v1.12, sync-contract.md §5 | NUBiz AX Initiative |
 | 0.1 | 2026-09-05 | Plan/ 폴더 원본 문서 4종 기반 Design 초안 등록 | NUBiz AX Initiative |
 | 0.2 | 2026-09-05 | design-validator 검증 반영 — RAG/정서모니터링/출판/온보딩/상태전이/Diff처리/페르소나 절 신설(§2.4~2.10), API 표준화(§4), RBAC·백업정책 추가(§7), 데이터모델 v1.1 동기화(§3), Domain 레이어 위치 정정(§9) | NUBiz AX Initiative |
 | 0.3 | 2026-09-06 | 사용자 제안 "Closed-Loop Architecture" 보고서 검토 반영 — §2.11 신설(Opus/WorkManager/Whisper Large-v3/Neo4j/Critic Agent/Compaction Engine 구체화), 컴포넌트 다이어그램·의존성표에 Neo4j 추가, §4.3에 sync/download 응답 예시 추가. 외부 GPT-4o/Claude 제안은 미채택(온프레미스 vLLM 유지, decisions #26) | NUBiz AX Initiative (사용자 제안 반영) |

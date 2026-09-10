@@ -13,6 +13,7 @@ from core_service.core.errors import ApiError
 from core_service.modules.author.application.chapter_service import ChapterService
 from core_service.modules.author.domain.chapter import (
     Chapter,
+    ChapterCompaction,
     ChapterPeriod,
     ChapterRevision,
     ChapterStatus,
@@ -78,6 +79,14 @@ class FakeChapterRepository:
             chapter.version += 1
         chapter.updated_at = datetime.now(UTC)
         return chapter
+
+    async def set_compaction(
+        self, chapter_id: uuid.UUID, *, summary: str, keywords: list[str], source_version: int
+    ) -> None:
+        chapter = self.by_id[chapter_id]
+        chapter.compaction = ChapterCompaction(
+            summary=summary, keywords=list(keywords), source_version=source_version
+        )
 
 
 class FakeChapterRevisionRepository:
@@ -256,3 +265,74 @@ async def test_save_draft_rejects_empty_body(service: ChapterService) -> None:
             body_text="",
         )
     assert exc_info.value.code == "VALIDATION_ERROR"
+
+
+class _FakeCompactor:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def compact_chapter(self, body_text: str) -> tuple[str, list[str]]:
+        self.calls += 1
+        return f"요약: {body_text[:10]}", ["인천", "1978년"]
+
+
+async def test_compact_chapter_stores_summary_and_keywords(service: ChapterService) -> None:
+    chapter = await service.save_draft(
+        user_id=uuid.uuid4(),
+        chapter_no=2,
+        title="청년기",
+        period=ChapterPeriod.YOUTH,
+        body_text="1978년 인천 기계공장에서 일하던 시절 이야기.",
+    )
+    compactor = _FakeCompactor()
+
+    result = await service.compact_chapter(chapter.id, compactor)
+
+    assert compactor.calls == 1
+    assert result.compaction is not None
+    assert result.compaction.summary.startswith("요약:")
+    assert result.compaction.keywords == ["인천", "1978년"]
+    assert result.compaction.source_version == chapter.version
+    assert result.compaction_is_stale is False
+
+
+async def test_compact_chapter_skips_when_fresh(service: ChapterService) -> None:
+    chapter = await service.save_draft(
+        user_id=uuid.uuid4(),
+        chapter_no=1,
+        title="유년기",
+        period=ChapterPeriod.CHILDHOOD,
+        body_text="어린 시절.",
+    )
+    compactor = _FakeCompactor()
+    await service.compact_chapter(chapter.id, compactor)
+    await service.compact_chapter(chapter.id, compactor)  # 두 번째는 이미 최신이라 LLM 호출 안 함
+
+    assert compactor.calls == 1
+
+
+async def test_compact_chapter_recomputes_after_body_change(service: ChapterService) -> None:
+    user_id = uuid.uuid4()
+    chapter = await service.save_draft(
+        user_id=user_id,
+        chapter_no=1,
+        title="유년기",
+        period=ChapterPeriod.CHILDHOOD,
+        body_text="첫 본문.",
+    )
+    compactor = _FakeCompactor()
+    await service.compact_chapter(chapter.id, compactor)
+
+    # 본문이 바뀌면 version이 오르고 요약은 stale이 된다
+    await service.save_draft(
+        user_id=user_id,
+        chapter_no=1,
+        title="유년기",
+        period=ChapterPeriod.CHILDHOOD,
+        body_text="바뀐 본문.",
+    )
+    updated = await service.get_chapter(chapter.id)
+    assert updated.compaction_is_stale is True
+
+    await service.compact_chapter(chapter.id, compactor)
+    assert compactor.calls == 2
