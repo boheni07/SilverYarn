@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.35 (apps/admin Keycloak 로그인 연동 — apps/web과 동일 Auth.js 방식, decisions #49)
+> **Version**: 0.36 (PDCA Check #2 — §11.1·§11.2 스테일 정정: 마이그레이션 0007, Compaction·Critic Agent 구현 반영)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -799,7 +799,7 @@ silveryarn/
 │       │       ├── domain/        # 엔티티·값 객체·규칙 (순수)
 │       │       ├── infrastructure/# ORM 모델·리포지토리·외부 연동
 │       │       └── deps.py        # 이 모듈의 DI 조립 (타 모듈은 이것만 import)
-│       ├── migrations/versions/   # Alembic 0001~0006
+│       ├── migrations/versions/   # Alembic 0001~0007
 │       ├── scripts/e2e_*.py       # 실 인프라 e2e (pii/http/keycloak)
 │       └── tests/                 # Fake*Repository 기반 Application 계층 단위 테스트
 ├── infra/
@@ -813,15 +813,15 @@ silveryarn/
 
 ### 11.2 Implementation Order
 
-1. [x] Phase 1 스키마 확정 (`/phase-1-schema`) — schema.md v1.11, 서버 21개 테이블(도메인 17 + 부속 4), 마이그레이션 0001~0006
+1. [x] Phase 1 스키마 확정 (`/phase-1-schema`) — schema.md v1.12, 서버 21개 테이블(도메인 17 + 부속 4), 마이그레이션 0001~0007
 2. [x] Phase 2 컨벤션 확정 (`/phase-2-convention`)
-3. [~] 온디바이스 오프라인 코어(STT/SLM/TTS) + 로컬 캐시 — 앱 셸·온보딩·sync 클라이언트·Room 스키마 구현, STT/SLM/TTS 런타임은 모델 선정(decisions.md #27) 대기
-4. [x] Wi-Fi 배치 동기화 기본 흐름 (업/다운로드, 재시도, 체크섬, Diff 멱등성) — sync-contract.md v0.5, 업로드 멱등성 3계층
-5. [x] 자서전 작가 엔진 + 웹 콘솔 감수 흐름 (Phase 1 MVP) — author 모듈(chapters/questions), `POST /chapters/{id}/review`, apps/web 감수 화면. Compaction Engine(§2.11 요약·키워드)은 미구현(body_text 원문 대체)
+3. [~] 온디바이스 오프라인 코어(STT/SLM/TTS) + 로컬 캐시 — 앱 셸·온보딩·앱시작게이트·sync 클라이언트·Room 스키마 구현, STT/SLM/TTS 런타임은 모델 선정(decisions.md #27) 대기
+4. [x] Wi-Fi 배치 동기화 기본 흐름 (업/다운로드, 재시도, 체크섬, Diff 멱등성) — sync-contract.md v0.6, 업로드 멱등성 3계층
+5. [x] 자서전 작가 엔진 + 웹 콘솔 감수 흐름 (Phase 1 MVP) — author 모듈(chapters/questions), `POST /chapters/{id}/review`, apps/web 감수 화면. **§2.11 서버측 클로즈드 루프**: Compaction Engine(4단계, 요약·키워드 — PR #15)·Critic Agent(3단계, `questions` 생성 — PR #16) 구현. Compaction Engine의 페르소나 JSON 룰셋(§2.10 연동)은 미구현
 6. [ ] 말벗돌봄 엔진 + 정서 모니터링(emotion_scores/emotion_alerts) (Phase 2) — 테이블만 존재, 엔드포인트·피처플래그 OFF
 7. [ ] 비서 엔진 + 출판 파이프라인 + 외부 연계 옵션 파일럿 (Phase 3) — schedule 모듈은 조회·응답만 구현, `publications` 테이블만 존재
 
-> Do 단계 보안 트랙(PR #1~8): PII 1·2차 필드 암호화(§7.3), Keycloak JWKS 실 인증·RBAC/IDOR(§7.4), consent 모듈, 알림 수신 설정, social_worker fail-closed, 모바일 온보딩 흐름, 로컬 Keycloak realm. 실 인프라 e2e 17/17·13/13·9/9.
+> Do 단계 진행(PR #1~19): PII 1·2차 필드 암호화(§7.3), Keycloak JWKS 실 인증·RBAC/IDOR(§7.4), consent·notifications 모듈, social_worker fail-closed, 모바일 온보딩+앱시작게이트, 로컬 Keycloak realm, import-linter, `core/auth.py` 순수화, Compaction Engine·Critic Agent(§2.11 3·4단계), apps/web·apps/admin Keycloak 로그인. 실 인프라 e2e 17/17·13/13·9/9. PDCA Check 2회(`docs/03-check/`).
 
 ### 11.3 Session Guide
 
@@ -848,6 +848,7 @@ silveryarn/
 | 0.33 | 2026-09-11 | Do 단계 — apps/web `(family)/notification-settings` 화면 신규. `notifications` 모듈(PR #3, `GET/PUT /family-members/{id}/notification-settings`)의 첫 웹 소비자 — 3채널(push/email/sms) × 3항목(챕터갱신/동기화문제/정서알림) 그리드, PUT 전체 교체. `types/notification-setting.ts`(구 `consent-log.ts`의 스테일 `NotificationSetting` 대체), `services/notification-settings.ts`, `features/notification-settings/NotificationSettingsForm.tsx`. §5.1 인벤토리에 구현 상태(✅/스텁/OFF) 표기 + 웹 콘솔 Keycloak 로그인 연동이 선결이라는 공통 미완 명시 | NUBiz AX Initiative |
 | 0.34 | 2026-09-11 | Do 단계 — apps/web Keycloak 로그인 연동(decisions #49, 사용자 결정: Auth.js/NextAuth v5). §7.4에 웹 콘솔 로그인 항목 추가, §5.1 인벤토리에서 "Bearer dev 공통 미완" 해소(web은 실 Bearer 동작, admin만 미연동). `silveryarn-web` public client + PKCE, `lib/api/client.ts` server-only + Server Action 경로, Next.js 16 `proxy.ts`. 로컬 실 flow(Keycloak 로그인 → 세션 → 백엔드 조회·PUT → DB) 브라우저 검증 | NUBiz AX Initiative |
 | 0.35 | 2026-09-11 | Do 단계 — apps/admin Keycloak 로그인 연동(decisions #49, apps/web과 동일 Auth.js). §5.1·§7.4에 admin도 완료 반영. realm `silveryarn-web` `redirectUris`에 `localhost:3001/*` 추가(`infra/keycloak/import/silveryarn-realm.json`·README). admin은 GET 전용이라 Server Action 없이 `lib/api/client.ts` server-only만. 브라우저 flow 검증(로그인 → `require_roles(admin)` 통과 → 사용자·동기화 목록 조회) | NUBiz AX Initiative |
+| 0.36 | 2026-09-11 | **PDCA Check #2** (`docs/03-check/gap-analysis-2026-09-11.md`) — 1차 Check 이후 PR #10~19 반영. §11.2 Implementation Order 스테일 정정(item 1: schema.md v1.11→v1.12·마이그레이션 0006→0007; item 5: Compaction Engine "미구현"→구현됨 PR #15, Critic Agent PR #16 추가; preamble: PR #1~19). §11.1 트리 "Alembic 0001~0006"→0007. structure.md 모듈 수(8/10→12)·orphan cleanup "미구현"→구현됨 정정. §4.2 endpoint 표에 없는 구현 헬퍼 6종은 경미(표가 "초안"·버전 로그에 기록)로 후속. schema DDL↔실 DB·4계층·import-linter 정상 확인 | NUBiz AX Initiative |
 | 0.1 | 2026-09-05 | Plan/ 폴더 원본 문서 4종 기반 Design 초안 등록 | NUBiz AX Initiative |
 | 0.2 | 2026-09-05 | design-validator 검증 반영 — RAG/정서모니터링/출판/온보딩/상태전이/Diff처리/페르소나 절 신설(§2.4~2.10), API 표준화(§4), RBAC·백업정책 추가(§7), 데이터모델 v1.1 동기화(§3), Domain 레이어 위치 정정(§9) | NUBiz AX Initiative |
 | 0.3 | 2026-09-06 | 사용자 제안 "Closed-Loop Architecture" 보고서 검토 반영 — §2.11 신설(Opus/WorkManager/Whisper Large-v3/Neo4j/Critic Agent/Compaction Engine 구체화), 컴포넌트 다이어그램·의존성표에 Neo4j 추가, §4.3에 sync/download 응답 예시 추가. 외부 GPT-4o/Claude 제안은 미채택(온프레미스 vLLM 유지, decisions #26) | NUBiz AX Initiative (사용자 제안 반영) |
