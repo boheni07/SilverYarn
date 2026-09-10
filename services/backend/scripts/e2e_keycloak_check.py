@@ -182,6 +182,13 @@ async def main() -> None:
 
         finally:
             async with get_session_factory()() as s:
+                # chapter_revisions.reviewer_id → family_members(id)는 CASCADE가 아니라,
+                # users를 지울 때 chapters/family_members CASCADE 순서에 따라 FK 위반이 날 수 있다.
+                # 챕터를 먼저 지우면(revisions는 chapter_id CASCADE) 안전하다.
+                await s.execute(
+                    text("DELETE FROM chapters WHERE user_id IN (:a, :b)"),
+                    {"a": elder_a, "b": elder_b},
+                )
                 await s.execute(text("DELETE FROM users WHERE id IN (:a, :b)"), {"a": elder_a, "b": elder_b})
                 await s.commit()
 

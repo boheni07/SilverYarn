@@ -57,13 +57,13 @@ services/backend/src/core_service/
   - 모듈 간 교차 import는 `application`(서비스 클래스)·`domain`(값 객체·enum)·`deps`(DI 제공자)로 한정. 타 모듈 `infrastructure`/`api` 직접 import **0건**.
   - 실제 교차 지점: `author→family_members`, `consent→family_members`, `invitations→family_members`, `photos→photo_requests`, `photo_requests→family_members`, `sync→{author,devices,schedule}`, `sync(upload_pipeline)→{author,care}` — 전부 `.application`/`.domain`/`.deps`.
   - 4계층: `domain/*.py`는 `fastapi`/`sqlalchemy`/상위 계층 import 0. `application`→`api` 역참조 0. `infrastructure`→`application`/`api` 역참조 0.
-  - 예외: `core/auth.py`가 principal 해석에 `family_members`/`devices`의 infrastructure를 함수 내부 지연 import(정석은 core에 포트를 두고 주입 — 후속 리팩터링).
+  - ~~예외: `core/auth.py`가 principal 해석에 `family_members`/`devices`의 infrastructure를 함수 내부 지연 import~~ → **해소**(후속 #3): `core/auth.py` 순수화, 조립은 `core_service/auth_deps.py`(composition root)로.
 
 **조치 (완료)**: `import-linter>=2.0` 추가, `pyproject.toml [tool.importlinter]`에 contract 4개:
 1. **layers** — 12개 도메인 모듈 각각 `api → application → infrastructure → domain` (역방향 import 금지)
 2. **forbidden** — `modules.*.domain`은 `fastapi`/`sqlalchemy`/`pydantic`에 의존 금지 (순수성)
 3. **forbidden** — `core_service.shared`는 `core_service.modules`에 의존 금지
-4. **forbidden** — `core_service.core`는 `core_service.modules`에 의존 금지 (예외 3건 `ignore_imports`로 고정: `model_registry`의 ORM 전체 import + `auth.py`의 2건)
+4. **forbidden** — `core_service.core`는 `core_service.modules`에 의존 금지 (예외 1건 `ignore_imports`로 고정: `model_registry`의 ORM 전체 import. auth.py의 2건은 v0.30에서 `auth_deps.py`로 분리해 해소)
 
 CI: `ci.yml` backend job에 `lint-imports` 스텝(mypy 다음). 로컬: `4 kept, 0 broken` 확인.
 
@@ -123,5 +123,5 @@ design §4.2 Endpoint List에 있으나 미구현:
 
 1. ~~import-linter 도입 (G2)~~ — **완료** (`chore/import-linter-module-boundaries`).
 2. **모바일 앱 흐름 완성** — 온보딩 재시작 스킵(`device_state.device_id`), install_mode 기반 진입 분기(키오스크 lockTask), 최초 동기화 화면: **완료** (`feat/mobile-app-entry-first-sync`). 가족 초대 수락 화면은 첫 가족 연결 경로 설계 결정 대기라 제외.
-3. **`core/auth.py` → 모듈 infrastructure 결합 제거** — core에 리포지토리 포트(Protocol) 정의 후 주입. 현재 import-linter contract 4에 예외 2건으로 고정돼 있음.
+3. ~~`core/auth.py` → 모듈 infrastructure 결합 제거~~ — **완료** (`refactor/auth-repo-ports`): `core/auth.py` 순수화 + `core_service/auth_deps.py` composition root 신규. import-linter 예외 2건 제거.
 4. ~~PDCA Report 생성~~ — **완료** (`docs/04-report/features/silveryarn-platform.report.md`, PR #1~11 + Check 종합).

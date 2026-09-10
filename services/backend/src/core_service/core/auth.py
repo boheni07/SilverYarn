@@ -1,36 +1,37 @@
-"""인증·인가 — Keycloak SSO(decisions.md #17) + Device Token(decisions.md #47).
+"""인증·인가 — 순수 로직만 (Keycloak SSO decisions.md #17 + Device Token decisions.md #47).
 
 원본 프로세스흐름도 §4.1: 모든 요청(배치 동기화 / 웹 콘솔 API)은 게이트웨이에서
 Keycloak SSO 인증/인가를 거친다. 웹 콘솔은 사람(가족·복지사·관리자), 모바일 동기화는
 기기가 주체다.
 
-## 구성요소
+## 이 모듈의 범위 (순수 — `core_service.modules`에 의존하지 않는다)
 - `KeycloakVerifier` — JWKS 캐시 + RS256 서명·iss·aud·exp 검증
-- `require_family` — Bearer 토큰 검증 → `sub`로 `family_members` 조회 → `AuthContext`
-- `require_device` — `X-Device-Token` → SHA-256 해시로 `device_credentials` 조회 → `DeviceIdentity`
-- `require_principal` — 가족 토큰 **또는** Device Token (photos/consent 등)
-- `authorize_user_access` — 대상 어르신(`user_id`)에 대한 접근 인가(IDOR 방지, RBAC 매트릭스)
-- `require_roles(...)` — 어르신에 종속되지 않는 관리자 전용 엔드포인트용
+- `require_verified_subject` — Bearer 토큰만 검증(연결 여부는 안 봄). 초대 수락 부트스트랩용
+- `authorize_user_access` / `authorize_own_family_member` — 이미 해석된 principal에 대한 인가 규칙
+- `FamilyMemberDirectory` / `DeviceTokenDirectory` — principal 해석에 필요한 조회 포트(Protocol)
+
+## principal 해석(=DB 조회)이 필요한 FastAPI 의존성
+`require_family` / `require_device` / `require_principal` / `require_roles`는
+`core_service/auth_deps.py`(조립 지점, 리포지토리와 엮는 곳)에 있다. 라우터는 인증
+심볼을 전부 거기서 가져온다.
 
 ## 실패 모드 (fail closed)
-`AUTH_ISSUER_URL`이 비어 있으면 `require_family`가 처음 호출될 때 RuntimeError. 앱/워커
-기동과 CI(Fake repository 단위 테스트, HTTP 미경유)에는 영향 없다.
+`AUTH_ISSUER_URL`이 비어 있으면 토큰 검증이 처음 호출될 때 RuntimeError. 앱/워커
+기동과 CI(HTTP 미경유 단위 테스트)에는 영향 없다.
 """
 
 from __future__ import annotations
 
-import hashlib
 import time
 import uuid
 from dataclasses import dataclass, field
+from typing import Protocol
 
 import httpx
-from fastapi import Depends, Header, Request
+from fastapi import Header
 from jose import JWTError, jwt
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from core_service.core.config import Settings, get_settings
-from core_service.core.db import get_db
 from core_service.core.errors import ApiError
 from core_service.shared.domain_enums import FamilyRole
 
@@ -144,7 +145,22 @@ Principal = AuthContext | DeviceIdentity
 
 
 # --------------------------------------------------------------------------- #
-# 의존성
+# 조회 포트 (auth_deps.py가 리포지토리로 구현)
+# --------------------------------------------------------------------------- #
+class FamilyMemberDirectory(Protocol):
+    """Keycloak `sub` → 이 계정에 연결된 `family_members` 행(들). `require_family`가 쓴다."""
+
+    async def memberships_for_subject(self, subject: str) -> list[Membership]: ...
+
+
+class DeviceTokenDirectory(Protocol):
+    """Device Token 해시 → 그 기기의 identity(폐기되지 않은 것). `require_device`가 쓴다."""
+
+    async def resolve_active(self, token_hash: str) -> DeviceIdentity | None: ...
+
+
+# --------------------------------------------------------------------------- #
+# 토큰 검증 의존성 (순수 — DB 조회 없음)
 # --------------------------------------------------------------------------- #
 def _bearer_token(authorization: str | None) -> str:
     if not authorization or not authorization.lower().startswith("bearer "):
@@ -175,97 +191,21 @@ async def require_verified_subject(
     return VerifiedSubject(subject=subject, is_2fa=_is_2fa(claims))
 
 
-async def require_family(
-    request: Request,
-    authorization: str | None = Header(default=None),
-    session: AsyncSession = Depends(get_db),
-) -> AuthContext:
-    """Keycloak 액세스 토큰 검증 → `family_members`(keycloak_sub) 조회 → AuthContext.
+def build_family_context(verified: VerifiedSubject, memberships: list[Membership]) -> AuthContext:
+    """검증된 토큰 + 조회된 membership 목록 → AuthContext. 연결이 없으면 403.
 
-    인증은 됐으나 어떤 어르신에도 연결되지 않은 계정(provisioning 전)은 403.
+    `require_family`(auth_deps.py)가 `FamilyMemberDirectory` 조회 결과를 넘겨 호출한다 —
+    조회 방식(리포지토리)과 규칙(연결 없으면 403)을 분리해 규칙만 여기서 순수하게 검증한다.
     """
-    verified = await require_verified_subject(authorization)
-    subject = verified.subject
-    claims_is_2fa = verified.is_2fa
-
-    from core_service.modules.family_members.infrastructure.family_member_repository import (
-        FamilyMemberRepository,
-    )
-
-    members = await FamilyMemberRepository(session).list_by_keycloak_sub(subject)
-    if not members:
+    if not memberships:
         raise ApiError(
             "FORBIDDEN", "이 계정은 아직 어떤 어르신 계정에도 연결되지 않았습니다(초대 수락 필요)."
         )
-
-    ctx = AuthContext(
-        subject=subject,
-        is_2fa=claims_is_2fa,
-        memberships=[
-            Membership(
-                family_member_id=m.id,
-                user_id=m.user_id,
-                role=m.role,
-                two_factor_enabled=m.two_factor_enabled,
-            )
-            for m in members
-        ],
-    )
-    request.state.actor_kind = "family_member"
-    request.state.actor_subject = subject
-    return ctx
-
-
-# 기존 라우터가 `Depends(require_auth)`를 광범위하게 쓰므로 별칭을 유지한다.
-require_auth = require_family
-
-
-async def require_device(
-    request: Request,
-    x_device_token: str | None = Header(default=None),
-    session: AsyncSession = Depends(get_db),
-) -> DeviceIdentity:
-    """`X-Device-Token`을 SHA-256 해시로 `device_credentials`에서 조회(폐기되지 않은 것)."""
-    if not x_device_token:
-        raise ApiError("UNAUTHORIZED", "기기 토큰이 필요합니다.")
-
-    from core_service.modules.devices.infrastructure.device_credential_repository import (
-        DeviceCredentialRepository,
-    )
-
-    token_hash = hashlib.sha256(x_device_token.encode()).hexdigest()
-    identity = await DeviceCredentialRepository(session).resolve_active(token_hash)
-    if identity is None:
-        raise ApiError("UNAUTHORIZED", "유효하지 않거나 폐기된 기기 토큰입니다.")
-
-    request.state.actor_kind = "device"
-    request.state.actor_subject = str(identity.device_id)
-    return identity
-
-
-# 별칭 — 반환 타입이 str에서 DeviceIdentity로 바뀐 것에 주의(호출부 갱신 완료).
-require_device_token = require_device
-
-
-async def require_principal(
-    request: Request,
-    authorization: str | None = Header(default=None),
-    x_device_token: str | None = Header(default=None),
-    session: AsyncSession = Depends(get_db),
-) -> Principal:
-    """가족 토큰 또는 Device Token 중 하나 (design.md §4.2 photos/consent 등)."""
-    if authorization:
-        return await require_family(request, authorization, session)
-    if x_device_token:
-        return await require_device(request, x_device_token, session)
-    raise ApiError("UNAUTHORIZED", "인증 토큰 또는 기기 토큰이 필요합니다.")
-
-
-require_auth_or_device_token = require_principal
+    return AuthContext(subject=verified.subject, is_2fa=verified.is_2fa, memberships=list(memberships))
 
 
 # --------------------------------------------------------------------------- #
-# 인가 헬퍼
+# 인가 헬퍼 (이미 해석된 principal에 대한 규칙 — 순수)
 # --------------------------------------------------------------------------- #
 # design.md §7.1 RBAC 매트릭스 — 어르신 데이터(챕터·사진·대화·일정·동의) 조회 허용 역할.
 #
@@ -328,17 +268,3 @@ def authorize_own_family_member(
         raise ApiError("FORBIDDEN", "본인의 구성원 설정만 변경할 수 있습니다.")
     if require_2fa and not ctx.is_2fa:
         raise ApiError("FORBIDDEN", "이 작업에는 2단계 인증이 필요합니다.")
-
-
-def require_roles(*roles: FamilyRole, require_2fa: bool = True):  # noqa: ANN201 (FastAPI 의존성 팩토리)
-    """어르신에 종속되지 않는 엔드포인트(관리자 콘솔 등)용 — 토큰 소유자가 어딘가에서
-    지정 역할 중 하나를 갖는지만 본다."""
-
-    async def _dep(ctx: AuthContext = Depends(require_family)) -> AuthContext:
-        if not (ctx.roles & set(roles)):
-            raise ApiError("FORBIDDEN", "이 엔드포인트에 필요한 역할이 없습니다.")
-        if require_2fa and not ctx.is_2fa:
-            raise ApiError("FORBIDDEN", "이 작업에는 2단계 인증이 필요합니다.")
-        return ctx
-
-    return _dep

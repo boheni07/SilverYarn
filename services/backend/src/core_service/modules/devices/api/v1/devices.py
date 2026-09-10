@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core_service.core.auth import require_roles
+from core_service.auth_deps import require_roles
 from core_service.core.db import get_db
 from core_service.modules.devices.application.device_service import DeviceService
 from core_service.modules.devices.infrastructure.device_credential_repository import (
