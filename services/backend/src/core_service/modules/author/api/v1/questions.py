@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core_service.core.auth import AuthContext, authorize_user_access, require_auth
+from core_service.auth_deps import AuthContext, authorize_user_access, require_auth
 from core_service.core.db import get_db
 from core_service.modules.author.application.question_service import QuestionService
 from core_service.modules.author.infrastructure.question_repository import QuestionRepository

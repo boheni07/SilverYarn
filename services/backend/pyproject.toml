@@ -129,7 +129,7 @@ forbidden_modules = [
 ]
 
 [[tool.importlinter.contracts]]
-name = "core/는 도메인 모듈에 의존하지 않는다 (아래 3건은 기록된 예외, 새 위반은 금지)"
+name = "core/는 도메인 모듈에 의존하지 않는다 (model_registry의 ORM 전체 import만 예외)"
 type = "forbidden"
 source_modules = [
     "core_service.core",
@@ -140,8 +140,4 @@ forbidden_modules = [
 ignore_imports = [
     # model_registry: 전 ORM 모델을 한 곳에서 import해 FK 문자열 참조를 해석(파일 상단 주석)
     "core_service.core.model_registry -> core_service.modules.**",
-    # auth.py: principal 해석에 두 리포지토리가 필요(함수 내부 지연 import). 정석은 core에
-    # 포트(Protocol)를 두고 주입하는 것 — 후속 리팩터링 대상, 지금은 이 2건으로 고정한다.
-    "core_service.core.auth -> core_service.modules.family_members.infrastructure.family_member_repository",
-    "core_service.core.auth -> core_service.modules.devices.infrastructure.device_credential_repository",
 ]

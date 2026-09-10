@@ -10,7 +10,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from core_service.core.auth import AuthContext, authorize_own_family_member, require_auth
+from core_service.auth_deps import AuthContext, authorize_own_family_member, require_auth
 from core_service.modules.notifications.application.notification_setting_service import (
     ChannelPreference,
     NotificationSettingService,

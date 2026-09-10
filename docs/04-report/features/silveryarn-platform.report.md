@@ -83,7 +83,7 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 
 ### 코드 후속 (착수 가능, 우선순위 낮음)
 
-- **`core/auth.py` → 모듈 infrastructure 결합 제거** — `require_family`/`require_device`가 `family_members`/`devices` 리포지토리를 함수 내부 지연 import. 현재 import-linter contract 4에 예외 2건으로 고정. core에 리포지토리 포트(Protocol) 정의 후 주입 또는 wiring을 composition root로 이동하는 리팩터링.
+- ~~`core/auth.py` → 모듈 infrastructure 결합 제거~~ — **완료 (PR #13)**. `core/auth.py`는 순수(토큰 검증·인가 규칙·조회 포트 `FamilyMemberDirectory`/`DeviceTokenDirectory` Protocol), 리포지토리 조립은 `core_service/auth_deps.py`(composition root). import-linter contract ④의 예외가 3건 → 1건(`model_registry`만).
 - **모바일 가족 초대 화면** — 첫 가족 구성원 연결 경로 설계 결정 후(웹 콘솔/admin 경로 vs device-token 부트스트랩 엔드포인트).
 - **Compaction Engine** (design §2.11) — `GET /sync/download`의 `chapter_updates.summary`/`keywords`가 현재 `body_text` 원문/빈 배열로 대체돼 있음. Phase 1 MVP 후.
 - 온디바이스 STT/SLM/TTS 런타임 — 모델 선정(decisions #27, 실기기 벤치마크) 대기.
@@ -127,3 +127,5 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 | #9 | PDCA Check — 설계문서↔구현 갭 분석 + 드리프트 동기화 | — |
 | #10 | 모바일 앱 시작 게이트 — 온보딩 스킵·install_mode 분기·최초 동기화 화면 | — |
 | #11 | import-linter — 모듈 경계·4계층 의존 규칙 CI 강제 | — |
+| #12 | 본 Do 사이클 보고서 | — |
+| #13 | `core/auth.py` 순수화 — 리포지토리 조립을 `auth_deps.py`로 분리 (import-linter 예외 2건 제거) | — |

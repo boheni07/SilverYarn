@@ -75,7 +75,7 @@ _AUDIT_SKIP_PATHS = frozenset({"/health", "/docs", "/openapi.json", "/redoc"})
 async def access_log_middleware(request: Request, call_next):  # noqa: ANN001, ANN201
     """접속기록 감사로그(schema.md §5 access_logs, 개인정보 안전성 확보조치 기준 제8조).
 
-    인증 의존성이 `request.state.actor_kind`/`actor_subject`를 채운다(core/auth.py) —
+    인증 의존성이 `request.state.actor_kind`/`actor_subject`를 채운다(auth_deps.py) —
     미들웨어는 응답 이후 그 값을 읽어 best-effort로 1행 적재한다. 적재 실패는
     요청에 영향을 주지 않는다(독립 세션 + 예외 삼킴, worker._update_sync_status 패턴).
     """

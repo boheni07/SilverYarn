@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core_service.core.auth import (
+from core_service.auth_deps import (
     AuthContext,
     Principal,
     authorize_user_access,
