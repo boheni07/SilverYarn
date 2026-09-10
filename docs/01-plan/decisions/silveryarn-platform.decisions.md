@@ -128,8 +128,9 @@
 | # | 항목 | 결정(근거 포함) | 상태 |
 |---|------|------|:---:|
 | 47 | 인증·인가 실구현 방식 + erd.md §11 스키마 추가 범위 | **Keycloak JWKS RS256 검증 + 사용자별 DEK식이 아닌 토큰 기반 RBAC로 확정.** `core/auth.py` 스텁(하드코딩 `roles=["family"]`)을 실 검증으로 교체([cto-review B5](../../02-design/cto-review-2026-09-05.md), 원본 프로세스흐름도 §4.1). erd.md §11 5개 중 **3개 반영**: ① `family_members.keycloak_sub`(VARCHAR, **비유일 인덱스** — erd의 "UK" 제안과 달리 한 사람이 여러 어르신을 담당하면 같은 sub로 여러 행이 생기므로), ② `device_credentials`(Device Token을 SHA-256 해시로만 보관, `POST /devices` 응답에 평문 1회 발급 — B5(b)), ③ `access_logs`(HTTP 미들웨어 best-effort 적재 — 제8조·B5(e)). **보류**: `organizations`(B2G 시설 테넌시 — 운영모델 확정 필요), `*.retention_until`(B3 법무 대기). **2FA**: 토큰 `amr` claim으로 판정(`AUTH_2FA_AMR_VALUES` 설정, Keycloak 인증흐름 의존). **IDOR/소유권**: `authorize_user_access()` 헬퍼로 핵심 엔드포인트(chapters·photos·consent·schedule·conversation-chunks·users·devices·sync)에 우선 적용, 나머지(family_members·invitations·photo_requests)는 인증만 유지하고 인가 확대는 후속. **환경변수**: `AUTH_AUDIENCE`·`AUTH_JWKS_URL`·`AUTH_2FA_AMR_VALUES` 추가(CONVENTIONS.md §4). `AUTH_ISSUER_URL` 미설정 시 `require_family` 첫 호출에서 RuntimeError(fail closed) | ✅ 확정 (구현: `services/backend`, 마이그레이션 `0003`) |
+| 49 | 웹 콘솔(apps/web) Keycloak 로그인 연동 방식 | **Auth.js(NextAuth v5) + Keycloak provider로 확정**(사용자 결정). `silveryarn-web`은 public client → auth code flow + PKCE(client secret 없음, `token_endpoint_auth_method: "none"`). Auth.js가 로그인 리다이렉트·토큰 교환·**리프레시**·httpOnly 세션 쿠키를 처리하고, 액세스 토큰은 `session.accessToken`으로 노출된다. `lib/api/client.ts`에 `import "server-only"` — 이 모듈은 서버(Server Component·Server Action·Route Handler)에서만 실행되고 `auth()`로 토큰을 읽어 백엔드 `Authorization: Bearer`로 실어 보낸다(토큰이 브라우저 번들에 안 들어감). 클라이언트 컴포넌트의 폼 제출은 **Server Action**(`features/*/actions.ts`)을 거친다. Next.js 16의 `middleware.ts`→`proxy.ts` rename 반영. **로컬 실 flow 검증**(Keycloak 로그인 → 세션 → 실 Bearer로 백엔드 조회·PUT → DB 반영). env: `AUTH_SECRET`·`AUTH_KEYCLOAK_ID`·`AUTH_KEYCLOAK_ISSUER`·`AUTH_URL`(apps/web/.env.local, gitignore) | ✅ 확정 (구현: `apps/web`) |
 
-> **후속 과제**: Device Token 회전 UI·주기, 나머지 엔드포인트 인가 확대, social_worker의 "동의 시 챕터 조회"(design.md §7.1) 동의 게이팅, `organizations` 테넌시(B2G 착수 시).
+> **후속 과제**: Device Token 회전 UI·주기, social_worker의 "동의 시 챕터 조회"(design.md §7.1) 동의 게이팅, `organizations` 테넌시(B2G 착수 시). 웹 콘솔 로그인(#49)은 완료 — apps/admin도 같은 방식으로 이식 필요(현재 `Bearer dev` 스텁 유지).
 
 ---
 
@@ -182,6 +183,7 @@
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.19 | 2026-09-11 | Do 단계 — #49 웹 콘솔 Keycloak 로그인 연동(**사용자 결정: Auth.js/NextAuth v5**). public client + auth code flow + PKCE, `lib/api/client.ts` server-only + Server Action 경로, Next 16 `proxy.ts`. 로컬 실 flow 검증 완료. design.md v0.34·structure.md v1.33 | NUBiz AX Initiative |
 | 0.1 | 2026-09-05 | 기획서 9장 11개 항목 처리(로그 행 기준 14개, 일부 이중 기재), 3개는 법무·경영 검토 필요로 분류 | NUBiz AX Initiative (사용자 확인 반영) |
 | 0.2 | 2026-09-05 | design-validator 검증 반영 — #15~#22 기술 결정 추가(FastAPI, Next.js 재등재, Keycloak, 구독결제 스코프아웃, 알림설정 범위분리, API 케이싱, enum 영문화, Wi-Fi 로컬전용), #23 후속 검토 항목 추가 | NUBiz AX Initiative |
 | 0.3 | 2026-09-05 | CTO팀 5개 관점 검토(cto-review-2026-09-05.md) 반영 — #24(Phase 1 무료 확정), #25(정서 파이프라인 Phase 1 OFF 확정) 추가 | NUBiz AX Initiative |

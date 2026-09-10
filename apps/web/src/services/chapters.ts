@@ -2,15 +2,15 @@ import { apiClient } from "@/lib/api/client";
 import type { Chapter, ChapterRevision, RevisionAction } from "@/types";
 
 export async function listChapters(userId: string): Promise<Chapter[]> {
-  return apiClient.get<Chapter[]>(`/users/${userId}/chapters`, { authToken: "dev" });
+  return apiClient.get<Chapter[]>(`/users/${userId}/chapters`);
 }
 
 export async function getChapter(chapterId: string): Promise<Chapter> {
-  return apiClient.get<Chapter>(`/chapters/${chapterId}`, { authToken: "dev" });
+  return apiClient.get<Chapter>(`/chapters/${chapterId}`);
 }
 
 export async function listChapterRevisions(chapterId: string): Promise<ChapterRevision[]> {
-  return apiClient.get<ChapterRevision[]>(`/chapters/${chapterId}/revisions`, { authToken: "dev" });
+  return apiClient.get<ChapterRevision[]>(`/chapters/${chapterId}/revisions`);
 }
 
 /**
@@ -22,5 +22,5 @@ export async function reviewChapter(
   chapterId: string,
   input: { action: RevisionAction; reviewComment?: string; reviewerId?: string },
 ): Promise<Chapter> {
-  return apiClient.post<Chapter>(`/chapters/${chapterId}/review`, input, { authToken: "dev" });
+  return apiClient.post<Chapter>(`/chapters/${chapterId}/review`, input);
 }
