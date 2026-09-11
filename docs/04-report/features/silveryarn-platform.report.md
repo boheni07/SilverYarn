@@ -114,7 +114,7 @@ Check #1 이후 이 사이클을 종료하지 않고 이어서 §2.11 서버측 
 - ~~apps/web·admin 공유 코드 추출~~ — **완료 (PR #21)**. npm 워크스페이스 + `packages/web-shared`(decisions #50).
 - ~~웹 가족 대시보드 "오늘의 기억 리포트"~~ — **완료 (PR #22)**.
 - ~~모바일 홈 셸(M2) + 하단 탭 4개~~ — **완료 (PR #23)**.
-- **§4.2 endpoint 표 ↔ 구현 1:1 정비** (gap-analysis G11) — `GET /chapters/{id}`·`/chapters/{id}/revisions`·`/conversation-chunks/{id}`·`/schedule-items/{id}` 등 조회 헬퍼 6종이 표에 없음. 대부분 버전 로그 산문에는 기록돼 있어 경미 — OpenAPI codegen 도입 시 자동 해소도 검토.
+- ~~§4.2 endpoint 표 ↔ 구현 1:1 정비~~ — **완료 (PR #26, design.md v0.40)**. OpenAPI 스키마 전수 대조로 실제 갭이 G11이 지목한 6건보다 컸음을 확인(17행 추가 — `family-members` 목록/생성 전체 누락 등).
 - **모바일 가족 초대 화면** — 첫 가족 구성원 연결 경로 설계 결정 후(웹 콘솔/admin 경로 vs device-token 부트스트랩 엔드포인트).
 - **온디바이스 SLM 의도 라우터** (workflow-diagrams.md §19) — 모바일 홈 셸(PR #23)의 마이크 세션이 말벗돌봄 모드로 고정돼 있는 이유. 모델 선정(decisions #27, 실기기 벤치마크) 선행 필요.
 - 온디바이스 STT/SLM/TTS 런타임 — 모델 선정(decisions #27, 실기기 벤치마크) 대기.
@@ -141,8 +141,7 @@ Check #1 이후 이 사이클을 종료하지 않고 이어서 §2.11 서버측 
 1. **법무 회신 취합** — B1(정서)·B2(대리동의)·B3(보유기간)·B5(제3자제공)가 한 묶음. 회신이 오면 retention 정책 + 파기 오케스트레이션이 가장 큰 단일 작업. (2026-09-11 현재 전부 미회신)
 2. **infra-architect 착수** — B6(egress), `organizations` 테넌시, `PII_KEK` Vault, GPU 토폴로지, 관측 스택(self-hosted). 온프레미스 배포 설계가 다음 병목.
 3. **온디바이스 SLM 모델 선정 벤치마크**(decisions #27, 실기기) — 착수하면 §19 의도 라우터(현재 모바일 홈 셸에서 말벗돌봄 모드 고정, PR #23)와 §2.10 페르소나 JSON 룰셋(Compaction Engine 잔여, PR #15)이 같이 풀린다. 남은 코드 후속 중 **유일하게 외부 회신이 아니라 실기기 확보가 선결조건**인 항목.
-4. **§4.2 endpoint 표 ↔ 구현 1:1 정비** (gap-analysis G11) — 코드 변경 없는 순수 문서 정비, 아무 때나 착수 가능.
-5. (완료) ~~`core/auth.py` 포트 리팩터링~~ → PR #13. ~~apps/web·admin 공유 코드 추출~~ → PR #21.
+4. (완료) ~~`core/auth.py` 포트 리팩터링~~ → PR #13. ~~apps/web·admin 공유 코드 추출~~ → PR #21. ~~§4.2 endpoint 표 정비~~ → PR #26.
 
 ---
 
@@ -175,3 +174,4 @@ Check #1 이후 이 사이클을 종료하지 않고 이어서 §2.11 서버측 
 | #23 | apps/mobile 홈 셸(M2) + 하단 탭 4개 — `AppShell`이 임시 `AssistantHomeScreen`을 대체 | — |
 | #24 | 챕터 감수 승인 시 Compaction 재확인 안전망 (gap-analysis G11 후속 #3) | — |
 | #25 | 본 Do 사이클 보고서 갱신 (PR #12~24 반영, §3-2 신설) | — |
+| #26 | §4.2 Endpoint List를 실제 구현과 1:1로 정비 (gap-analysis G11, OpenAPI 스키마 전수 대조) | — |
