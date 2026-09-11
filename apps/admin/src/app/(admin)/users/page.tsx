@@ -92,15 +92,21 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
       <ul className="mt-6 flex flex-col gap-4">
         {users.map((user) => (
           <li key={user.id}>
-            <Link href={`/devices?userId=${user.id}`}>
-              <Card className="transition-shadow hover:shadow-md">
+            <Card>
+              <Link href={`/devices?userId=${user.id}`} className="block transition-opacity hover:opacity-80">
                 <h2 className="font-editorial text-h2 font-semibold text-ink">{user.name}</h2>
                 <p className="mt-1 text-caption text-ink-muted">
                   {user.birthDate ? `생년월일 ${user.birthDate} · ` : ""}
                   가입일 {new Date(user.createdAt).toLocaleDateString("ko-KR")}
                 </p>
-              </Card>
-            </Link>
+              </Link>
+              <Link
+                href={`/family-members?userId=${user.id}`}
+                className="mt-3 inline-block text-caption text-teal-deep underline"
+              >
+                가족 구성원 관리
+              </Link>
+            </Card>
           </li>
         ))}
       </ul>
