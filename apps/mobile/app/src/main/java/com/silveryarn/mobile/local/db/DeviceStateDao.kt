@@ -22,4 +22,12 @@ interface DeviceStateDao {
         epochMs: Long,
         syncVersion: String,
     )
+
+    /** download() 응답의 persona_snapshot 로컬 캐시(mobile-schema.md v0.11) — null이면
+     * (아직 요약된 챕터 없음) 기존 값을 지운다. */
+    @Query("UPDATE device_state SET persona_summary = :summary, persona_keywords = :keywords WHERE id = 0")
+    suspend fun updatePersonaSnapshot(
+        summary: String?,
+        keywords: String?,
+    )
 }

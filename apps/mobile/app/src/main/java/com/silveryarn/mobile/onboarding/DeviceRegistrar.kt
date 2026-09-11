@@ -60,6 +60,8 @@ class DeviceRegistrar(private val context: Context) {
                     lastSyncAt = null,
                     lastSyncVersion = null,
                     userName = userName,
+                    personaSummary = null,
+                    personaKeywords = null,
                 ),
             )
             device.id

@@ -29,6 +29,8 @@ from core_service.modules.sync.application.upload_pipeline_service import (
     UploadPipelineInput,
     UploadPipelineService,
 )
+from core_service.modules.users.application.user_service import UserService
+from core_service.modules.users.domain.user import PersonaSnapshot, User
 
 # --- 페이크 Repository (author/care 테스트 파일과 같은 패턴, 이 파일에 독립 정의) ---
 
@@ -81,6 +83,31 @@ class FakeChapterRepository:
         chapter.compaction = ChapterCompaction(
             summary=summary, keywords=list(keywords), source_version=source_version
         )
+
+
+class FakeUserRepository:
+    def __init__(self) -> None:
+        self.by_id: dict[uuid.UUID, User] = {}
+
+    async def get_by_id(self, user_id):
+        return self.by_id.get(user_id)
+
+    async def set_persona_snapshot(self, user_id, *, summary, keywords, source_chapter_count):
+        user = self.by_id[user_id]
+        user.persona_snapshot = PersonaSnapshot(
+            summary=summary, keywords=list(keywords), source_chapter_count=source_chapter_count
+        )
+
+
+def _make_user(user_id: uuid.UUID) -> User:
+    return User(
+        id=user_id,
+        name="테스트 어르신",
+        birth_date=None,
+        primary_device_id=None,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
 
 
 class FakeQuestionRepository:
@@ -196,12 +223,14 @@ class FakeLLMClient:
         fail_generate: bool = False,
         fail_compact: bool = False,
         fail_critic: bool = False,
+        fail_persona: bool = False,
         knowledge: dict | None = None,
     ):
         self._fail_extract = fail_extract
         self._fail_generate = fail_generate
         self._fail_compact = fail_compact
         self._fail_critic = fail_critic
+        self._fail_persona = fail_persona
         self._knowledge = knowledge if knowledge is not None else {}
 
     async def extract_knowledge(self, transcript: str) -> dict:
@@ -228,6 +257,13 @@ class FakeLLMClient:
             ("그때 어떤 마음이셨어요?", "follow_up"),
             ("그 무렵 형제분들과는 어떻게 지내셨나요?", "new_topic"),
         ]
+
+    async def summarize_persona_memory(
+        self, chapter_digests: list[tuple[str, list[str]]]
+    ) -> tuple[str, list[str]]:
+        if self._fail_persona:
+            raise RuntimeError("LLM 페르소나 요약 실패")
+        return "[페르소나 요약]", ["페르소나키워드1", "페르소나키워드2"]
 
 
 class FakeEmbeddingClient:
@@ -266,6 +302,7 @@ def _build_pipeline(
     chapter_repo=None,
     revision_repo=None,
     question_repo=None,
+    user_repo=None,
     stt=None,
     embedding=None,
     llm=None,
@@ -276,10 +313,12 @@ def _build_pipeline(
     chapter_repo = chapter_repo or FakeChapterRepository()
     revision_repo = revision_repo or FakeChapterRevisionRepository()
     question_repo = question_repo or FakeQuestionRepository()
+    user_repo = user_repo or FakeUserRepository()
     pipeline = UploadPipelineService(
         chunk_service=ConversationChunkService(chunk_repo),
         chapter_service=ChapterService(chapter_repo, revision_repo),
         question_service=QuestionService(question_repo),
+        user_service=UserService(user_repo),
         stt_client=stt or FakeSTTClient(),
         embedding_client=embedding or FakeEmbeddingClient(),
         llm_client=llm or FakeLLMClient(),
@@ -376,6 +415,51 @@ async def test_pipeline_compaction_failure_does_not_break_chunk_or_chapter() -> 
     assert await chunk_repo.get_by_id(chunk.id) is not None
     chapter = next(iter(chapter_repo.by_id.values()))
     assert chapter.compaction is None  # 요약 실패해도 챕터 자체는 저장됨
+
+
+async def test_pipeline_refreshes_persona_snapshot_after_compaction() -> None:
+    """design §2.11 4단계 "단기 압축 기억" — 챕터 Compaction 이후 사용자 페르소나
+    스냅샷도 갱신된다."""
+    chapter_repo = FakeChapterRepository()
+    user_repo = FakeUserRepository()
+    user_id = uuid.uuid4()
+    user_repo.by_id[user_id] = _make_user(user_id)
+    llm = FakeLLMClient(knowledge={"period": "youth"})
+    pipeline, _ = _build_pipeline(llm=llm, chapter_repo=chapter_repo, user_repo=user_repo)
+
+    await pipeline.run(_input(user_id=user_id))
+
+    user = user_repo.by_id[user_id]
+    assert user.persona_snapshot is not None
+    assert user.persona_snapshot.summary == "[페르소나 요약]"
+    assert user.persona_snapshot.keywords == ["페르소나키워드1", "페르소나키워드2"]
+    assert user.persona_snapshot.source_chapter_count == 1
+
+
+async def test_pipeline_persona_snapshot_failure_does_not_break_pipeline() -> None:
+    chapter_repo = FakeChapterRepository()
+    user_repo = FakeUserRepository()
+    user_id = uuid.uuid4()
+    user_repo.by_id[user_id] = _make_user(user_id)
+    llm = FakeLLMClient(knowledge={"period": "youth"}, fail_persona=True)
+    pipeline, chunk_repo = _build_pipeline(llm=llm, chapter_repo=chapter_repo, user_repo=user_repo)
+
+    chunk = await pipeline.run(_input(user_id=user_id))
+
+    assert await chunk_repo.get_by_id(chunk.id) is not None
+    chapter = next(iter(chapter_repo.by_id.values()))
+    assert chapter.compaction is not None  # 페르소나 요약 실패해도 챕터 Compaction은 이미 성공
+    assert user_repo.by_id[user_id].persona_snapshot is None
+
+
+async def test_pipeline_persona_snapshot_missing_user_does_not_break_pipeline() -> None:
+    """user_id가 users 테이블에 없어도(방어적) 파이프라인은 계속돼야 한다."""
+    llm = FakeLLMClient(knowledge={"period": "youth"})
+    pipeline, chunk_repo = _build_pipeline(llm=llm)  # 빈 FakeUserRepository
+
+    chunk = await pipeline.run(_input())
+
+    assert await chunk_repo.get_by_id(chunk.id) is not None
 
 
 async def test_pipeline_critic_agent_fills_question_queue() -> None:

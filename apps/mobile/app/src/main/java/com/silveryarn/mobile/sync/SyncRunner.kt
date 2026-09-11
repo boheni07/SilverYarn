@@ -155,6 +155,12 @@ class SyncRunner(
                 epochMs = System.currentTimeMillis(),
                 syncVersion = payload.syncVersion,
             )
+            // design.md §2.11 4단계 "단기 압축 기억" — 아직 소비하는 곳은 없다(SlmEngine
+            // 스텁). 다음 대화용 배경지식이 준비되면 여기서 로컬 캐시만 갱신해 둔다.
+            db.deviceStateDao().updatePersonaSnapshot(
+                summary = payload.personaSnapshot?.summary,
+                keywords = payload.personaSnapshot?.keywords?.joinToString("|"),
+            )
             true
         }.getOrDefault(false)
 }
