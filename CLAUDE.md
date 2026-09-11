@@ -35,7 +35,7 @@ Claude automatically applies PDCA methodology. Commands are shortcuts for power 
 | 9-Phase Pipeline | Phase 1(Schema) ✅ · Phase 2(Convention) ✅ · Phase 3(Mockup, BI가이드+UI/UX설계서+design-tokens.md) ✅ · Phase 4(API 설계, sync-contract.md 포함) ✅ 완료 |
 | Primary Feature | `silveryarn-platform` |
 | 원본 기획 자료 | `Plan/` 폴더 (기획서 v0.5, 프로세스흐름도, BI가이드 v2.0, UI/UX설계서 v1.2) |
-| PDCA 문서 | `docs/01-plan/features/silveryarn-platform.plan.md`(v0.4), `docs/02-design/features/silveryarn-platform.design.md`(v0.36), `docs/03-check/gap-analysis-2026-09-10.md`, `docs/03-check/gap-analysis-2026-09-11.md`, `docs/03-check/blocked-decisions-tracker.md`(법무·인프라 회신 대기 트래커), `docs/04-report/features/silveryarn-platform.report.md` |
+| PDCA 문서 | `docs/01-plan/features/silveryarn-platform.plan.md`(v0.4), `docs/02-design/features/silveryarn-platform.design.md`(v0.37), `docs/03-check/gap-analysis-2026-09-10.md`, `docs/03-check/gap-analysis-2026-09-11.md`, `docs/03-check/blocked-decisions-tracker.md`(법무·인프라 회신 대기 트래커), `docs/04-report/features/silveryarn-platform.report.md` |
 | 동기화 계약 | `docs/02-design/sync-contract.md` — 비동기 업로드(202+job_id), 엔티티별 충돌정책, Presigned URL, 증분 다운로드 |
 | 의사결정 로그 | `docs/01-plan/decisions/silveryarn-platform.decisions.md`(v0.20) (기획서 9장 + design-validator 반영 항목) |
 | 디자인 토큰 | `docs/02-design/design-tokens.md`(v1.2) (BI 가이드 컬러/타이포 → Tailwind 토큰, WCAG AA 대비 규칙, 접근성 최소기준) |
