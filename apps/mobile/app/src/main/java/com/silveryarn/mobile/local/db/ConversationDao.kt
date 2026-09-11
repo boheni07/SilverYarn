@@ -25,4 +25,12 @@ interface ConversationDao {
     /** mobile-schema.md §3 — 매일 자정 배치가 5일(잠정, decisions.md #9) 지난 행을 정리. */
     @Query("DELETE FROM conversations WHERE created_at < :cutoffEpochMs")
     suspend fun deleteOlderThan(cutoffEpochMs: Long)
+
+    /** 홈 화면(M2) "연속 대화일수" 통계용 — 기기 로컬 시간대 날짜별 distinct 목록,
+     * 최신순. §3 retention(5일)이 그대로 이 통계의 상한이 된다(잠정, decisions.md #9). */
+    @Query(
+        "SELECT DISTINCT date(created_at / 1000, 'unixepoch', 'localtime') " +
+            "FROM conversations ORDER BY 1 DESC",
+    )
+    suspend fun listDistinctLocalDates(): List<String>
 }

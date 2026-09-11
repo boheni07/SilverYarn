@@ -30,6 +30,14 @@ class AutobiographyFtsStore(
         )
     }
 
+    /** 홈 화면(M2) "완성 챕터" 통계용 — 로컬에 동기화된(= 다운로드받은) 챕터 수.
+     * FTS5 가상테이블도 COUNT(DISTINCT ...) 집계 쿼리는 지원한다. */
+    fun countChapters(): Int {
+        db.query("SELECT COUNT(DISTINCT chapter_id) FROM autobiography_fts").use { cursor ->
+            return if (cursor.moveToFirst()) cursor.getInt(0) else 0
+        }
+    }
+
     /** mobile-schema.md §2.2 조회 예시 그대로 — bm25() 랭킹 함수로 정렬. */
     fun search(
         query: String,

@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.37 (웹·가족 대시보드 "오늘의 기억 리포트" 구현 — §9.1 화면 인벤토리 반영)
+> **Version**: 0.38 (모바일 홈 셸 M2 + 하단 탭 4개 구현 — §9.1 화면 인벤토리 반영)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -605,7 +605,7 @@ interface Publication {         // v1.1 신규
 
 | 영역 | 화면 |
 |---|---|
-| 모바일앱(당사자) | 온보딩·동의 ✅, 홈·음성대화(셸만), 자서전 작가모드 인터뷰(스텁), 말벗돌봄 대화(스텁), 비서모드 일정·복약(스텁), 설정·동기화 상태(최초 동기화 ✅), 사진 추가하기 |
+| 모바일앱(당사자) | 온보딩·동의 ✅, 홈·음성대화 ✅(M2 셸 + 하단 탭 4개, v0.38 — 마이크 세션 라우팅은 온디바이스 SLM 라우터 붙기 전까지 말벗돌봄 모드 고정), 자서전 작가모드 인터뷰(스텁), 말벗돌봄 대화(스텁), 비서모드 일정·복약(스텁), 설정·동기화 상태(최초 동기화 ✅), 사진 추가하기 |
 | 웹·자서전 사용자 | **로그인 ✅**(`/login` — Keycloak SSO, v0.34), 자서전 뷰어 ✅, 사진·타임라인 갤러리 ✅, ~~구독·결제 관리~~(스코프 아웃, decisions.md #18), 계정 설정 |
 | 웹·가족 | 가족 대시보드(오늘의 기억 리포트) ✅(`(family)/dashboard`, v0.37 — 정서 항목은 안내문구로 대체), 원고 감수·대조편집 ✅, 사진 업로드·타임라인 배치(사진 요청 ✅), 정서 모니터링 상세(⚖️ 정서 파이프라인 OFF), 알림·가족구성원 설정 ✅(`(family)/notification-settings`) |
 | 웹·관리자 | 관리자 대시보드, 사용자 관리 ✅, Wi-Fi 동기화 모니터링 ✅, 정서 알림 이력 관리(⚖️ OFF), 시스템 설정·리소스 모니터링, 기기 관리 ✅ |
@@ -848,6 +848,7 @@ silveryarn/
 | 0.33 | 2026-09-11 | Do 단계 — apps/web `(family)/notification-settings` 화면 신규. `notifications` 모듈(PR #3, `GET/PUT /family-members/{id}/notification-settings`)의 첫 웹 소비자 — 3채널(push/email/sms) × 3항목(챕터갱신/동기화문제/정서알림) 그리드, PUT 전체 교체. `types/notification-setting.ts`(구 `consent-log.ts`의 스테일 `NotificationSetting` 대체), `services/notification-settings.ts`, `features/notification-settings/NotificationSettingsForm.tsx`. §5.1 인벤토리에 구현 상태(✅/스텁/OFF) 표기 + 웹 콘솔 Keycloak 로그인 연동이 선결이라는 공통 미완 명시 | NUBiz AX Initiative |
 | 0.34 | 2026-09-11 | Do 단계 — apps/web Keycloak 로그인 연동(decisions #49, 사용자 결정: Auth.js/NextAuth v5). §7.4에 웹 콘솔 로그인 항목 추가, §5.1 인벤토리에서 "Bearer dev 공통 미완" 해소(web은 실 Bearer 동작, admin만 미연동). `silveryarn-web` public client + PKCE, `lib/api/client.ts` server-only + Server Action 경로, Next.js 16 `proxy.ts`. 로컬 실 flow(Keycloak 로그인 → 세션 → 백엔드 조회·PUT → DB) 브라우저 검증 | NUBiz AX Initiative |
 | 0.35 | 2026-09-11 | Do 단계 — apps/admin Keycloak 로그인 연동(decisions #49, apps/web과 동일 Auth.js). §5.1·§7.4에 admin도 완료 반영. realm `silveryarn-web` `redirectUris`에 `localhost:3001/*` 추가(`infra/keycloak/import/silveryarn-realm.json`·README). admin은 GET 전용이라 Server Action 없이 `lib/api/client.ts` server-only만. 브라우저 flow 검증(로그인 → `require_roles(admin)` 통과 → 사용자·동기화 목록 조회) | NUBiz AX Initiative |
+| 0.38 | 2026-09-11 | Do 단계 — 모바일 홈 셸(M2, UI/UX 화면설계서) 구현. `presentation/home/HomeScreen.kt`(인사 헤더·마이크 CTA·오늘의 회고 질문 카드·통계 바) + `presentation/AppShell.kt`(하단 탭 4개: 대화/자서전/일정/설정 — `AppEntry.kt`의 `AppState.Home`이 이제 이걸 그린다). 통계는 로컬 DB만 조회(오프라인 완결, §2.1): `autobiography_fts` DISTINCT chapter_id(완성 챕터), `conversations` distinct 날짜로 계산한 연속 대화일수(§3 retention 5일이 상한), `unrecalled_photos` COUNT. mobile-schema.md v0.10 — `device_state.user_name` 신규(인사말용, `POST /devices` 응답엔 이름이 없어 온보딩 값을 별도 저장). ⚠️ "대화" 탭 마이크 세션은 온디바이스 SLM 의도 라우터(workflow-diagrams.md §19)가 아직 스텁이라 말벗돌봄 모드(M4)로 고정 — 라우터 구현 시 `AppShell`의 분기만 교체 | NUBiz AX Initiative |
 | 0.37 | 2026-09-11 | Do 단계 — 웹·가족 대시보드 "오늘의 기억 리포트"(WF1) 구현. `(family)/dashboard` 신규 — 오늘 대화 수(신규 `GET /users/{id}/conversation-chunks/count?since=`, PII 복호화 없이 COUNT만)·오늘 새 회고 수·"주요 회고 카드"(§2.11 4단계 Compaction 요약을 `ChapterResponse.compaction_summary/keywords`로 최초 노출). WF1의 "정서 상태"·"정서 추이 차트"는 렌더하지 않고 파이프라인 OFF 사실을 안내(decisions #25) — §9.1 화면 인벤토리 갱신 | NUBiz AX Initiative |
 | 0.36 | 2026-09-11 | **PDCA Check #2** (`docs/03-check/gap-analysis-2026-09-11.md`) — 1차 Check 이후 PR #10~19 반영. §11.2 Implementation Order 스테일 정정(item 1: schema.md v1.11→v1.12·마이그레이션 0006→0007; item 5: Compaction Engine "미구현"→구현됨 PR #15, Critic Agent PR #16 추가; preamble: PR #1~19). §11.1 트리 "Alembic 0001~0006"→0007. structure.md 모듈 수(8/10→12)·orphan cleanup "미구현"→구현됨 정정. §4.2 endpoint 표에 없는 구현 헬퍼 6종은 경미(표가 "초안"·버전 로그에 기록)로 후속. schema DDL↔실 DB·4계층·import-linter 정상 확인 | NUBiz AX Initiative |
 | 0.1 | 2026-09-05 | Plan/ 폴더 원본 문서 4종 기반 Design 초안 등록 | NUBiz AX Initiative |

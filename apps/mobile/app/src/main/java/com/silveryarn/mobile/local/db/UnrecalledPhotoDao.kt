@@ -19,4 +19,8 @@ interface UnrecalledPhotoDao {
 
     @Query("DELETE FROM unrecalled_photos")
     suspend fun clear()
+
+    /** 홈 화면(M2) "미회고 사진" 통계용. */
+    @Query("SELECT COUNT(*) FROM unrecalled_photos")
+    suspend fun count(): Int
 }
