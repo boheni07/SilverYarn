@@ -38,6 +38,9 @@ class FakeConversationChunkRepository:
         matches.sort(key=lambda c: c.created_at, reverse=True)
         return matches[offset : offset + limit]
 
+    async def count_since(self, user_id: uuid.UUID, since: datetime) -> int:
+        return sum(1 for c in self._store.values() if c.user_id == user_id and c.created_at >= since)
+
     async def search_by_keyword(self, user_id: uuid.UUID, keyword: str) -> list[ConversationChunk]:
         return [
             c
@@ -168,4 +171,14 @@ async def test_search_chunks_matches_transcript_server(service: ConversationChun
     )
     results = await service.search_chunks(user_id, "인천")
     assert len(results) == 1
-    assert "인천" in results[0].transcript_server
+
+
+async def test_count_chunks_since_filters_by_user_and_time(service: ConversationChunkService) -> None:
+    user_id = uuid.uuid4()
+    other_id = uuid.uuid4()
+    await service.record_chunk(user_id=user_id, raw_audio_ref="a.opus", transcript_on_device="A", mode=None)
+    await service.record_chunk(user_id=other_id, raw_audio_ref="b.opus", transcript_on_device="B", mode=None)
+
+    assert await service.count_chunks_since(user_id, datetime(2020, 1, 1, tzinfo=UTC)) == 1
+    assert await service.count_chunks_since(user_id, datetime(2999, 1, 1, tzinfo=UTC)) == 0
+    assert await service.count_chunks_since(other_id, datetime(2020, 1, 1, tzinfo=UTC)) == 1

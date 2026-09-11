@@ -8,6 +8,7 @@ UploadPipelineService가 호출하며 공개 POST 엔드포인트로 노출하�
 """
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from core_service.core.errors import ApiError
@@ -41,6 +42,9 @@ class ConversationChunkService:
         if limit < 1 or limit > 200:
             raise ApiError("VALIDATION_ERROR", "limit은 1~200 사이여야 합니다.")
         return await self._repo.list_by_user(user_id, limit=limit, offset=offset)
+
+    async def count_chunks_since(self, user_id: uuid.UUID, since: datetime) -> int:
+        return await self._repo.count_since(user_id, since)
 
     async def search_chunks(self, user_id: uuid.UUID, keyword: str) -> list[ConversationChunk]:
         if not keyword:

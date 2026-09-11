@@ -46,6 +46,9 @@ export default function HomePage() {
         />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Button onClick={() => goTo("/chapters")}>자서전 뷰어로 이동</Button>
+          <Button variant="secondary" onClick={() => goTo("/dashboard")}>
+            가족 대시보드로 이동
+          </Button>
           <Button variant="secondary" onClick={() => goTo("/photos")}>
             사진 갤러리로 이동
           </Button>
