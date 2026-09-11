@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.39 (`POST /chapters/{id}/review` 승인 시 Compaction 재확인 안전망 — gap-analysis-2026-09-11 G11 후속 #3)
+> **Version**: 0.40 (§4.2 Endpoint List ↔ 실제 구현 1:1 정비 — gap-analysis-2026-09-11 G11)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -539,24 +539,40 @@ interface Publication {         // v1.1 신규
 | GET | /api/v1/sync/sessions?deviceId={deviceId}&status={status}&page={page}&pageSize={pageSize} | 동기화 이력 조회, 페이지네이션 — apps/admin 동기화 모니터링 화면용(신규 0.7, deviceId 선택·페이지네이션·status 필터로 확장 0.10). deviceId를 생략하면 전체 기기 통합 모니터링. 응답 항목에 deviceDisplayId(0.11, devices 모듈에서 조합해 붙임 — SyncSession 엔티티 컬럼은 아님) 포함. 위 항목(기기 자신의 폴링용, Device Token)과 인가모델이 달라 별도 엔드포인트로 분리 | Admin |
 | GET | /api/v1/sync/download?deviceId={deviceId}&since={syncVersion} | 최신 자서전·RAG 스냅샷·사진·질문목록 다운로드 — `since` 지정 시 증분만 반환. `deviceId`는 실제 구현 중 발견해 신규 추가한 필수 파라미터(0.14, [sync-contract.md §5](../sync-contract.md#5-증분-다운로드-be-b4)) | Device Token |
 | GET | /api/v1/users/{userId}/chapters | 챕터 목록/본문 조회 | 2FA + Role |
-| POST | /api/v1/chapters/{id}/review | 감수 승인/반려 (`chapter_revisions` 생성) | 2FA + Role(family) |
+| GET | /api/v1/chapters/{id} | 챕터 단건 조회 — 목록을 실제로 쓰려면 필요한 조회(신규, 스캐폴딩 시점 추가, gap-analysis G11) | 2FA + Role |
+| GET | /api/v1/chapters/{id}/revisions | 감수 이력 조회(신규, 스캐폴딩 시점 추가, gap-analysis G11) | 2FA + Role |
+| POST | /api/v1/chapters/{id}/review | 감수 승인/반려 (`chapter_revisions` 생성). 승인 시 Compaction 재확인 안전망(v0.39) | 2FA + Role(family) |
+| GET | /api/v1/users/{userId}/family-members | 가족/복지사 목록 조회(신규, gap-analysis G11 — §7.4가 "적용 범위"에 이미 명시했던 인가 대상인데 표에 행 자체가 없었음) | 2FA + Role |
+| POST | /api/v1/users/{userId}/family-members | 가족/복지사 구성원 생성(신규, gap-analysis G11) — `contact`는 PII(암호문+blind index) | 2FA + Role(family) |
 | GET | /api/v1/users/{userId}/photos | 사진 목록 조회 | 2FA + Role |
 | POST | /api/v1/photos/upload-url | 사진 업로드용 Presigned URL 발급 (신규, [sync-contract.md §4](../sync-contract.md#4-사진-업로드--presigned-url-흐름-be-b2)) | 2FA + Role(family) 또는 Device Token |
 | POST | /api/v1/photos/{id}/complete | 사진 업로드 완료 확인 (신규) | 2FA + Role(family) 또는 Device Token |
 | POST | /api/v1/photo-requests | 가족→당사자 사진 추가 요청 | 2FA + Role(family) |
 | GET | /api/v1/users/{userId}/photo-requests | 사진 추가 요청 목록 조회(신규 0.13, 스캐폴딩 시점 추가 — invitations 모듈과 동일 이유: 만들기만 하고 볼 방법이 없으면 WU3→WF3 루프가 끝나지 않음) | 2FA + Role |
 | POST | /api/v1/photo-requests/{id}/dismiss | 사진 추가 요청 닫기(신규 0.13) — 충족(fulfilled)은 이 엔드포인트가 아니라 POST /photos/{id}/complete가 자동 처리 | 2FA + Role |
+| GET | /api/v1/users/{userId}/conversation-chunks | 대화 청크 목록 조회(신규, gap-analysis G11) | 2FA + Role |
+| GET | /api/v1/users/{userId}/conversation-chunks/search?keyword={keyword} | 대화 청크 임시 검색(신규, gap-analysis G11) — ⚠️ 암호화 후 SQL ILIKE 불가라 전량 복호화+파이썬 부분일치. §2.4 하이브리드 서치(Qdrant)로 교체 예정, 프로덕션 사용 금지 | 2FA + Role |
+| GET | /api/v1/users/{userId}/conversation-chunks/count?since={isoDateTime} | 특정 시각 이후 청크 개수만 반환 — `transcript_*`(PII)는 복호화하지 않는다. 가족 대시보드(WF1) "오늘 대화" 통계용(신규 v0.37) | 2FA + Role |
+| GET | /api/v1/conversation-chunks/{id} | 대화 청크 단건 조회(신규, gap-analysis G11) | 2FA + Role |
 | GET | /api/v1/users/{userId}/emotion-scores | 일별 정서 점수 추이 조회 | 2FA + Role |
 | GET | /api/v1/users/{userId}/emotion-alerts | 정서 알림 이력 | 2FA + Role |
 | GET | /api/v1/family-members/{id}/notification-settings | 알림 수신 설정 조회 (구현 v0.22) | 2FA + 본인/admin |
 | PUT | /api/v1/family-members/{id}/notification-settings | 알림 수신 채널·항목 설정 — 이 구성원의 설정 전체 교체(delete→insert). `receives_emotion_alerts` 기본 opt-out(CTO B1). 구현 v0.22 | 2FA + 본인/admin |
 | POST | /api/v1/invitations | 가족 구성원 초대 | 2FA + Role(family) |
+| GET | /api/v1/invitations/{token} | 초대 토큰 조회(신규, gap-analysis G11) — 토큰 자체가 접근 권한이라 무인증 | 없음 |
+| POST | /api/v1/invitations/{token}/accept | 초대 수락 → 계정 연결(신규, gap-analysis G11) — 수락자 토큰 `sub`를 `family_members.keycloak_sub`에 연결(구현 v0.21) | Bearer(`require_verified_subject`, membership 미확인) |
 | POST | /api/v1/users/{userId}/publications | 인쇄/출판 요청 | 2FA + Role |
+| POST | /api/v1/users | 온보딩 시 어르신(1차 사용자) 계정 생성(F-3 예외, 부트스트랩 — 인증 없음. 신규, gap-analysis G11) | 없음(부트스트랩) |
+| GET | /api/v1/users/{userId} | 사용자 단건 조회(신규, gap-analysis G11) | 2FA + Role |
 | POST | /api/v1/devices | 설치 시점 1회 기기 등록(F-3 예외, 부트스트랩 — 인증 없음). 응답에 **Device Token 1회 발급**(v0.19, decisions.md #47 — 이후 `/sync/*`는 이 토큰을 `X-Device-Token`으로 제시) | 없음(부트스트랩) |
 | GET | /api/v1/users/{userId}/devices | 기기 사양·설치모드 조회 (관리자, 조회 전용) — *(v0.6: `/devices/{userId}` → 소유자 중첩 규칙에 맞게 정정, M-8)* | Admin (role 강제, v0.19) |
 | GET | /api/v1/users?page={page}&pageSize={pageSize}&name={name} | 전체 사용자 목록 조회, 페이지네이션(신규 0.8) + 이름 부분일치 검색(신규 0.12) — F-3 예외(사전에 소유자를 특정할 수 없는 전역 조회) | Admin |
 | GET | /api/v1/users/{userId}/questions | 회고 질문 큐 조회 (L-12, 구현 v0.20 — `answered` 필터 옵션. sync/download의 `priority_questions`와 달리 필터 없이 큐 전체) | 2FA + Role |
 | GET | /api/v1/users/{userId}/schedule-items | 일정/복약 목록 조회 (신규, L-12) | 2FA + Role |
+| POST | /api/v1/users/{userId}/schedule-items | 일정/복약 항목 생성(신규, gap-analysis G11) | 2FA + Role |
+| GET | /api/v1/schedule-items/{id} | 일정/복약 단건 조회(신규, gap-analysis G11) | 2FA + Role |
+| POST | /api/v1/schedule-items/{id}/respond | 일정 응답(확인/거절) — sync-contract.md §3 Device-Wins 필드 병합의 실제 구현(구현 v0.20, 표에는 없었음, gap-analysis G11) | 2FA + Role |
+| POST | /api/v1/schedule-items/{id}/next-reminder | 재알림 예약(M5 "나중에 알림") — `next_remind_at` 갱신(신규, gap-analysis G11) | 2FA + Role(family) |
 | POST | /api/v1/users/{userId}/consent-logs | 개인정보 수집 동의/철회 1건 기록 (신규 0.18 — §2.9 온보딩 흐름이 이미 전제하던 '동의 기록' 경로가 §4.2에 없던 갭). 응답 `actor`(self/proxy) 파생 | 2FA + Role(family) 또는 Device Token |
 | GET | /api/v1/users/{userId}/consent-logs | 동의 이력 조회 (신규, L-12) | 2FA + Role |
 | GET | /api/v1/users/{userId}/consent-state | 유형별 현재 동의 상태(최신 행 기준) — 온보딩 완료 게이트·RBAC "동의 시" 조건용 (신규 0.18) | 2FA + Role |
@@ -848,6 +864,7 @@ silveryarn/
 | 0.33 | 2026-09-11 | Do 단계 — apps/web `(family)/notification-settings` 화면 신규. `notifications` 모듈(PR #3, `GET/PUT /family-members/{id}/notification-settings`)의 첫 웹 소비자 — 3채널(push/email/sms) × 3항목(챕터갱신/동기화문제/정서알림) 그리드, PUT 전체 교체. `types/notification-setting.ts`(구 `consent-log.ts`의 스테일 `NotificationSetting` 대체), `services/notification-settings.ts`, `features/notification-settings/NotificationSettingsForm.tsx`. §5.1 인벤토리에 구현 상태(✅/스텁/OFF) 표기 + 웹 콘솔 Keycloak 로그인 연동이 선결이라는 공통 미완 명시 | NUBiz AX Initiative |
 | 0.34 | 2026-09-11 | Do 단계 — apps/web Keycloak 로그인 연동(decisions #49, 사용자 결정: Auth.js/NextAuth v5). §7.4에 웹 콘솔 로그인 항목 추가, §5.1 인벤토리에서 "Bearer dev 공통 미완" 해소(web은 실 Bearer 동작, admin만 미연동). `silveryarn-web` public client + PKCE, `lib/api/client.ts` server-only + Server Action 경로, Next.js 16 `proxy.ts`. 로컬 실 flow(Keycloak 로그인 → 세션 → 백엔드 조회·PUT → DB) 브라우저 검증 | NUBiz AX Initiative |
 | 0.35 | 2026-09-11 | Do 단계 — apps/admin Keycloak 로그인 연동(decisions #49, apps/web과 동일 Auth.js). §5.1·§7.4에 admin도 완료 반영. realm `silveryarn-web` `redirectUris`에 `localhost:3001/*` 추가(`infra/keycloak/import/silveryarn-realm.json`·README). admin은 GET 전용이라 Server Action 없이 `lib/api/client.ts` server-only만. 브라우저 flow 검증(로그인 → `require_roles(admin)` 통과 → 사용자·동기화 목록 조회) | NUBiz AX Initiative |
+| 0.40 | 2026-09-11 | Do 단계 — §4.2 Endpoint List를 실제 구현과 1:1로 정비(gap-analysis-2026-09-11 G11). OpenAPI 스키마 대조로 발견한 누락 17행 추가: `POST/GET /users`(부트스트랩·단건 조회), `GET /chapters/{id}`·`/revisions`, `GET/POST /users/{id}/family-members`, `GET /users/{id}/conversation-chunks`·`/search`·`/count`·`GET /conversation-chunks/{id}`, `GET /invitations/{token}`·`POST .../accept`, `GET /schedule-items/{id}`·`POST .../respond`·`/next-reminder`·`POST /users/{id}/schedule-items`. G11이 원래 지목한 6건보다 실제 갭이 더 컸다(family-members 목록·생성 전체가 표에 아예 없었음 등) — 코드 변경 없음, 순수 문서 정비 | NUBiz AX Initiative |
 | 0.39 | 2026-09-11 | Do 단계 — `POST /chapters/{id}/review` 승인 시 Compaction 재확인 안전망(gap-analysis-2026-09-11 G11 후속 #3). 감수는 `body_text`/`version`을 바꾸지 않아(`update_status` `bump_version=False` 기본값) 평소엔 `compact_chapter(force=False)`가 재조회만 하고 끝나지만, 직전 `save_draft` 시점 압축이 vLLM 장애로 실패했던 경우 확정 시점에 한 번 더 시도한다. best-effort — 실패해도 승인 응답은 그대로 200. 실 인프라(vLLM 미기동 상태 포함) 검증: 승인 200 + `status=confirmed` 확인, 예외 시 폴백 로그도 확인 | NUBiz AX Initiative |
 | 0.38 | 2026-09-11 | Do 단계 — 모바일 홈 셸(M2, UI/UX 화면설계서) 구현. `presentation/home/HomeScreen.kt`(인사 헤더·마이크 CTA·오늘의 회고 질문 카드·통계 바) + `presentation/AppShell.kt`(하단 탭 4개: 대화/자서전/일정/설정 — `AppEntry.kt`의 `AppState.Home`이 이제 이걸 그린다). 통계는 로컬 DB만 조회(오프라인 완결, §2.1): `autobiography_fts` DISTINCT chapter_id(완성 챕터), `conversations` distinct 날짜로 계산한 연속 대화일수(§3 retention 5일이 상한), `unrecalled_photos` COUNT. mobile-schema.md v0.10 — `device_state.user_name` 신규(인사말용, `POST /devices` 응답엔 이름이 없어 온보딩 값을 별도 저장). ⚠️ "대화" 탭 마이크 세션은 온디바이스 SLM 의도 라우터(workflow-diagrams.md §19)가 아직 스텁이라 말벗돌봄 모드(M4)로 고정 — 라우터 구현 시 `AppShell`의 분기만 교체 | NUBiz AX Initiative |
 | 0.37 | 2026-09-11 | Do 단계 — 웹·가족 대시보드 "오늘의 기억 리포트"(WF1) 구현. `(family)/dashboard` 신규 — 오늘 대화 수(신규 `GET /users/{id}/conversation-chunks/count?since=`, PII 복호화 없이 COUNT만)·오늘 새 회고 수·"주요 회고 카드"(§2.11 4단계 Compaction 요약을 `ChapterResponse.compaction_summary/keywords`로 최초 노출). WF1의 "정서 상태"·"정서 추이 차트"는 렌더하지 않고 파이프라인 OFF 사실을 안내(decisions #25) — §9.1 화면 인벤토리 갱신 | NUBiz AX Initiative |
