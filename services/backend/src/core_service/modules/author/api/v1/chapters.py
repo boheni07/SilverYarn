@@ -44,6 +44,10 @@ class ChapterResponse(BaseModel):
     status: str
     version: int
     updated_at: datetime
+    # §2.11 4단계 Compaction Engine(PR #15) 산출물 — 가족 대시보드(WF1) "주요 회고 카드"의
+    # AI 요약 미리보기. compaction_is_stale이면(최신 sync 이후 아직 재계산 전) null.
+    compaction_summary: str | None = None
+    compaction_keywords: list[str] | None = None
 
 
 class ChapterRevisionResponse(BaseModel):
@@ -80,6 +84,8 @@ def _to_response(chapter) -> ChapterResponse:  # noqa: ANN001 — Chapter 도메
         status=chapter.status.value,
         version=chapter.version,
         updated_at=chapter.updated_at,
+        compaction_summary=chapter.compaction.summary if chapter.compaction else None,
+        compaction_keywords=chapter.compaction.keywords if chapter.compaction else None,
     )
 
 

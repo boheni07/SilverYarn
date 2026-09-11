@@ -26,6 +26,11 @@ from core_service.shared.schemas import DataResponse
 router = APIRouter(tags=["conversation-chunks"])
 
 
+class ConversationChunkCountResponse(BaseModel):
+    count: int
+    since: datetime
+
+
 class ConversationChunkResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
@@ -100,6 +105,23 @@ async def search_conversation_chunks(
     authorize_user_access(ctx, user_id)
     chunks = await service.search_chunks(user_id, keyword)
     return DataResponse(data=[_to_response(c) for c in chunks])
+
+
+@router.get(
+    "/users/{user_id}/conversation-chunks/count",
+    response_model=DataResponse[ConversationChunkCountResponse],
+)
+async def count_conversation_chunks(
+    user_id: uuid.UUID,
+    since: datetime = Query(description="이 시각(포함) 이후 생성된 청크만 센다 — ISO 8601"),
+    service: ConversationChunkService = Depends(_service),
+    ctx: AuthContext = Depends(require_auth),
+) -> DataResponse[ConversationChunkCountResponse]:
+    """가족 대시보드(WF1) "오늘 대화" 통계 — transcript_*(PII)를 복호화하지 않고
+    개수만 반환한다. "오늘"의 경계는 호출자가 정한다(클라이언트 로케일 자정)."""
+    authorize_user_access(ctx, user_id)
+    count = await service.count_chunks_since(user_id, since)
+    return DataResponse(data=ConversationChunkCountResponse(count=count, since=since))
 
 
 @router.get("/conversation-chunks/{chunk_id}", response_model=DataResponse[ConversationChunkResponse])

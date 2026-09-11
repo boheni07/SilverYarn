@@ -14,7 +14,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import ARRAY, DateTime, ForeignKey, Integer, String, Text, select
+from sqlalchemy import ARRAY, DateTime, ForeignKey, Integer, String, Text, func, select
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
@@ -120,6 +120,19 @@ class ConversationChunkRepository:
             .offset(offset)
         )
         return [await self._to_domain(m) for m in result.scalars().all()]
+
+    async def count_since(self, user_id: uuid.UUID, since: datetime) -> int:
+        """가족 대시보드(WF1) "오늘 대화" 통계용 — transcript_*를 복호화하지 않고
+        COUNT(*)만 셈한다(불필요한 PII 노출 회피)."""
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(ConversationChunkModel)
+            .where(
+                ConversationChunkModel.user_id == user_id,
+                ConversationChunkModel.created_at >= since,
+            )
+        )
+        return result.scalar_one()
 
     async def search_by_keyword(self, user_id: uuid.UUID, keyword: str) -> list[ConversationChunk]:
         """TODO(다음 스프린트): 이건 임시 검색이다. 실제로는 design.md §2.4 RAG

@@ -14,6 +14,9 @@ export interface Chapter {
   version: number;
   createdAt: string;
   updatedAt: string;
+  /** §2.11 4단계 Compaction Engine 산출물 — 재계산 전(stale)이면 없음. */
+  compactionSummary?: string;
+  compactionKeywords?: string[];
 }
 
 export interface ChapterRevision {
