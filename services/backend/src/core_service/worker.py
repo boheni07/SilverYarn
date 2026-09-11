@@ -51,6 +51,8 @@ from core_service.modules.sync.application.upload_pipeline_service import (
 )
 from core_service.modules.sync.domain.sync_session import SyncStatus
 from core_service.modules.sync.infrastructure.sync_repository import SyncSessionRepository
+from core_service.modules.users.application.user_service import UserService
+from core_service.modules.users.infrastructure.user_repository import UserRepository
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -96,6 +98,7 @@ async def process_upload(
                     ChapterRepository(db_session), ChapterRevisionRepository(db_session)
                 ),
                 question_service=QuestionService(QuestionRepository(db_session)),
+                user_service=UserService(UserRepository(db_session)),
                 stt_client=STTClient(),
                 embedding_client=EmbeddingClient(),
                 llm_client=LLMClient(),

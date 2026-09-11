@@ -2,10 +2,20 @@
 
 import uuid
 from datetime import date
+from typing import Protocol
 
 from core_service.core.errors import ApiError
 from core_service.modules.users.domain.user import User
 from core_service.modules.users.infrastructure.user_repository import UserRepository
+
+
+class PersonaSummarizer(Protocol):
+    """design §2.11 4단계 — 챕터별 (요약, 키워드) 목록 → (전체 인물 요약, 키워드).
+    `core.clients.LLMClient`가 구현."""
+
+    async def summarize_persona_memory(
+        self, chapter_digests: list[tuple[str, list[str]]]
+    ) -> tuple[str, list[str]]: ...
 
 
 class UserService:
@@ -22,6 +32,32 @@ class UserService:
         if not name or len(name) > 100:
             raise ApiError("VALIDATION_ERROR", "name은 1~100자여야 합니다.")
         return await self._repo.create(name=name, birth_date=birth_date)
+
+    async def refresh_persona_snapshot(
+        self,
+        user_id: uuid.UUID,
+        chapter_digests: list[tuple[str, list[str]]],
+        summarizer: PersonaSummarizer,
+        *,
+        force: bool = False,
+    ) -> User:
+        """§2.11 4단계 "단기 압축 기억" 갱신 — `ChapterService.compact_chapter`와 동일한
+        stale 판정 패턴(force가 아니면 참고 챕터 수가 그대로면 재호출 없이 그대로 반환).
+
+        `chapter_digests`가 비어 있으면(아직 요약된 챕터가 하나도 없음) 요약할 게
+        없으므로 vLLM을 부르지 않고 그대로 반환한다.
+        """
+        user = await self.get_user(user_id)
+        current_count = len(chapter_digests)
+        if not force and not user.persona_is_stale(current_count):
+            return user
+        if current_count == 0:
+            return user
+        summary, keywords = await summarizer.summarize_persona_memory(chapter_digests)
+        await self._repo.set_persona_snapshot(
+            user_id, summary=summary, keywords=keywords, source_chapter_count=current_count
+        )
+        return await self.get_user(user_id)
 
     async def list_users(self, page: int, page_size: int, name: str | None = None) -> tuple[list[User], int]:
         """apps/admin "전체 사용자 목록" — page는 1부터 시작(design.md §4.1 예시와 동일).

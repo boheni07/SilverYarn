@@ -4,7 +4,7 @@
 
 **Project**: 은빛실타래 (SilverYarn)
 **Date**: 2026-09-07
-**Version**: 1.12 (Do 단계 — `chapters` Compaction Engine 컬럼 3종, 마이그레이션 0007)
+**Version**: 1.13 (Do 단계 — `users` 페르소나 스냅샷 컬럼 3종, 마이그레이션 0008)
 **Source**: Design 문서 §3 Data Model 초안 + UI/UX 화면설계서 필드 단위 대조 결과 반영
 **용어 정의**: [glossary.md](./glossary.md) 참조
 
@@ -19,6 +19,8 @@
 > **v1.5 변경 요약** (Do 단계, 2026-09-08): apps/admin "전체 기기 통합 모니터링" 화면용 `idx_sync_started_at ON sync_sessions(started_at DESC)` 인덱스 신규 — 기기로 필터하지 않는 전역 정렬 쿼리는 기존 `idx_sync_device(device_id, started_at DESC)`를 못 쓰기 때문(선두 컬럼 불일치).
 >
 > **v1.6 변경 요약** (Do 단계 — photos 모듈 완성, 2026-09-08): `photos`에 `status` 컬럼 신규(`pending_upload`/`uploaded`, 기본값 `pending_upload`) — [sync-contract.md §4](../02-design/sync-contract.md#4-사진-업로드--presigned-url-흐름-be-b2)의 "3단계 확인 콜백이 없으면 `photos` 행은 `status=pending_upload`로 남고" 문장이 이미 전제하고 있던 컬럼인데 §3.6 속성 표에는 빠져 있던 걸 실제 구현 중 발견 — 문서가 이미 확정해 둔 흐름을 코드로 옮기며 정정했다.
+>
+> **v1.13 변경 요약** (Do 단계 — 페르소나 스냅샷, 2026-09-11): `users`에 `persona_summary VARCHAR(500)`·`persona_keywords TEXT[]`·`persona_source_chapter_count INTEGER` 3개 컬럼 추가(마이그레이션 `0008`). design §2.11 4단계 "단기 압축 기억" — 요약된 챕터 전체를 가로질러 vLLM이 만든, 말벗돌봄 모드(CareAgent "은빛이")가 다음 대화에서 참고할 배경지식. `GET /sync/download`의 `persona_snapshot`이 이 값을 내려보낸다. `chapters.compaction_*`(v1.12)와 동일하게 평문 보관. ⚠️ 정서·심리 평가는 포함하지 않는다(decisions.md #25).
 >
 > **v1.12 변경 요약** (Do 단계 — Compaction Engine, 2026-09-10): `chapters`에 `compaction_summary VARCHAR(500)`·`compaction_keywords TEXT[]`·`compacted_version INTEGER` 3개 컬럼 추가(마이그레이션 `0007`). design §2.11 4단계 — vLLM이 확정 챕터 본문을 온디바이스 FTS5용 요약·키워드로 압축, `GET /sync/download`가 이 값을 내려보낸다(이전엔 `body_text` 원문/빈 배열). `compacted_version != version`이면 stale로 재계산. 평문 보관(PII 자유텍스트 5개 컬럼에 미포함)이나 인물명이 들어갈 수 있어 B3 파기 시 함께 삭제.
 >
@@ -84,6 +86,9 @@
 | primary_device_id | UUID | N | FK → devices.id |
 | created_at | timestamptz | Y | 생성 시각 |
 | updated_at | timestamptz | Y | 수정 시각 |
+| persona_summary | varchar(500) | N | design.md §2.11 4단계 "단기 압축 기억" — 요약된 챕터 전체를 가로지른 vLLM 요약. **v1.13 신규**. `compaction_summary`(chapters)와 동일하게 평문 |
+| persona_keywords | text[] | N | 위와 같은 배경지식의 핵심 키워드 5~8개. **v1.13 신규** |
+| persona_source_chapter_count | integer | N | 생성 시점에 참고한(=Compaction 요약이 있는) 챕터 수 — 값이 바뀌면 stale. **v1.13 신규** |
 
 ---
 
@@ -472,7 +477,10 @@ CREATE TABLE users (
   birth_date VARCHAR(200),                        -- v1.11: DATE→VARCHAR, 앱 레이어 암호문
   primary_device_id UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  persona_summary VARCHAR(500),                   -- v1.13 신규, 평문 (§2.11 4단계)
+  persona_keywords TEXT[],                        -- v1.13 신규
+  persona_source_chapter_count INTEGER            -- v1.13 신규
 );
 
 CREATE TYPE family_role AS ENUM ('family', 'caregiver', 'social_worker', 'admin');

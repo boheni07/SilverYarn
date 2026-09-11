@@ -29,6 +29,8 @@ from core_service.modules.schedule.deps import get_schedule_item_service
 from core_service.modules.sync.application.sync_service import SyncService
 from core_service.modules.sync.domain.sync_session import SyncStatus
 from core_service.modules.sync.infrastructure.sync_repository import SyncSessionRepository
+from core_service.modules.users.application.user_service import UserService
+from core_service.modules.users.deps import get_user_service
 from core_service.shared.domain_enums import FamilyRole
 from core_service.shared.schemas import DataResponse, PaginatedResponse, Pagination
 
@@ -97,11 +99,19 @@ class ScheduleItemDownloadResponse(BaseModel):
     description: str | None
 
 
+class PersonaSnapshotResponse(BaseModel):
+    summary: str
+    keywords: list[str]
+
+
 class SyncDownloadResponse(BaseModel):
     sync_version: str
     chapter_updates: list[ChapterUpdateResponse]
     priority_questions: list[PriorityQuestionResponse]
     schedule_items: list[ScheduleItemDownloadResponse]
+    # design.md §2.11 4단계 "단기 압축 기억" — 아직 요약된 챕터가 하나도 없으면 null
+    # (신규 사용자, 또는 vLLM 미가동으로 Compaction이 한 번도 성공한 적 없음).
+    persona_snapshot: PersonaSnapshotResponse | None = None
 
 
 _SYNC_VERSION_FORMAT = "sync_%Y%m%d_%H%M%S"
@@ -238,6 +248,7 @@ async def download(
     chapter_service: ChapterService = Depends(get_chapter_service),
     question_service: QuestionService = Depends(get_question_service),
     schedule_service: ScheduleItemService = Depends(get_schedule_item_service),
+    user_service: UserService = Depends(get_user_service),
     _device: DeviceIdentity = Depends(require_device_token),
 ) -> DataResponse[SyncDownloadResponse]:
     """sync-contract.md §5 — 증분 다운로드.
@@ -257,10 +268,17 @@ async def download(
     chapters = await chapter_service.list_chapter_updates_for_user(device.user_id, since_dt)
     questions = await question_service.list_priority_questions_for_user(device.user_id, since_dt)
     schedule_items = await schedule_service.list_pending_schedule_items_for_user(device.user_id)
+    user = await user_service.get_user(device.user_id)
+    persona = user.persona_snapshot
 
     return DataResponse(
         data=SyncDownloadResponse(
             sync_version=_new_sync_version(),
+            persona_snapshot=(
+                PersonaSnapshotResponse(summary=persona.summary, keywords=persona.keywords)
+                if persona
+                else None
+            ),
             chapter_updates=[
                 ChapterUpdateResponse(
                     chapter_id=c.id,

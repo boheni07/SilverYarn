@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.40 (§4.2 Endpoint List ↔ 실제 구현 1:1 정비 — gap-analysis-2026-09-11 G11)
+> **Version**: 0.41 (§2.11 4단계 "단기 압축 기억" 페르소나 JSON 룰셋 서버측 생성 — CareAgent 전용 스코프)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -242,7 +242,7 @@ Idle → Listening(웨이크워드 또는 마이크 버튼 탭 — M2 화면과 
 - 서버 확정 챕터 요약·핵심 키워드를 온디바이스 SQLite FTS5 테이블용 차분 데이터로 컴파일 (§2.4 "경량화 스냅샷 생성"의 구체 산출물)
 - 다음 대화용 "단기 압축 기억(Short-term Compressed Persona)" JSON 룰셋 생성 — §2.10 페르소나 정의와 연동
 
-> **구현 상태 (v0.31)**: 챕터 요약·키워드 부분 구현. 업로드 파이프라인(`upload_pipeline_service`)이 `save_draft` 직후 `ChapterService.compact_chapter()`를 best-effort로 호출한다 — `LLMClient.compact_chapter(body_text)`(vLLM, `_COMPACT_SYSTEM_PROMPT`)가 `{summary, keywords}` JSON을 반환하고 `chapters.compaction_summary`/`compaction_keywords`/`compacted_version`에 저장(마이그레이션 0007). `compacted_version != version`이면 stale로 보고 다음 턴에 재계산. `GET /sync/download`의 `chapter_updates.summary`/`keywords`가 이 값을 그대로 내려보내고, 아직 요약 안 된 챕터는 `body_text` 앞 200자로 임시 대체(이전엔 원문 전체/빈 배열). **"단기 압축 기억 JSON 룰셋"(페르소나, §2.10 연동)은 미구현** — 온디바이스 SLM/페르소나 배포 경로가 확정되면. **v0.39**: `POST /chapters/{id}/review` 승인(confirmed) 시에도 `compact_chapter()`(force=False)를 한 번 더 호출한다(gap-analysis-2026-09-11 G11 후속 #3) — 감수는 `body_text`/`version`을 바꾸지 않으므로 평소엔 재조회만 하고 끝나는 안전망이고, `save_draft` 시점 압축이 vLLM 장애로 실패했던 경우에만 확정 시점에 재시도한다. 실패해도 승인 자체는 이미 커밋된 상태를 그대로 반환(best-effort).
+> **구현 상태 (v0.31)**: 챕터 요약·키워드 부분 구현. 업로드 파이프라인(`upload_pipeline_service`)이 `save_draft` 직후 `ChapterService.compact_chapter()`를 best-effort로 호출한다 — `LLMClient.compact_chapter(body_text)`(vLLM, `_COMPACT_SYSTEM_PROMPT`)가 `{summary, keywords}` JSON을 반환하고 `chapters.compaction_summary`/`compaction_keywords`/`compacted_version`에 저장(마이그레이션 0007). `compacted_version != version`이면 stale로 보고 다음 턴에 재계산. `GET /sync/download`의 `chapter_updates.summary`/`keywords`가 이 값을 그대로 내려보내고, 아직 요약 안 된 챕터는 `body_text` 앞 200자로 임시 대체(이전엔 원문 전체/빈 배열). **v0.39**: `POST /chapters/{id}/review` 승인(confirmed) 시에도 `compact_chapter()`(force=False)를 한 번 더 호출한다(gap-analysis-2026-09-11 G11 후속 #3) — 감수는 `body_text`/`version`을 바꾸지 않으므로 평소엔 재조회만 하고 끝나는 안전망이고, `save_draft` 시점 압축이 vLLM 장애로 실패했던 경우에만 확정 시점에 재시도한다. 실패해도 승인 자체는 이미 커밋된 상태를 그대로 반환(best-effort). **v0.41**: "단기 압축 기억 JSON 룰셋" 서버측 생성 부분 구현. `upload_pipeline_service`가 챕터 Compaction 직후 `UserService.refresh_persona_snapshot(user_id, chapter_digests, llm_client)`를 best-effort로 호출한다 — 요약이 있는 모든 챕터의 (요약, 키워드)를 모아 `LLMClient.summarize_persona_memory()`(vLLM, `_PERSONA_SYSTEM_PROMPT`)가 `{summary, keywords}` JSON을 반환하고 `users.persona_summary`/`persona_keywords`/`persona_source_chapter_count`에 저장(마이그레이션 0008). 참고 챕터 수가 그대로면(`User.persona_is_stale`) 재호출 없이 재조회만 — `ChapterCompaction`과 동일한 stale 판정 패턴. `GET /sync/download`의 `persona_snapshot`이 이 값을 그대로 내려보낸다(sync-contract.md §5, `chapter_updates`와 달리 diff가 아니라 매번 최신값 전체). 요약된 챕터가 하나도 없으면 `null`. ⚠️ 프롬프트가 정서 상태·심리 평가를 명시적으로 배제한다(decisions.md #25 — 정서 모니터링 파이프라인은 법무 회신 전까지 OFF, 곁가지로도 재도입하지 않는다). **온디바이스 소비(SLM 프롬프트 주입)는 여전히 미구현** — SlmEngine 자체가 스텁이라(decisions #27 실기기 벤치마크 대기) 다운로드해 로컬에 저장하는 배관까지만 이번에 완성한다. §2.10의 AuthorAgent/ScheduleAgent 표시명은 여전히 미정이라 이 스냅샷은 CareAgent(은빛이) 전용으로 스코프를 좁혔다.
 
 **5단계 — 하향 동기화 및 반영, 6단계 — 진화된 재대화**
 - `GET /api/v1/sync/download` 응답 예시는 §4.3 참조. 로컬 SQLite에 Upsert(FTS5 인덱스, 우선순위 질문, 일정)되며, 다음 대화에서 온디바이스 SLM이 최신 맥락으로 더 깊은 꼬리질문을 구성한다.
@@ -537,7 +537,7 @@ interface Publication {         // v1.1 신규
 | POST | /api/v1/sync/upload | 원본 음성+1차 전사+신규 사진 업로드 — **202 Accepted, 비동기 처리** ([sync-contract.md §2](../sync-contract.md#2-비동기-처리-계약-be-b1)) | Device Token |
 | GET | /api/v1/sync/sessions/{sessionId} | 업로드 작업 상태 조회 (신규, [sync-contract.md §2.2](../sync-contract.md#22-작업-상태-조회-신규-엔드포인트)) | Device Token |
 | GET | /api/v1/sync/sessions?deviceId={deviceId}&status={status}&page={page}&pageSize={pageSize} | 동기화 이력 조회, 페이지네이션 — apps/admin 동기화 모니터링 화면용(신규 0.7, deviceId 선택·페이지네이션·status 필터로 확장 0.10). deviceId를 생략하면 전체 기기 통합 모니터링. 응답 항목에 deviceDisplayId(0.11, devices 모듈에서 조합해 붙임 — SyncSession 엔티티 컬럼은 아님) 포함. 위 항목(기기 자신의 폴링용, Device Token)과 인가모델이 달라 별도 엔드포인트로 분리 | Admin |
-| GET | /api/v1/sync/download?deviceId={deviceId}&since={syncVersion} | 최신 자서전·RAG 스냅샷·사진·질문목록 다운로드 — `since` 지정 시 증분만 반환. `deviceId`는 실제 구현 중 발견해 신규 추가한 필수 파라미터(0.14, [sync-contract.md §5](../sync-contract.md#5-증분-다운로드-be-b4)) | Device Token |
+| GET | /api/v1/sync/download?deviceId={deviceId}&since={syncVersion} | 최신 자서전·RAG 스냅샷·사진·질문목록·페르소나 스냅샷(v0.41) 다운로드 — `since` 지정 시 증분만 반환(`persona_snapshot`은 예외, 항상 최신값 전체). `deviceId`는 실제 구현 중 발견해 신규 추가한 필수 파라미터(0.14, [sync-contract.md §5](../sync-contract.md#5-증분-다운로드-be-b4)) | Device Token |
 | GET | /api/v1/users/{userId}/chapters | 챕터 목록/본문 조회 | 2FA + Role |
 | GET | /api/v1/chapters/{id} | 챕터 단건 조회 — 목록을 실제로 쓰려면 필요한 조회(신규, 스캐폴딩 시점 추가, gap-analysis G11) | 2FA + Role |
 | GET | /api/v1/chapters/{id}/revisions | 감수 이력 조회(신규, 스캐폴딩 시점 추가, gap-analysis G11) | 2FA + Role |
@@ -602,10 +602,16 @@ interface Publication {         // v1.1 신규
     ],
     "schedule_items": [
       { "id": "s_...-uuid", "kind": "medication", "due_at": "2026-09-07T08:30:00+09:00", "description": "혈압약" }
-    ]
+    ],
+    "persona_snapshot": {
+      "summary": "1978년 인천 기계공장에서 일하며 가정을 꾸린 어르신. 슬하에 자녀를 두었다.",
+      "keywords": ["인천", "기계공장", "가족", "1978년"]
+    }
   }
 }
 ```
+
+> `persona_snapshot`은 요약된 챕터가 하나도 없으면 `null`이다(신규 사용자, 또는 vLLM 미가동으로 Compaction이 한 번도 성공한 적 없음) — sync-contract.md §5 참조.
 
 > `chapter_updates`는 온디바이스 SQLite FTS5 테이블 Upsert용 차분 데이터, `priority_questions`는 로컬 질문목록 큐 갱신용이다(§2.11 4단계).
 
@@ -864,6 +870,7 @@ silveryarn/
 | 0.33 | 2026-09-11 | Do 단계 — apps/web `(family)/notification-settings` 화면 신규. `notifications` 모듈(PR #3, `GET/PUT /family-members/{id}/notification-settings`)의 첫 웹 소비자 — 3채널(push/email/sms) × 3항목(챕터갱신/동기화문제/정서알림) 그리드, PUT 전체 교체. `types/notification-setting.ts`(구 `consent-log.ts`의 스테일 `NotificationSetting` 대체), `services/notification-settings.ts`, `features/notification-settings/NotificationSettingsForm.tsx`. §5.1 인벤토리에 구현 상태(✅/스텁/OFF) 표기 + 웹 콘솔 Keycloak 로그인 연동이 선결이라는 공통 미완 명시 | NUBiz AX Initiative |
 | 0.34 | 2026-09-11 | Do 단계 — apps/web Keycloak 로그인 연동(decisions #49, 사용자 결정: Auth.js/NextAuth v5). §7.4에 웹 콘솔 로그인 항목 추가, §5.1 인벤토리에서 "Bearer dev 공통 미완" 해소(web은 실 Bearer 동작, admin만 미연동). `silveryarn-web` public client + PKCE, `lib/api/client.ts` server-only + Server Action 경로, Next.js 16 `proxy.ts`. 로컬 실 flow(Keycloak 로그인 → 세션 → 백엔드 조회·PUT → DB) 브라우저 검증 | NUBiz AX Initiative |
 | 0.35 | 2026-09-11 | Do 단계 — apps/admin Keycloak 로그인 연동(decisions #49, apps/web과 동일 Auth.js). §5.1·§7.4에 admin도 완료 반영. realm `silveryarn-web` `redirectUris`에 `localhost:3001/*` 추가(`infra/keycloak/import/silveryarn-realm.json`·README). admin은 GET 전용이라 Server Action 없이 `lib/api/client.ts` server-only만. 브라우저 flow 검증(로그인 → `require_roles(admin)` 통과 → 사용자·동기화 목록 조회) | NUBiz AX Initiative |
+| 0.41 | 2026-09-11 | Do 단계 — §2.11 4단계 "단기 압축 기억(Short-term Compressed Persona)" JSON 룰셋 서버측 생성 부분 구현. `UserService.refresh_persona_snapshot` — 요약된 챕터 전체(요약·키워드)를 모아 `LLMClient.summarize_persona_memory()`(vLLM)가 압축한 배경지식을 `users.persona_summary`/`persona_keywords`/`persona_source_chapter_count`에 저장(마이그레이션 0008). 업로드 파이프라인이 챕터 Compaction 직후 best-effort 호출. `GET /sync/download`의 `persona_snapshot`(sync-contract.md v0.7)이 매번 최신값 전체 반환. 프롬프트가 정서·심리 평가를 명시적으로 배제(decisions #25 준수). §2.10에서 AuthorAgent/ScheduleAgent 표시명이 여전히 미정이라 CareAgent(은빛이) 전용으로 스코프 확정. 온디바이스 소비(SLM 프롬프트 주입)는 SlmEngine 자체가 스텁이라 미구현 — 다운로드·로컬 저장 배관까지만 완성 | NUBiz AX Initiative |
 | 0.40 | 2026-09-11 | Do 단계 — §4.2 Endpoint List를 실제 구현과 1:1로 정비(gap-analysis-2026-09-11 G11). OpenAPI 스키마 대조로 발견한 누락 17행 추가: `POST/GET /users`(부트스트랩·단건 조회), `GET /chapters/{id}`·`/revisions`, `GET/POST /users/{id}/family-members`, `GET /users/{id}/conversation-chunks`·`/search`·`/count`·`GET /conversation-chunks/{id}`, `GET /invitations/{token}`·`POST .../accept`, `GET /schedule-items/{id}`·`POST .../respond`·`/next-reminder`·`POST /users/{id}/schedule-items`. G11이 원래 지목한 6건보다 실제 갭이 더 컸다(family-members 목록·생성 전체가 표에 아예 없었음 등) — 코드 변경 없음, 순수 문서 정비 | NUBiz AX Initiative |
 | 0.39 | 2026-09-11 | Do 단계 — `POST /chapters/{id}/review` 승인 시 Compaction 재확인 안전망(gap-analysis-2026-09-11 G11 후속 #3). 감수는 `body_text`/`version`을 바꾸지 않아(`update_status` `bump_version=False` 기본값) 평소엔 `compact_chapter(force=False)`가 재조회만 하고 끝나지만, 직전 `save_draft` 시점 압축이 vLLM 장애로 실패했던 경우 확정 시점에 한 번 더 시도한다. best-effort — 실패해도 승인 응답은 그대로 200. 실 인프라(vLLM 미기동 상태 포함) 검증: 승인 200 + `status=confirmed` 확인, 예외 시 폴백 로그도 확인 | NUBiz AX Initiative |
 | 0.38 | 2026-09-11 | Do 단계 — 모바일 홈 셸(M2, UI/UX 화면설계서) 구현. `presentation/home/HomeScreen.kt`(인사 헤더·마이크 CTA·오늘의 회고 질문 카드·통계 바) + `presentation/AppShell.kt`(하단 탭 4개: 대화/자서전/일정/설정 — `AppEntry.kt`의 `AppState.Home`이 이제 이걸 그린다). 통계는 로컬 DB만 조회(오프라인 완결, §2.1): `autobiography_fts` DISTINCT chapter_id(완성 챕터), `conversations` distinct 날짜로 계산한 연속 대화일수(§3 retention 5일이 상한), `unrecalled_photos` COUNT. mobile-schema.md v0.10 — `device_state.user_name` 신규(인사말용, `POST /devices` 응답엔 이름이 없어 온보딩 값을 별도 저장). ⚠️ "대화" 탭 마이크 세션은 온디바이스 SLM 의도 라우터(workflow-diagrams.md §19)가 아직 스텁이라 말벗돌봄 모드(M4)로 고정 — 라우터 구현 시 `AppShell`의 분기만 교체 | NUBiz AX Initiative |

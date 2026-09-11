@@ -28,4 +28,11 @@ data class DeviceStateEntity(
     // 서버는 이 값을 되돌려주지 않고(POST /devices 응답엔 없음), 홈 화면(M2) 인사말
     // "안녕하세요, OOO님"에 필요해 온보딩 시점에 같이 저장한다.
     @ColumnInfo(name = "user_name") val userName: String?,
+    // GET /sync/download의 persona_snapshot(design.md §2.11 4단계) 로컬 캐시
+    // (mobile-schema.md v0.11, 신규). keywords는 Room TypeConverter 없이 "|"로
+    // 합쳐 저장한다 — autobiography_fts의 keywords join(" ") 트릭과 같은 이유
+    // (AutobiographyFtsStore 참조), 여기선 FTS5 토큰 매칭이 필요 없어 구분자만 다르다.
+    // 온디바이스 SLM(SlmEngine)이 아직 스텁이라 지금은 저장만 하고 소비하는 곳은 없다.
+    @ColumnInfo(name = "persona_summary") val personaSummary: String?,
+    @ColumnInfo(name = "persona_keywords") val personaKeywords: String?,
 )

@@ -33,6 +33,7 @@ from core_service.modules.care.application.conversation_chunk_service import (
     ConversationChunkService,
 )
 from core_service.modules.care.domain.conversation_chunk import ConversationChunk, ConversationMode
+from core_service.modules.users.application.user_service import UserService
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,7 @@ class UploadPipelineService:
         chunk_service: ConversationChunkService,
         chapter_service: ChapterService,
         question_service: QuestionService,
+        user_service: UserService,
         stt_client: STTClient,
         embedding_client: EmbeddingClient,
         llm_client: LLMClient,
@@ -82,6 +84,7 @@ class UploadPipelineService:
         self._chunks = chunk_service
         self._chapters = chapter_service
         self._questions = question_service
+        self._users = user_service
         self._stt = stt_client
         self._embedding = embedding_client
         self._llm = llm_client
@@ -210,6 +213,7 @@ class UploadPipelineService:
             return
 
         await self._safe_compact_chapter(chapter.id)
+        await self._safe_refresh_persona_snapshot(user_id)
         await self._safe_generate_questions(user_id, chapter.id, chapter.body_text, transcript)
 
     async def _safe_compact_chapter(self, chapter_id: uuid.UUID) -> None:
@@ -220,6 +224,17 @@ class UploadPipelineService:
             await self._chapters.compact_chapter(chapter_id, self._llm)
         except Exception:
             logger.warning("챕터 Compaction 실패 — 이전 요약 유지. chapter_id=%s", chapter_id)
+
+    async def _safe_refresh_persona_snapshot(self, user_id: uuid.UUID) -> None:
+        """design §2.11 4단계 "단기 압축 기억" — 요약이 있는(=Compaction 완료된) 챕터를
+        전부 모아 이 어르신에 대한 배경지식을 갱신한다. `UserService.refresh_persona_snapshot`가
+        이미 stale 판정을 하므로 여기서는 매번 불러도 안전(force=False 기본값)."""
+        try:
+            chapters = await self._chapters.list_chapters_for_user(user_id)
+            digests = [(c.compaction.summary, c.compaction.keywords) for c in chapters if c.compaction]
+            await self._users.refresh_persona_snapshot(user_id, digests, self._llm)
+        except Exception:
+            logger.warning("페르소나 스냅샷 갱신 실패 — 이전 스냅샷 유지. user_id=%s", user_id)
 
     async def _safe_generate_questions(
         self, user_id: uuid.UUID, chapter_id: uuid.UUID, chapter_body: str, transcript: str

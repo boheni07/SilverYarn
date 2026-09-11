@@ -2,7 +2,7 @@
 
 > Phase 4 보강 산출물 — 3차 design-validator 검증 H-3, CTO Enterprise B1/백엔드 BE-B1/BE-B2/BE-B4 반영. `workflow-diagrams.md` §3(시퀀스)·§17(충돌 플로우차트)·§20(미결 영향)에서 각주로 예고된 계약 산출물의 본문이다.
 
-**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-10 · **Version**: 0.6
+**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-11 · **Version**: 0.7
 
 > 이 문서는 `docs/02-design/features/silveryarn-platform.design.md` §4(API Specification)를 동기화 도메인에 한해 상세화한다. 충돌하면 design.md가 아니라 **이 문서가 동기화 관련 SoR**이며, design.md §4.2/§6.1은 이 문서의 요약만 담는다(design.md v0.6에서 갱신 예정).
 
@@ -147,6 +147,7 @@ Auth: Device Token
   - `priority_questions`(questions): `updated_at` 컬럼이 없어(schema.md §3.9 — 답변 여부만 바뀌는 단순 큐) `created_at`을 근사 워터마크로 쓴다. `since` 이후 새로 생긴 **미답변** 질문만 반환. design.md §4.3 예시엔 없지만 실제로는 `linked_chapter_id`도 함께 내려준다(questions_cache의 연대기 탭별 필터링, mobile-schema.md §2.3).
   - `schedule_items`: 역시 `updated_at`이 없다(schema.md §3.10). `since`와 무관하게 **아직 응답 안 한(status=pending) 항목 전체**를 매번 반환 — 응답된 항목은 자연히 빠지므로 그 자체로 멱등적인 diff 역할을 한다.
   - `chapter_updates`의 `summary`/`keywords`는 design.md §2.11 4단계 Compaction Engine이 채운다(`chapters.compaction_summary`/`compaction_keywords`, 마이그레이션 0007). 업로드 파이프라인이 챕터 저장 직후 vLLM으로 요약을 생성한다(best-effort). 아직 요약 안 된 챕터(신규, 또는 vLLM 미가동)는 `summary`에 `body_text` 앞 200자를, `keywords`에 빈 배열을 임시로 담는다.
+- `persona_snapshot`(신규 v0.7) — design.md §2.11 4단계 "단기 압축 기억(Short-term Compressed Persona)" JSON. 요약이 있는 모든 챕터의 (요약, 키워드)를 가로질러 vLLM이 만든 이 어르신의 배경지식(`{"summary": "...", "keywords": [...]}`, `users.persona_summary`/`persona_keywords`, 마이그레이션 0008) — 말벗돌봄 모드(CareAgent "은빛이")가 다음 대화를 시작할 때 참고한다. `since`와 무관하게 매번 최신값 전체를 내려준다(`chapter_updates`처럼 diff가 아니라 schedule_items와 같은 "현재값 전체" 방식 — 그래야 온디바이스가 항상 최신 배경지식을 갖는다). 요약된 챕터가 하나도 없으면 `null`. ⚠️ 정서 상태·심리 평가는 포함하지 않는다(decisions.md #25).
 
 ---
 
@@ -179,4 +180,5 @@ design.md §4.1의 표준 에러 코드에 아래 2종을 추가한다 (L-12):
 | 0.3 | 2026-09-08 | `GET /sync/download` 실제 구현 중 발견 — §5에 `device_id` 필수 쿼리 파라미터 신규(호출 주체 식별 수단이 원문에 없었음), 엔티티별 워터마크 방식이 실제로는 다르다는 것을 명시(chapters=updated_at, questions=created_at 근사, schedule_items=pending 상태 전체), chapter_updates의 summary/keywords가 Compaction Engine 미구현으로 body_text 원문/빈 배열 대체임을 문서화 | NUBiz AX Initiative |
 | 0.4 | 2026-09-08 | photos orphan cleanup 배치 실제 구현 — §4에 구현 상세 반영(`worker.py`의 arq cron job, 매시 정각 실행, MinIO 삭제는 best-effort). 실 Postgres+MinIO로 3가지 케이스(오브젝트 있는 채로 방치/오브젝트 없이 방치/최근 생성) 검증 | NUBiz AX Initiative |
 | 0.5 | 2026-09-09 | §2.3 신설 — 업로드 멱등성 3계층(arq `_job_id` / 파이프라인 사전 확인 / 부분 유니크 인덱스 `uq_conversation_chunks_turn`), CTO B1 미해소분 반영. 멱등성 키는 별도 ULID 컬럼이 아니라 기존 `(session_id, turn_id)`. §3 `schedule_items` 행에 "필드 병합 = `/schedule-items/{id}/respond` 엔드포인트로 실현(배치 병합 코드 없음)" 명시. 마이그레이션 `0004` | NUBiz AX Initiative |
+| 0.7 | 2026-09-11 | §5 — `persona_snapshot` 신규(design §2.11 4단계 "단기 압축 기억"). 요약된 챕터 전체를 가로지른 vLLM 요약(`users.persona_summary`/`persona_keywords`, 마이그레이션 0008), `chapter_updates`와 달리 diff가 아니라 매번 최신값 전체 반환. 정서·심리 평가 제외(decisions #25) | NUBiz AX Initiative |
 | 0.6 | 2026-09-10 | §5 — `chapter_updates`의 `summary`/`keywords`가 이제 Compaction Engine(design §2.11 4단계, `chapters.compaction_*`, 마이그레이션 0007)이 채운 값. 업로드 파이프라인이 챕터 저장 직후 vLLM으로 요약 생성(best-effort). 요약 없는 챕터는 `body_text` 앞 200자 임시 대체(이전엔 원문 전체) | NUBiz AX Initiative |

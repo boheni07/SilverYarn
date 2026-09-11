@@ -111,6 +111,15 @@ data class SyncDownloadPayload(
     @Json(name = "chapter_updates") val chapterUpdates: List<ChapterUpdate>,
     @Json(name = "priority_questions") val priorityQuestions: List<PriorityQuestion> = emptyList(),
     @Json(name = "schedule_items") val scheduleItems: List<ScheduleItemDownload> = emptyList(),
+    // design.md §2.11 4단계 "단기 압축 기억" — 요약된 챕터가 하나도 없으면 null.
+    // chapter_updates와 달리 diff가 아니라 매번 최신값 전체(sync-contract.md §5).
+    @Json(name = "persona_snapshot") val personaSnapshot: PersonaSnapshot? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class PersonaSnapshot(
+    val summary: String,
+    val keywords: List<String> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)

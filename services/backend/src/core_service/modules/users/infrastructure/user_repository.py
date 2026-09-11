@@ -8,14 +8,14 @@
 import uuid
 from datetime import UTC, date, datetime
 
-from sqlalchemy import DateTime, String, func, select
+from sqlalchemy import ARRAY, DateTime, Integer, String, func, select
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core_service.core.crypto import PiiFieldEncryptor, get_pii_encryptor
 from core_service.core.db import Base
-from core_service.modules.users.domain.user import User
+from core_service.modules.users.domain.user import PersonaSnapshot, User
 
 
 class UserModel(Base):
@@ -27,6 +27,11 @@ class UserModel(Base):
     primary_device_id: Mapped[uuid.UUID | None] = mapped_column(PgUUID(as_uuid=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # §2.11 4단계 "단기 압축 기억" (마이그레이션 0008) — compaction_summary(챕터별)와
+    # 동일하게 평문(일관성 우선, 모듈 docstring 참조).
+    persona_summary: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    persona_keywords: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
+    persona_source_chapter_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class UserRepository:
@@ -38,6 +43,13 @@ class UserRepository:
 
     async def _to_domain(self, model: UserModel) -> User:
         birth_raw = await self._pii.decrypt_opt(self._session, model.id, model.birth_date)
+        persona: PersonaSnapshot | None = None
+        if model.persona_summary is not None and model.persona_source_chapter_count is not None:
+            persona = PersonaSnapshot(
+                summary=model.persona_summary,
+                keywords=list(model.persona_keywords or []),
+                source_chapter_count=model.persona_source_chapter_count,
+            )
         return User(
             id=model.id,
             name=model.name,
@@ -45,6 +57,7 @@ class UserRepository:
             primary_device_id=model.primary_device_id,
             created_at=model.created_at,
             updated_at=model.updated_at,
+            persona_snapshot=persona,
         )
 
     async def get_by_id(self, user_id: uuid.UUID) -> User | None:
@@ -96,4 +109,18 @@ class UserRepository:
             raise LookupError(f"user {user_id} not found")
         model.primary_device_id = device_id
         model.updated_at = datetime.now(UTC)
+        await self._session.flush()
+
+    async def set_persona_snapshot(
+        self, user_id: uuid.UUID, *, summary: str, keywords: list[str], source_chapter_count: int
+    ) -> None:
+        """§2.11 4단계 "단기 압축 기억" 저장. `compaction_summary`(chapters, 0007)와
+        마찬가지로 `updated_at`은 건드리지 않는다 — 요약 갱신만으로 다른 신선도
+        기준(예: 프로필 변경 감지)이 흔들리면 안 된다."""
+        model = await self._session.get(UserModel, user_id)
+        if model is None:
+            raise LookupError(f"user {user_id} not found")
+        model.persona_summary = summary[:500]
+        model.persona_keywords = keywords
+        model.persona_source_chapter_count = source_chapter_count
         await self._session.flush()
