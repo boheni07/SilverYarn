@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { apiClient } from "@silveryarn/web-shared/api";
 import type { Device } from "@/types";
 
 /**

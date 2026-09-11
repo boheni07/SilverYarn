@@ -1,5 +1,5 @@
-import { apiClient } from "@/lib/api/client";
-import type { Pagination } from "@/lib/api/client";
+import { apiClient } from "@silveryarn/web-shared/api";
+import type { Pagination } from "@silveryarn/web-shared/api";
 import type { User } from "@/types";
 
 // Presentation(app/·components/·features/)이 lib/api를 직접 import할 수 없으므로

@@ -132,6 +132,8 @@
 
 > **후속 과제**: Device Token 회전 UI·주기, social_worker의 "동의 시 챕터 조회"(design.md §7.1) 동의 게이팅, `organizations` 테넌시(B2G 착수 시). 웹 콘솔 로그인(#49)은 apps/web·apps/admin 둘 다 완료.
 
+| 50 | apps/web·apps/admin 공유 코드 추출 방식 | **npm workspaces + `packages/web-shared`로 확정**(사용자 결정). 루트 `package.json`에 `workspaces: ["apps/web","apps/admin","packages/*"]`. `@silveryarn/web-shared`가 **Keycloak 인증**(`auth.ts`·`proxy`·`auth-route` — PR #19에서 두 앱에 cp됐던 보안 코드), **API 클라이언트**(`api/`, server-only + `auth()` 토큰 주입), **UI 프리미티브**(`ui/` Button·Card), **AppHeader**(`brand` prop)를 노출. TS 소스를 그대로 export하고 각 앱 `next.config.ts` `transpilePackages`로 트랜스파일(Turbopack은 자동이지만 명시). `types/*`는 앱별 유지(design.md §3.1 SoR 미러, 향후 OpenAPI codegen). Next 16 `src/proxy.ts`·`app/api/auth/[...nextauth]/route.ts`는 앱 루트에 얇은 재노출 shim. eslint 계층 경계는 `import/no-restricted-paths`(파일 경로) → `no-restricted-imports`(패키지명 `@silveryarn/web-shared/api`)로 전환. CI는 워크스페이스 루트에서 `npm ci` 1회. **트리거**: admin README가 명시한 "인증 코드가 두 앱에 복붙돼 동기화 부담" 조건에 도달 | ✅ 확정 (구현: 루트·`packages/web-shared`) |
+
 ---
 
 ## 3. 별도 검토가 필요한 항목 (AI가 임의 결정하지 않음)
@@ -183,6 +185,7 @@
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.21 | 2026-09-11 | Do 단계 — #50 apps/web·apps/admin 공유 코드 추출(**사용자 결정: npm workspaces + `packages/web-shared`**). 루트 package.json 워크스페이스, Keycloak 인증·API 클라이언트·UI 프리미티브를 `@silveryarn/web-shared`로. eslint 계층 경계를 `no-restricted-imports`로 전환. CI 워크스페이스 루트 설치. structure.md v1.36 | NUBiz AX Initiative |
 | 0.20 | 2026-09-11 | Do 단계 — #49를 apps/admin에도 이식(같은 Auth.js 방식). admin은 GET 전용이라 Server Action 불필요. realm `silveryarn-web` `redirectUris`에 `localhost:3001/*` 추가(admin은 3001에서 뜸). 양쪽 앱 브라우저 flow 검증(admin은 `require_roles(admin)` 통과 확인). design.md v0.35·structure.md v1.34 | NUBiz AX Initiative |
 | 0.19 | 2026-09-11 | Do 단계 — #49 웹 콘솔 Keycloak 로그인 연동(**사용자 결정: Auth.js/NextAuth v5**). public client + auth code flow + PKCE, `lib/api/client.ts` server-only + Server Action 경로, Next 16 `proxy.ts`. 로컬 실 flow 검증 완료. design.md v0.34·structure.md v1.33 | NUBiz AX Initiative |
 | 0.1 | 2026-09-05 | 기획서 9장 11개 항목 처리(로그 행 기준 14개, 일부 이중 기재), 3개는 법무·경영 검토 필요로 분류 | NUBiz AX Initiative (사용자 확인 반영) |

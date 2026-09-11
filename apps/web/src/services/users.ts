@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { apiClient } from "@silveryarn/web-shared/api";
 import type { User } from "@/types";
 
 export async function getUser(userId: string): Promise<User> {
