@@ -4,6 +4,7 @@
 동기화 라운드에서 검토).
 """
 
+import logging
 import uuid
 from datetime import datetime
 
@@ -17,10 +18,11 @@ from core_service.auth_deps import (
     authorize_user_access,
     require_auth,
 )
+from core_service.core.clients.llm_client import LLMClient
 from core_service.core.db import get_db
 from core_service.core.errors import ApiError
 from core_service.modules.author.application.chapter_service import ChapterService
-from core_service.modules.author.domain.chapter import RevisionAction
+from core_service.modules.author.domain.chapter import Chapter, RevisionAction
 from core_service.modules.author.infrastructure.chapter_repository import ChapterRepository
 from core_service.modules.author.infrastructure.chapter_revision_repository import (
     ChapterRevisionRepository,
@@ -30,6 +32,8 @@ from core_service.modules.family_members.application.family_member_service impor
 )
 from core_service.modules.family_members.deps import get_family_member_service
 from core_service.shared.schemas import DataResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["chapters"])
 
@@ -71,6 +75,10 @@ class ChapterReviewRequest(BaseModel):
 
 def _service(session: AsyncSession = Depends(get_db)) -> ChapterService:
     return ChapterService(ChapterRepository(session), ChapterRevisionRepository(session))
+
+
+def _compactor() -> LLMClient:
+    return LLMClient()
 
 
 def _to_response(chapter) -> ChapterResponse:  # noqa: ANN001 — Chapter 도메인 dataclass
@@ -144,6 +152,7 @@ async def review_chapter(
     body: ChapterReviewRequest,
     service: ChapterService = Depends(_service),
     family_service: FamilyMemberService = Depends(get_family_member_service),
+    compactor: LLMClient = Depends(_compactor),
     ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[ChapterResponse]:
     """design.md §4.2 — 감수 승인/반려 (chapter_revisions 생성은 이 시점에만 발생, M-5).
@@ -172,4 +181,24 @@ async def review_chapter(
         action=body.action,
         comment=body.review_comment,
     )
+    if body.action == RevisionAction.APPROVED:
+        chapter = await _safe_compact_after_approval(service, compactor, chapter.id)
     return DataResponse(data=_to_response(chapter))
+
+
+async def _safe_compact_after_approval(
+    service: ChapterService, compactor: LLMClient, chapter_id: uuid.UUID
+) -> Chapter:
+    """gap-analysis-2026-09-11 G11 후속 #3 — 승인(확정) 시점에 요약이 최신인지 한 번 더
+    보장한다. 감수 자체는 body_text를 바꾸지 않으므로(version 불변, ChapterRepository.
+    update_status의 bump_version=False 기본값) 파이프라인 저장 시점에 이미 압축이
+    성공했다면 `compact_chapter`(force=False)는 그대로 재조회만 하고 끝난다 — vLLM이
+    일시 다운돼 그 압축이 실패했던 경우에만 확정 시점에 다시 시도하는 안전망.
+
+    실패해도 승인 자체는 이미 커밋됐으니 원래 챕터를 그대로 반환한다(best-effort,
+    sync/upload_pipeline_service._safe_compact_chapter와 동일한 태도)."""
+    try:
+        return await service.compact_chapter(chapter_id, compactor)
+    except Exception:
+        logger.warning("승인 후 챕터 Compaction 실패 — 이전 요약 유지. chapter_id=%s", chapter_id)
+        return await service.get_chapter(chapter_id)
