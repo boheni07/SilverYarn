@@ -1,9 +1,10 @@
 # silveryarn-platform — Do 단계 사이클 보고서
 
-> **작성일**: 2026-09-10
-> **대상 사이클**: CTO 착수 심사(`docs/02-design/cto-review-2026-09-05.md`) 보안 블로커 해소 + Design v0.6→v0.29 잔여 구현
-> **PR 범위**: #1 ~ #11 (전부 main squash 머지)
-> **PDCA 위치**: Do 대부분 완료 → Check 1회 수행(`docs/03-check/gap-analysis-2026-09-10.md`) → 본 Report
+> **작성일**: 2026-09-10 (§1 최초 작성 시점 — PR #1~11 기준. §1의 지표·서술은 그 시점 스냅샷으로 남겨두고, #12 이후 확장분은 아래 **§3-2**·부록에 이어 적었다)
+> **갱신일**: 2026-09-11 — PR #12~24 반영
+> **대상 사이클**: CTO 착수 심사(`docs/02-design/cto-review-2026-09-05.md`) 보안 블로커 해소 + Design v0.6→v0.39 잔여 구현
+> **PR 범위**: #1 ~ #24 (전부 main squash 머지)
+> **PDCA 위치**: Do 대부분 완료 → Check 2회(`docs/03-check/gap-analysis-2026-09-10.md`, `-11.md`) → 본 Report. 남은 항목은 전부 [`blocked-decisions-tracker.md`](../../03-check/blocked-decisions-tracker.md) 외부 회신 대기
 
 ---
 
@@ -51,6 +52,28 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 
 ---
 
+## 3-2. 2차 확장 — PR #12~24 (갱신일 2026-09-11)
+
+Check #1 이후 이 사이클을 종료하지 않고 이어서 §2.11 서버측 클로즈드 루프 완성, 웹 콘솔 실 인증, 공유 코드 정리, 웹·모바일 남은 화면 셸까지 계속 진행했다. CTO 블로커 B1~B6 자체는 §2의 상태에서 변화가 없다(전부 외부 회신 대기) — 아래는 그 대기 기간에 계속 진행 가능했던 코드 작업이다.
+
+| 영역 | 실적 | PR |
+|---|---|---|
+| 아키텍처 정리 | `core/auth.py` 순수화 — 토큰 검증·인가 규칙·조회 포트 Protocol만 남기고, 리포지토리 조립 FastAPI 의존성은 신규 `core_service/auth_deps.py`(composition root)로 분리. import-linter contract ④ 예외 3→1건(`model_registry`만) | #13 |
+| 문서 인프라 | 법무·인프라 결정 대기 트래커(`blocked-decisions-tracker.md`) 신설 — 회신을 채워가며 관리하는 살아있는 문서 | #14 |
+| §2.11 서버측 클로즈드 루프 | **4단계 Compaction Engine**: `LLMClient.compact_chapter`(vLLM) + `ChapterService.compact_chapter`(stale 판정) + 파이프라인 best-effort 호출, `chapters.compaction_*`(마이그레이션 0007). `sync/download`가 body_text 원문 대신 요약을 내려보냄 | #15 |
+| §2.11 서버측 클로즈드 루프 | **3단계 Critic Agent**: `questions` 큐에 생성 경로 신설(이전 read-only) — `LLMClient.critique_and_generate_questions`(Fact/Emotion/Relation/Reflection 4축) + `QuestionService.generate_followups`(큐 8개 상한·중복 제거) | #16 |
+| apps/web | 알림 수신 설정 화면(`(family)/notification-settings`) — `notifications` 모듈 첫 웹 소비자 | #17 |
+| apps/web·admin 실 인증 | **Auth.js(NextAuth v5) + Keycloak 로그인**(decisions #49) — `silveryarn-web` public client + PKCE, `lib/api/client.ts` server-only + `auth()` 토큰 주입, Next.js 16 `proxy.ts`가 미로그인 요청을 `/login`으로. web은 Server Action 경유, admin은 GET 전용이라 불필요. 양쪽 앱 실 flow 브라우저 검증 | #18, #19 |
+| PDCA Check #2 | `gap-analysis-2026-09-11.md` — PR #10~19 반영한 설계문서 스테일 5건(G7~G11) 정정 | #20 |
+| 아키텍처 정리 | **npm 워크스페이스 + `packages/web-shared`**(decisions #50) — apps/web·admin에 복제돼 있던 Auth.js 설정·API 클라이언트·UI 프리미티브를 단일 공유 패키지로 통합. CI 왕복 2회로 lockfile 함정 2건 발견·수정(§6 L7·L8) | #21 |
+| apps/web | **가족 대시보드 "오늘의 기억 리포트"**(WF1) — 오늘 대화 수(신규 PII-비노출 COUNT 엔드포인트)·오늘 새 회고 수·Compaction 요약 카드. "정서 상태"·"정서 추이 차트"는 렌더하지 않고 파이프라인 OFF 사실을 안내(decisions #25 준수) | #22 |
+| apps/mobile | **홈 셸(M2) + 하단 탭 4개** — `AppEntry.kt`가 임시로 띄우던 `AssistantHomeScreen`을 실제 `AppShell`로 교체. 통계는 전부 로컬 DB 집계(오프라인 완결). 마이크 세션은 SLM 의도 라우터 스텁이라 말벗돌봄 모드 고정 | #23 |
+| services/backend | 챕터 감수 승인 시 Compaction 재확인 안전망(gap-analysis G11 후속 #3) — 직전 압축이 vLLM 장애로 실패했을 때만 확정 시점에 재시도 | #24 |
+
+**§1 지표 갱신(2026-09-11 기준)**: 머지된 PR **24건**(#1~#24) · 마이그레이션 0002~**0007** · 백엔드 단위 테스트 **156** · Design 문서 v0.6 → **v0.39** · decisions.md → **v0.21** · mobile-schema.md → **v0.10**. import-linter 4 contract는 계속 4 kept·0 broken.
+
+---
+
 ## 4. 검증
 
 ### 실 인프라 e2e (Docker: postgres·redis·qdrant·neo4j·minio·keycloak, 마이그레이션 0006)
@@ -69,8 +92,8 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 
 ## 5. 미해결 / 다음 사이클 이월
 
-> 이 보고서는 PR #1~11 시점 기준이다. 이후 진행분(#12~19)은 부록 PR 목록과 각 설계문서 버전 로그, PDCA Check #2(`docs/03-check/gap-analysis-2026-09-11.md`) 참조.
-> 상세·회신 관리는 **[`docs/03-check/blocked-decisions-tracker.md`](../../03-check/blocked-decisions-tracker.md)** (살아있는 트래커).
+> §1~4는 PR #1~11 시점 기준, §3-2는 #12~24까지 갱신했다. 상세·회신 관리는
+> **[`docs/03-check/blocked-decisions-tracker.md`](../../03-check/blocked-decisions-tracker.md)** (살아있는 트래커) — 아래 "외부 결정 대기" 표는 그 문서의 요약이다.
 
 ### 외부 결정 대기 (착수 불가)
 
@@ -87,8 +110,13 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 ### 코드 후속 (착수 가능, 우선순위 낮음)
 
 - ~~`core/auth.py` → 모듈 infrastructure 결합 제거~~ — **완료 (PR #13)**. `core/auth.py`는 순수(토큰 검증·인가 규칙·조회 포트 `FamilyMemberDirectory`/`DeviceTokenDirectory` Protocol), 리포지토리 조립은 `core_service/auth_deps.py`(composition root). import-linter contract ④의 예외가 3건 → 1건(`model_registry`만).
+- ~~Compaction Engine (design §2.11)~~ — **요약·키워드 부분 완료 (PR #15, 감수 승인 시 재확인 안전망은 PR #24)**: `LLMClient.compact_chapter`(vLLM) + 업로드 파이프라인 best-effort 호출 + `chapters.compaction_*`(마이그레이션 0007). `sync/download`가 요약을 내려보냄(vLLM 미가동 시 `body_text` 앞 200자). **미구현**: "단기 압축 기억 JSON 룰셋"(페르소나, §2.10 연동) — 온디바이스 SLM/페르소나 배포 경로 확정 후.
+- ~~apps/web·admin 공유 코드 추출~~ — **완료 (PR #21)**. npm 워크스페이스 + `packages/web-shared`(decisions #50).
+- ~~웹 가족 대시보드 "오늘의 기억 리포트"~~ — **완료 (PR #22)**.
+- ~~모바일 홈 셸(M2) + 하단 탭 4개~~ — **완료 (PR #23)**.
+- **§4.2 endpoint 표 ↔ 구현 1:1 정비** (gap-analysis G11) — `GET /chapters/{id}`·`/chapters/{id}/revisions`·`/conversation-chunks/{id}`·`/schedule-items/{id}` 등 조회 헬퍼 6종이 표에 없음. 대부분 버전 로그 산문에는 기록돼 있어 경미 — OpenAPI codegen 도입 시 자동 해소도 검토.
 - **모바일 가족 초대 화면** — 첫 가족 구성원 연결 경로 설계 결정 후(웹 콘솔/admin 경로 vs device-token 부트스트랩 엔드포인트).
-- ~~Compaction Engine (design §2.11)~~ — **요약·키워드 부분 완료 (PR #15)**: `LLMClient.compact_chapter`(vLLM) + 업로드 파이프라인 best-effort 호출 + `chapters.compaction_*`(마이그레이션 0007). `sync/download`가 요약을 내려보냄(vLLM 미가동 시 `body_text` 앞 200자). **미구현**: "단기 압축 기억 JSON 룰셋"(페르소나, §2.10 연동) — 온디바이스 SLM/페르소나 배포 경로 확정 후.
+- **온디바이스 SLM 의도 라우터** (workflow-diagrams.md §19) — 모바일 홈 셸(PR #23)의 마이크 세션이 말벗돌봄 모드로 고정돼 있는 이유. 모델 선정(decisions #27, 실기기 벤치마크) 선행 필요.
 - 온디바이스 STT/SLM/TTS 런타임 — 모델 선정(decisions #27, 실기기 벤치마크) 대기.
 
 ---
@@ -103,15 +131,18 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 | L4 | **법적 미결을 코드로 밀어넣지 않는 절제가 유효했다** — social_worker fail-closed, 정서 파이프라인 OFF, 대리동의 enum 미도입. "지금 안 하는 것"을 decisions.md에 근거와 함께 남겨 나중에 다시 열 수 있게 함. | PR #3/#5, decisions #12/#25/#48 |
 | L5 | **모바일 CI는 로컬 사전 검증이 필수** — 이 세션 환경에 Android SDK가 없어, IntelliJ 번들 JBR + ktlint CLI로 파싱·포맷을 먼저 돌리고 푸시하는 방식으로 CI 왕복을 줄였다. KDoc 안 `/*` 시퀀스가 블록 주석 중첩 규칙과 충돌하는 함정 등. | structure.md v1.23, 메모리 `mobile-local-ktlint-verification` |
 | L6 | **세션 중 사고 1건** — 포트 8000 정리 중 `taskkill`로 Docker Desktop 백엔드 프로세스를 죽여 infra 컨테이너 전부 다운. 이후 포트 프로세스는 식별 후에만 종료. | (세션 로그) |
+| L7 | **npm 워크스페이스로 전환하면 플랫폼별 네이티브 바이너리가 lockfile에서 조용히 빠질 수 있다** — 기존 win32 `node_modules` 위에 증분 `npm install`을 돌리자 lightningcss/@tailwindcss/oxide의 비호스트(linux-x64-gnu 등) optional dependency가 lockfile에서 pruning됐다. `npm ci`는 로컬에서 통과하지만 CI(Linux)의 `next build`가 "Cannot find lightningcss.linux-x64-gnu.node"로 실패 — `node_modules`+lockfile을 완전히 지우고 처음부터 재설치해야 전 플랫폼 바이너리가 복원된다. | PR #21, CI 왕복 2회 |
+| L8 | **Keycloak 테스트 유저는 firstName/lastName 없이 만들면 direct grant가 거부된다** — Admin REST로 만든 유저에 `requiredActions: []`를 명시해도, realm User Profile이 요구하는 `firstName`/`lastName`이 없으면 password grant가 "Account is not fully set up"(400)으로 실패한다. e2e 스크립트들은 이미 이 필드를 채우고 있었지만, 새 검증 스크립트를 짤 때 빠뜨려 재발했다. | PR #24 실 인프라 검증 |
 
 ---
 
 ## 7. 다음 사이클 권고
 
-1. **법무 회신 취합** — B1(정서)·B2(대리동의)·B3(보유기간)·B5(제3자제공)가 한 묶음. 회신이 오면 retention 정책 + 파기 오케스트레이션이 가장 큰 단일 작업.
+1. **법무 회신 취합** — B1(정서)·B2(대리동의)·B3(보유기간)·B5(제3자제공)가 한 묶음. 회신이 오면 retention 정책 + 파기 오케스트레이션이 가장 큰 단일 작업. (2026-09-11 현재 전부 미회신)
 2. **infra-architect 착수** — B6(egress), `organizations` 테넌시, `PII_KEK` Vault, GPU 토폴로지, 관측 스택(self-hosted). 온프레미스 배포 설계가 다음 병목.
-3. **Phase 1 MVP 마무리** — 온디바이스 SLM 모델 선정 벤치마크(decisions #27), 첫 구술 인터뷰 흐름, 페르소나 배포 경로. (Compaction Engine 요약·키워드 = PR #15, Critic Agent 질문 생성 = PR #16 완료 — 서버측 클로즈드 루프 §2.11 3·4단계 채워짐)
-4. `core/auth.py` 포트 리팩터링 — 작지만 import-linter 예외를 없애는 깔끔한 정리.
+3. **온디바이스 SLM 모델 선정 벤치마크**(decisions #27, 실기기) — 착수하면 §19 의도 라우터(현재 모바일 홈 셸에서 말벗돌봄 모드 고정, PR #23)와 §2.10 페르소나 JSON 룰셋(Compaction Engine 잔여, PR #15)이 같이 풀린다. 남은 코드 후속 중 **유일하게 외부 회신이 아니라 실기기 확보가 선결조건**인 항목.
+4. **§4.2 endpoint 표 ↔ 구현 1:1 정비** (gap-analysis G11) — 코드 변경 없는 순수 문서 정비, 아무 때나 착수 가능.
+5. (완료) ~~`core/auth.py` 포트 리팩터링~~ → PR #13. ~~apps/web·admin 공유 코드 추출~~ → PR #21.
 
 ---
 
@@ -130,7 +161,7 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 | #9 | PDCA Check — 설계문서↔구현 갭 분석 + 드리프트 동기화 | — |
 | #10 | 모바일 앱 시작 게이트 — 온보딩 스킵·install_mode 분기·최초 동기화 화면 | — |
 | #11 | import-linter — 모듈 경계·4계층 의존 규칙 CI 강제 | — |
-| #12 | 본 Do 사이클 보고서 | — |
+| #12 | 본 Do 사이클 보고서 최초 작성 (PR #1~11 기준) | — |
 | #13 | `core/auth.py` 순수화 — 리포지토리 조립을 `auth_deps.py`로 분리 (import-linter 예외 2건 제거) | — |
 | #14 | 법무·인프라 결정 대기 트래커 | — |
 | #15 | 챕터 Compaction Engine (§2.11 4단계 요약·키워드) — `sync/download`가 요약 내려보냄 | 0007 |
@@ -138,3 +169,9 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 | #17 | apps/web 알림 수신 설정 화면 (notifications 모듈 첫 웹 소비자) | — |
 | #18 | apps/web Keycloak 로그인 연동 (Auth.js/NextAuth v5, decisions #49) — 웹 화면 전체가 실 Bearer로 동작 | — |
 | #19 | apps/admin Keycloak 로그인 연동 (동일 Auth.js 방식) | — |
+| #20 | PDCA Check #2 — PR #10~19 반영, 설계문서 스테일 5건(G7~G11) 정정 | — |
+| #21 | apps/web·admin 공유 코드를 `packages/web-shared`로 추출 (npm 워크스페이스, decisions #50) | — |
+| #22 | apps/web 가족 대시보드 "오늘의 기억 리포트"(WF1) — Compaction 요약 최초 노출, 정서 항목은 OFF 안내로 대체 | — |
+| #23 | apps/mobile 홈 셸(M2) + 하단 탭 4개 — `AppShell`이 임시 `AssistantHomeScreen`을 대체 | — |
+| #24 | 챕터 감수 승인 시 Compaction 재확인 안전망 (gap-analysis G11 후속 #3) | — |
+| #25 | 본 Do 사이클 보고서 갱신 (PR #12~24 반영, §3-2 신설) | — |
