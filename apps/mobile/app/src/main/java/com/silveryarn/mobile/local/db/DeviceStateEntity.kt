@@ -24,4 +24,8 @@ data class DeviceStateEntity(
     // 보내는 불투명 커서(mobile-schema.md v0.5, sync-contract.md §5) — last_sync_at
     // (epoch ms)만으로는 서버 발급 형식을 재구성할 수 없어 별도로 둔다.
     @ColumnInfo(name = "last_sync_version") val lastSyncVersion: String?,
+    // 온보딩 POST /users 요청에 쓴 이름 그대로 로컬 보관(mobile-schema.md v0.10, 신규) —
+    // 서버는 이 값을 되돌려주지 않고(POST /devices 응답엔 없음), 홈 화면(M2) 인사말
+    // "안녕하세요, OOO님"에 필요해 온보딩 시점에 같이 저장한다.
+    @ColumnInfo(name = "user_name") val userName: String?,
 )

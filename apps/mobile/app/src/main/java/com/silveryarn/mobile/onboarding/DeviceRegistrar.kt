@@ -15,19 +15,21 @@ import com.silveryarn.mobile.sync.RetrofitClient
  * 이 클래스가 하는 일: 응답의 토큰을 [DeviceCredentialStore]에, device_id/install_mode를
  * Room `device_state`에 저장 → 이후 [com.silveryarn.mobile.sync.SyncWorker]가 동작 가능.
  *
- * ⚠️ 호출 시점은 온보딩에서 어르신 계정(user_id) 생성 직후다. 온보딩 화면 흐름
- * (OnboardingScreen.kt)이 아직 없어 이 클래스를 부르는 곳은 없다 — 서버 계약을 실제로
- * 소비하는 코드까지 완성해 두고 화면 연결만 후속으로 남긴다.
+ * 호출 시점은 온보딩에서 어르신 계정(user_id) 생성 직후다 — [OnboardingCoordinator.run]
+ * 3연쇄의 두 번째 단계.
  */
 class DeviceRegistrar(private val context: Context) {
     /**
      * @param userId  온보딩에서 만든 어르신(1차 사용자) 계정 id
+     * @param userName 어르신 이름 — 서버가 등록 응답에 되돌려주지 않아 호출자가 그대로 넘긴다
+     *   (device_state.user_name, mobile-schema.md v0.10 — 홈 화면 인사말용)
      * @param displayId 표시용 기기 ID(예: "MB-1042") — 발급 규칙은 운영 정책, 지금은 호출자가 결정
      * @param ramGb 총 RAM(GB) — install_mode 판정 입력(DeviceCapabilityReader가 읽는 값)
      * @return 성공 시 서버 device_id
      */
     suspend fun register(
         userId: String,
+        userName: String,
         displayId: String,
         ramGb: Double,
         modelName: String? = Build.MODEL,
@@ -57,6 +59,7 @@ class DeviceRegistrar(private val context: Context) {
                     promptPackVersion = device.promptPackVersion,
                     lastSyncAt = null,
                     lastSyncVersion = null,
+                    userName = userName,
                 ),
             )
             device.id

@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.silveryarn.mobile.local.db.AppDatabase
-import com.silveryarn.mobile.presentation.assistant.AssistantHomeScreen
 import com.silveryarn.mobile.presentation.onboarding.OnboardingScreen
 import com.silveryarn.mobile.presentation.sync.FirstSyncScreen
 
@@ -43,7 +42,7 @@ private sealed interface AppState {
  * 건다(decisions.md #6). 화면 자체는 두 모드가 동일(design.md §9.3) — 차이는 잠금뿐.
  *
  * ⚠️ 상태는 `remember`라 구성 변경 시 다시 로딩부터 — device_state 조회가 즉시라
- * 스캐폴딩 수준에서 감수. 3대 모드 선택 홈은 미구현이라 [AssistantHomeScreen] 임시.
+ * 스캐폴딩 수준에서 감수. 등록 완료 후 홈은 [AppShell](M2 홈 + 하단 탭 4개)이 맡는다.
  */
 @Composable
 fun AppEntry(
@@ -90,6 +89,6 @@ fun AppEntry(
                 onDone = { state = AppState.Home(current.installMode) },
             )
 
-        is AppState.Home -> AssistantHomeScreen(modifier = modifier)
+        is AppState.Home -> AppShell(modifier = modifier)
     }
 }

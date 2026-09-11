@@ -40,8 +40,12 @@ class OnboardingCoordinator(
             // 임시 display_id — 발급 규칙은 운영 정책(DeviceRegistrar 주석 참조).
             val displayId = "MB-%04d".format(Random.nextInt(0, 10000))
             registrar
-                .register(userId = user.id, displayId = displayId, ramGb = capabilities.totalRamGb())
-                .getOrThrow()
+                .register(
+                    userId = user.id,
+                    userName = name.trim(),
+                    displayId = displayId,
+                    ramGb = capabilities.totalRamGb(),
+                ).getOrThrow()
 
             val token =
                 DeviceCredentialStore.getInstance(context).token()

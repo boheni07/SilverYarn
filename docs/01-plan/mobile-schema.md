@@ -4,7 +4,7 @@
 >
 > **Project**: 은빛실타래 (SilverYarn)
 > **Date**: 2026-09-07
-> **Version**: 0.9 (§2.2 — autobiography_fts의 summary/keywords가 서버 Compaction Engine 산출물임을 명시. 페이로드 형식 불변)
+> **Version**: 0.10 (§2.6 — device_state.user_name 신규, 홈 화면(M2) 인사말용)
 > **Status**: Draft — Do 단계에서 Room Entity로 구현 시 최종 확정
 
 > 서버 `schema.md`가 SoR(전체 마스터 데이터)이며, 본 문서는 온디바이스가 오프라인 동작을 위해 로컬에 보관하는 **서브셋**을 정의한다. 컬럼명은 서버와의 동기화 페이로드 매핑을 쉽게 하기 위해 서버 필드명을 최대한 따른다.
@@ -111,6 +111,7 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 | prompt_pack_version | TEXT NULL | 동기화로 갱신되는 페르소나/프롬프트 팩 버전 |
 | last_sync_at | INTEGER NULL | |
 | last_sync_version | TEXT NULL | `GET /sync/download` 응답의 `sync_version`을 그대로 저장 — 다음 호출의 `since` 파라미터로 되돌려 보내는 불투명 커서(sync-contract.md §5). *(v0.5 신규 — SyncWorker 실제 다운로드 구현 중 발견: `last_sync_at`(epoch ms)만으로는 서버가 발급한 `sync_version` 문자열을 재구성할 수 없다 — 클라이언트는 서버 형식을 몰라도 되게 받은 값을 그대로 저장했다 되돌려주는 게 맞다)* |
+| user_name | TEXT NULL | 온보딩 `POST /users` 요청에 쓴 어르신 이름 그대로 로컬 보관. *(v0.10 신규 — 홈 화면(M2) 인사말 "안녕하세요, OOO님" 구현 중 발견: 서버는 `POST /devices` 등록 응답에 사용자 이름을 되돌려주지 않아, 온보딩이 이미 갖고 있던 값을 그대로 같이 저장해야 했다)* |
 
 > **Device Token(구현 v0.6)**: 서버가 `POST /devices` 응답으로 평문 토큰을 1회 발급한다([decisions.md #47](./decisions/silveryarn-platform.decisions.md), `device_credentials`). 이 토큰은 자격증명이므로 **Room `device_state`가 아니라 Android Keystore 기반 `EncryptedSharedPreferences`**(`auth/DeviceCredentialStore.kt`)에 저장하고 모든 `/sync/*` 호출의 `X-Device-Token` 헤더로 보낸다. 등록 orchestration은 `onboarding/DeviceRegistrar.kt`(`POST /devices` → 토큰 저장 + `device_state.device_id`/`install_mode` 갱신). **v0.7: 온보딩 화면 흐름 연결 완료** — `OnboardingScreen`(상태 호이스팅) → `OnboardingCoordinator`가 `createUser`→`DeviceRegistrar.register()`→`recordConsent` 3연쇄 실행. `device_state`는 이 시점에 처음 채워진다.
 
@@ -146,4 +147,5 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 | 0.6 | 2026-09-09 | Device Token 배선 구현 — 토큰은 자격증명이라 Room `device_state`가 아니라 `EncryptedSharedPreferences`(`auth/DeviceCredentialStore.kt`)에 저장하기로 확정(§2.6 하단 노트). `onboarding/DeviceRegistrar.kt`(POST /devices → 토큰 저장 + device_state 갱신), `SyncWorker`가 저장소에서 토큰을 읽어 `X-Device-Token`으로 전송·원본 오디오 SHA-256 checksum 계산. `androidx.security:security-crypto` 의존성 추가 | NUBiz AX Initiative |
 | 0.7 | 2026-09-09 | 온보딩 화면 흐름 구현 — `presentation/onboarding/OnboardingScreen.kt`(상태 호이스팅: sealed `OnboardingStep` + `when`, nav 프레임워크·ViewModel 미도입 결정) + `onboarding/OnboardingCoordinator.kt`(createUser → DeviceRegistrar.register → recordConsent 3연쇄). `MainActivity`가 완료 시 홈 전환. `device_state`는 이 흐름에서 처음 채워진다. `DeviceCapabilityReader.totalRamGb()` public화 | NUBiz AX Initiative |
 | 0.8 | 2026-09-10 | 앱 시작 게이트 — `presentation/AppEntry.kt`가 `device_state` 조회로 시작 목적지 결정: `device_id` 있음 → 온보딩 스킵·바로 홈, 없음 → 온보딩 → **최초 동기화 화면**(`presentation/sync/FirstSyncScreen.kt`, design.md §2.9 마지막 단계) → 홈. `install_mode` 분기: `MainActivity`가 확정 모드를 받아 `installmode/KioskController.kt`로 `kiosk`면 lockTask 진입(decisions.md #6, Device Owner 아니면 무시). 동기화 로직은 `SyncWorker.doWork()`에서 `sync/SyncRunner.kt`로 분리(Worker와 최초 동기화 화면이 공유). 가족 초대 화면은 이번 트랙 제외(갓 온보딩한 Device Token은 `POST /invitations` 불가 — 별도 설계 결정 대기) | NUBiz AX Initiative |
+| 0.10 | 2026-09-11 | 홈 화면(M2, UI/UX 화면설계서) 구현 — §2.6 `device_state`에 `user_name` 컬럼 신규(인사말 "안녕하세요, OOO님"용, `POST /devices` 응답엔 이름이 없어 온보딩이 갖고 있던 값을 같이 저장). 통계 바(완성 챕터·연속 대화일수·미회고 사진 수)는 신규 컬럼 없이 기존 `autobiography_fts`/`conversations`/`unrecalled_photos`를 집계만 해서 구한다 | NUBiz AX Initiative |
 | 0.9 | 2026-09-10 | §2.2 `autobiography_fts` — `summary`/`keywords`가 서버 Compaction Engine(design §2.11 4단계, `chapters.compaction_*`, 마이그레이션 0007)이 vLLM으로 만든 값임을 명시. 요약 없는 챕터는 서버가 `body_text` 앞 200자로 대체해 내려주므로 온디바이스 Upsert 코드는 형식 불변(변경 없음) | NUBiz AX Initiative |
