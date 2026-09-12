@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.45 (blind index 키 정식 분리 — decisions.md #60 구현)
+> **Version**: 0.46 (가족 대리 동의 관리 화면 — decisions.md #53 구현)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -861,6 +861,7 @@ silveryarn/
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.46 | 2026-09-12 | Do 단계 — decisions.md #53(2026-09-12 사용자 결정) 구현. 조사 결과 백엔드 `POST /users/{id}/consent-logs`는 이미 `granted_by`로 가족 대리동의를 지원하고 있었음(PR #6) — 빠진 건 화면뿐이었다. apps/web `/consent`(신규): notification-settings와 동일한 "구성원 먼저 선택" 패턴, 유형별(개인정보 수집·외부TTS·외부LLM) 동의 토글이 `grantedBy`로 대리 동의를 기록. `consent_logs.actor` 전용 enum 컬럼은 추가하지 않음(파생값으로 충분, YAGNI) | NUBiz AX Initiative |
 | 0.45 | 2026-09-12 | Do 단계 — decisions.md #60(2026-09-12 사용자 결정) 구현. §7.3 PII 암호화 3차: blind index 키를 `PII_KEK`에서 유도하던 방식(하나 유출 시 둘 다 노출)을 신규 `BLIND_INDEX_KEY` 환경변수로 정식 분리. `core/crypto.py` `PiiCrypto.__init__`이 `bidx_key` 인자를 받고, 미설정 시 하위호환 폴백(경고 로그). `scripts/backfill_blind_index.py`(신규) — 기존 `family_members`/`invitations`의 `contact_bidx`를 새 키로 재계산. 유닛테스트 3건 추가(168개) | NUBiz AX Initiative |
 | 0.44 | 2026-09-12 | 순수 결정 기록 — `blocked-decisions-tracker.md`의 법무 6건(Q1~Q6)·인프라 5건(I1~I5)·경영 3건 전부를 사용자와의 대화로 일괄 확정(decisions.md §2.9 #52~#65). 설계 변경 자체는 없음 — 각 결정의 실제 구현(retention_policies·organizations 테넌시·third_party_access consent·관측스택 등)은 후속 PR에서 따로 진행하며, 그때 이 문서의 해당 절(§7.1 RBAC·§7.2 백업정책 등)을 갱신한다 | NUBiz AX Initiative |
 | 0.43 | 2026-09-12 | Do 단계 — 온디바이스 SLM 실기기 벤치마크 프로토콜 + 측정 하니스(decisions #27/#31/#9 — "결정 아니라 실측이 먼저"인 3건, 사용자 요청). `docs/03-check/ondevice-slm-benchmark-protocol.md`(신규, SoR) — 실기기 3종(S10급/A35급/S24급) 준비물·테스트 픽스처·측정 절차·지표별 목표치·검증·비교표 방법. `apps/mobile/.../benchmark/` 신규(순수 Kotlin `BenchmarkModels`/`CsvReportWriter`+Android `DeviceProfiler`+오케스트레이터 `ConversationBenchmarkRunner`, JVM 유닛테스트 포함) + `app/src/androidTest`(신규 source set) `RealDeviceBenchmarkTest` — `SttEngine`/`SlmEngine` 실 구현체가 없어 `UnimplementedSttEngine`/`UnimplementedSlmEngine`로 의도적 미구현 상태(`NotImplementedError`), 픽스처 없으면 실패 아닌 스킵(`Assume`). `ci.yml` mobile job에 `assembleAndroidTest`(컴파일만, 실행은 로컬 실기기 전용) 추가. **이 PR은 준비물이지 실측 결과가 아니다** — 실행 환경에 물리 기기/Android SDK가 없어 실제 벤치마크는 미실행, `blocked-decisions-tracker.md` 3개 행을 "프로토콜+하니스 준비 완료"로 갱신 | NUBiz AX Initiative |
