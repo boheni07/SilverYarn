@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.46 (가족 대리 동의 관리 화면 — decisions.md #53 구현)
+> **Version**: 0.47 (복지사 제3자제공 동의 게이트 — decisions.md #54 구현)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -670,11 +670,11 @@ interface Publication {         // v1.1 신규
 
 > 기획서 6장 "역할별 차등 권한" 요구를 구체화. 세부 조정은 Do 단계.
 >
-> **v0.24 구현 상태**: social_worker의 "동의 시" 열람은 그 동의를 표현할 consent 유형이 없고 CTO B2가 제3자제공 여부를 법무 질문으로 지목한 상태라, **fail-closed로 구현**했다 — 전용 consent 유형이 확정될 때까지 복지사는 어르신 데이터(챕터·사진·대화·일정) 조회에서 제외된다(정서 알림·본인 알림설정은 유지). `core/auth.py`의 `READ_ELDER_DATA_ROLES` = {family, caregiver, admin}.
+> **v0.46 구현 상태 ([decisions.md #54](../../01-plan/decisions/silveryarn-platform.decisions.md), 2026-09-13)**: social_worker의 "동의 시" 열람이 실제로 구현됐다 — 어르신(또는 가족 대리)이 `third_party_access` 동의를 주면 복지사가 챕터·사진·대화·일정을 조회할 수 있다. `auth_deps.authorize_elder_data_read()`가 게이트를 담당(`core/auth.py`의 `READ_ELDER_DATA_ROLES` = {family, caregiver, admin}은 순수하게 유지, social_worker 조건부 허용은 composition root에서 처리). v0.24의 전면 fail-closed를 대체.
 
 | 리소스 | family | caregiver | social_worker | admin |
 |---|:-:|:-:|:-:|:-:|
-| 챕터 조회 | ✅ | ✅ | ⏸️(동의 시 — fail-closed, 미도입) | ✅ |
+| 챕터 조회 | ✅ | ✅ | 🔓(`third_party_access` 동의 시, v0.46 구현) | ✅ |
 | 챕터 감수(승인/반려) | ✅ | ❌ | ❌ | ✅ |
 | 사진 업로드 | ✅ | ✅ | ❌ | ✅ |
 | 정서 알림 조회 | ✅ | ✅ | ✅ | ✅ |
@@ -718,7 +718,7 @@ CTO 보안 검토 B4가 "스키마 결정, Do 단계 이연 불가"로 지목한
 - **2FA**(기획서 6장 "웹 콘솔 접근 시 2단계 인증"): 토큰 `amr` claim으로 판정(`AUTH_2FA_AMR_VALUES`). 쓰기·감수 작업은 `require_2fa=True`.
 - **인가(RBAC + IDOR 방지)**: `authorize_user_access(principal, target_user_id, allowed_roles, require_2fa)` — 대상 어르신에 대한 membership·role·2FA를 검사(admin은 우회, device는 소속 어르신만). §7.1 매트릭스 기준. **적용 범위**(v0.19 + v0.21): chapters(조회·감수)·photos(조회·업로드)·consent(전체)·schedule(조회·생성·응답)·conversation-chunks(조회)·users(`GET /users`=admin, `GET /users/{id}`=연결된 가족/admin)·devices(조회=admin)·sync(`/sessions` 목록=admin, device 엔드포인트는 device_id 일치)·**family-members**(조회·생성=family/admin+2FA, contact가 PII)·**invitations**(생성=family/admin+2FA, `invited_by`는 호출자 본인 구성원)·**photo-requests**(생성=family/admin, 조회·닫기=Device 또는 가족).
 - **초대 수락 → 계정 연결**: `POST /invitations/{token}/accept`는 아직 family_member에 매핑 안 된 계정이라 `require_verified_subject`(토큰만 검증, membership 미확인)를 쓴다. 수락자 토큰 `sub`를 새 `family_members.keycloak_sub`에 박아넣어야 이후 `require_family`가 그 사람을 로그인시킬 수 있다(이게 없으면 수락 후에도 앱을 못 씀). `GET /invitations/{token}`은 계속 무인증(토큰 자체가 접근 권한).
-- **social_worker fail-closed (v0.24)**: 복지사의 어르신 데이터 조회는 `READ_ELDER_DATA_ROLES`에서 제외(family/caregiver/admin만). RBAC §7.1의 "동의 시"를 표현할 전용 consent 유형이 없고 제3자제공 법무 판단 대기(CTO B2, decisions.md #12/#46 관련). 전용 유형 확정 시 그 동의 상태를 게이트로 복지사를 다시 포함.
+- **social_worker 조건부 허용 (v0.46, [decisions.md #54](../../01-plan/decisions/silveryarn-platform.decisions.md))**: `READ_ELDER_DATA_ROLES`(순수, `core/auth.py`)는 여전히 family/caregiver/admin만 담지만, `auth_deps.authorize_elder_data_read()`(composition root, consent 모듈 의존)가 social_worker에게 `third_party_access` 동의 여부를 확인해 조건부로 허용한다. 적용 엔드포인트: `GET /users/{id}/chapters`·`/chapters/{id}`·`/chapters/{id}/revisions`·`/conversation-chunks`(목록·검색·카운트)·`/conversation-chunks/{id}`·`/schedule-items`(목록·단건)·`/photos`. v0.24의 전면 fail-closed(decisions.md #48)를 대체 — 이제 "동의 없으면 차단"만 기본값이다.
 - **미적용(후속)**: `emotion_alerts`/`emotion_scores` 엔드포인트(피처플래그 OFF).
 - **감사로그**: `access_logs` — `main.py` HTTP 미들웨어가 `/api/v1/*` 요청 처리 후 best-effort 1행 적재(제8조).
 - **fail closed**: `AUTH_ISSUER_URL` 미설정 시 웹 콘솔 인증이 요청에서 401(토큰 없음) 또는 500(토큰 있는데 verifier 미구성). 앱/워커 기동·CI(HTTP 미경유 단위 테스트)에는 영향 없음.
@@ -861,6 +861,7 @@ silveryarn/
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.47 | 2026-09-13 | Do 단계 — decisions.md #54(2026-09-12 사용자 결정) 구현. §7.1 RBAC 매트릭스·§7.4 인가 절 갱신: social_worker의 "동의 시" 열람이 실제로 동작한다. `consent_type` enum에 `third_party_access` 추가(마이그레이션 0009, schema.md v1.14). `auth_deps.authorize_elder_data_read()`(신규) — `core/auth.py`(순수)는 그대로 두고 composition root에서 consent 조회를 게이트로 얹음, `ConsentDirectory` Protocol(+ `_ConsentDirectory`/`get_consent_directory`)로 Fake 단위테스트 가능하게 분리. 챕터(3)·대화(4)·일정(2)·사진(1) 10개 조회 엔드포인트 전환. 유닛테스트 7건 신규(175개). **실 인프라 e2e로 왕복 검증**(`e2e_keycloak_check.py`, 11/11 PASS) — social_worker 동의 전 403, family 동의 기록 후 재시도 200 | NUBiz AX Initiative |
 | 0.46 | 2026-09-12 | Do 단계 — decisions.md #53(2026-09-12 사용자 결정) 구현. 조사 결과 백엔드 `POST /users/{id}/consent-logs`는 이미 `granted_by`로 가족 대리동의를 지원하고 있었음(PR #6) — 빠진 건 화면뿐이었다. apps/web `/consent`(신규): notification-settings와 동일한 "구성원 먼저 선택" 패턴, 유형별(개인정보 수집·외부TTS·외부LLM) 동의 토글이 `grantedBy`로 대리 동의를 기록. `consent_logs.actor` 전용 enum 컬럼은 추가하지 않음(파생값으로 충분, YAGNI) | NUBiz AX Initiative |
 | 0.45 | 2026-09-12 | Do 단계 — decisions.md #60(2026-09-12 사용자 결정) 구현. §7.3 PII 암호화 3차: blind index 키를 `PII_KEK`에서 유도하던 방식(하나 유출 시 둘 다 노출)을 신규 `BLIND_INDEX_KEY` 환경변수로 정식 분리. `core/crypto.py` `PiiCrypto.__init__`이 `bidx_key` 인자를 받고, 미설정 시 하위호환 폴백(경고 로그). `scripts/backfill_blind_index.py`(신규) — 기존 `family_members`/`invitations`의 `contact_bidx`를 새 키로 재계산. 유닛테스트 3건 추가(168개) | NUBiz AX Initiative |
 | 0.44 | 2026-09-12 | 순수 결정 기록 — `blocked-decisions-tracker.md`의 법무 6건(Q1~Q6)·인프라 5건(I1~I5)·경영 3건 전부를 사용자와의 대화로 일괄 확정(decisions.md §2.9 #52~#65). 설계 변경 자체는 없음 — 각 결정의 실제 구현(retention_policies·organizations 테넌시·third_party_access consent·관측스택 등)은 후속 PR에서 따로 진행하며, 그때 이 문서의 해당 절(§7.1 RBAC·§7.2 백업정책 등)을 갱신한다 | NUBiz AX Initiative |

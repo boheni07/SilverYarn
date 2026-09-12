@@ -29,6 +29,7 @@ class ConsentLogModel(Base):
             "data_collection",
             "external_tts_optin",
             "external_llm_optin",
+            "third_party_access",  # 마이그레이션 0009, decisions.md #54
             name="consent_type",
             create_type=False,
         ),

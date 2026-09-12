@@ -148,10 +148,27 @@ async def main() -> None:
             )
             check(r.status_code == 403, f"family1 → elder_B(미연결) → 403 (got {r.status_code})")
 
-            # 5. worker1(복지사) → elder_A 챕터 → 403 (fail-closed, decisions #48)
+            # 5. worker1(복지사) → elder_A 챕터, third_party_access 동의 없음 → 403
+            #    (decisions #54 — 동의 없으면 여전히 막힘. #48의 전면 fail-closed는
+            #    #54로 대체됐지만 "동의 없는 상태"의 기본값은 여전히 차단이다)
             r = await c.get(f"{BASE}/users/{elder_a}/chapters", headers={"Authorization": f"Bearer {sw_tok}"})
             check(
-                r.status_code == 403, f"social_worker → 챕터 조회 → 403 (fail-closed) (got {r.status_code})"
+                r.status_code == 403,
+                f"social_worker(동의 없음) → 챕터 조회 → 403 (got {r.status_code})",
+            )
+
+            # 5b. elder_A가 third_party_access 동의 → worker1 재시도 → 200 (decisions #54)
+            r = await c.post(
+                f"{BASE}/users/{elder_a}/consent-logs",
+                headers={"Authorization": f"Bearer {fam_tok}"},
+                json={"consent_type": "third_party_access", "granted": True},
+            )
+            check(r.status_code == 201, f"family1 → third_party_access 동의 기록 → 201 (got {r.status_code})")
+
+            r = await c.get(f"{BASE}/users/{elder_a}/chapters", headers={"Authorization": f"Bearer {sw_tok}"})
+            check(
+                r.status_code == 200,
+                f"social_worker(동의 있음) → 챕터 조회 → 200 (got {r.status_code})",
             )
 
             # 6. 인증됐지만 어떤 어르신에도 연결 안 된 계정 → 403

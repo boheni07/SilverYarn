@@ -65,7 +65,11 @@ def test_caregiver_can_read_but_not_write() -> None:
 
 
 def test_social_worker_is_fail_closed_on_elder_data() -> None:
-    """복지사는 매트릭스상 '동의 시' 열람인데 그 consent 유형이 없어 fail-closed."""
+    """이 순수 함수 기준으로는 social_worker가 기본 READ_ELDER_DATA_ROLES에 없어
+    항상 막힌다 — consent(`third_party_access`) 있을 때만 조건부 허용하는 로직은
+    이 함수가 아니라 `auth_deps.authorize_elder_data_read()`에 있다(decisions.md #54,
+    tests/test_auth_deps.py 참조). 여기 남겨두는 건 "기본값은 계속 막혀 있다"는
+    회귀 방지용."""
     elder = uuid.uuid4()
     ctx = _ctx(_member(elder, FamilyRole.SOCIAL_WORKER))
     with pytest.raises(ApiError, match="역할"):

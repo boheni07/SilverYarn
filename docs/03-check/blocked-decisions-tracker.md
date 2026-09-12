@@ -38,14 +38,14 @@
 | 구현 (2026-09-12) | 조사해보니 백엔드는 이미 `POST /users/{id}/consent-logs`의 `granted_by`(호출자 본인 구성원 id 검증 포함, PR #6)로 대리동의를 지원하고 있었다 — 실제 빠져 있던 건 이걸 쓰는 화면뿐. `apps/web` `/consent`(신규): 가족 구성원 선택 → 유형별(개인정보 수집·외부TTS·외부LLM) 동의 토글, `grantedBy`로 대리 동의 기록. `actor`는 여전히 `granted_by` 유무로 파생(별도 enum 컬럼은 불필요 — YAGNI) |
 | 남은 것 | 없음 — apps/web이 아직 세션→family_member 자동 해석을 안 해서(notification-settings와 동일한 임시 상태) 구성원을 직접 고르는 UX는 실 인증 완성 시 함께 개선 예정 |
 
-### Q3. 가족·복지사 열람 = 제17조 제3자제공인가, 제26조 위탁범위 내 이용인가? — ✅ 확정
+### Q3. 가족·복지사 열람 = 제17조 제3자제공인가, 제26조 위탁범위 내 이용인가? — ✅ 확정, ✔️ 구현 완료
 
 | | |
 |---|---|
-| 관련 결정 | [decisions #54](../01-plan/decisions/silveryarn-platform.decisions.md)(신규), #48, #12 (CTO B2) |
+| 관련 결정 | [decisions #54](../01-plan/decisions/silveryarn-platform.decisions.md), #48, #12 (CTO B2) |
 | 회신/결정 | **2026-09-12, 사용자**: 가족 = 위탁범위 내 이용(별도 동의 불필요), 복지사 = 제3자제공(전용 동의 필요) |
-| 현재 코드 | **social_worker fail-closed** — `core/auth.py` `READ_ELDER_DATA_ROLES`에서 제외 |
-| 후속 작업 (미착수) | `third_party_access` consent 유형 신설 · 그 동의 상태를 게이트로 social_worker `READ_ELDER_DATA_ROLES` 재포함 · design §7.1 RBAC 매트릭스 갱신 |
+| 구현 (2026-09-13) | `consent_type` enum에 `third_party_access` 추가(마이그레이션 0009). `auth_deps.authorize_elder_data_read()`(신규, `core/auth.py`는 여전히 순수 유지) — social_worker는 이 동의가 있을 때만 통과. 챕터(3)·대화(4)·일정(2)·사진(1) 총 10개 조회 엔드포인트 전환. `ConsentDirectory` Protocol + Fake로 순수 단위테스트 7건. **실 인프라 e2e로 왕복 검증**: 동의 전 social_worker→403, family가 동의 기록(201)→social_worker 재시도 403→200(`e2e_keycloak_check.py`, 11/11 PASS) |
+| 남은 것 | 없음 — social_worker 기본 fail-closed(#48)는 조건부 허용으로 완전히 대체됨 |
 
 ### Q4. 정서점수 산출·통보가 의료기기법 규제대상이 될 위험? — ✅ 확정
 
