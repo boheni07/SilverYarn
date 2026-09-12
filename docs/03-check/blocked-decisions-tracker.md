@@ -29,14 +29,14 @@
 | 현재 코드 | 정서 모니터링 파이프라인 **피처플래그 OFF**(decisions #25) — 이 결정은 법적 전제만 정리, 기능 자체 활성화는 별개 착수 여부 |
 | 후속 작업 (미착수) | 정서 write 경로 활성화 · `GET /users/{id}/emotion-scores`·`/emotion-alerts` · 알림 임계치 로직(#19, 여전히 별도 검토 필요) · design §2.5 파이프라인 · 문구는 #55(Q4) 가이드라인 준수 |
 
-### Q2. 성년후견 미개시 어르신에 대한 가족 대리동의 유효? 본인동의 필수범위? — ✅ 확정
+### Q2. 성년후견 미개시 어르신에 대한 가족 대리동의 유효? 본인동의 필수범위? — ✅ 확정, ✔️ 구현 완료
 
 | | |
 |---|---|
-| 관련 결정 | [decisions #53](../01-plan/decisions/silveryarn-platform.decisions.md)(신규), #46 (CTO B2) |
+| 관련 결정 | [decisions #53](../01-plan/decisions/silveryarn-platform.decisions.md), #46 (CTO B2) |
 | 회신/결정 | **2026-09-12, 사용자**: 가족(1촌 이내) 대리동의를 유효로 인정. legal_guardian enum까지는 아니고 self/proxy 대리동의 자체의 법적 효력만 인정 |
-| 현재 코드 | `consent_logs.granted_by` 유무로 `actor`(self/proxy) **파생만** — 아직 정식 enum 컬럼 없음 |
-| 후속 작업 (미착수) | `consent_logs.actor` enum 컬럼(self/proxy) 마이그레이션 · 온보딩 동의 화면의 대리동의 분기 UI |
+| 구현 (2026-09-12) | 조사해보니 백엔드는 이미 `POST /users/{id}/consent-logs`의 `granted_by`(호출자 본인 구성원 id 검증 포함, PR #6)로 대리동의를 지원하고 있었다 — 실제 빠져 있던 건 이걸 쓰는 화면뿐. `apps/web` `/consent`(신규): 가족 구성원 선택 → 유형별(개인정보 수집·외부TTS·외부LLM) 동의 토글, `grantedBy`로 대리 동의 기록. `actor`는 여전히 `granted_by` 유무로 파생(별도 enum 컬럼은 불필요 — YAGNI) |
+| 남은 것 | 없음 — apps/web이 아직 세션→family_member 자동 해석을 안 해서(notification-settings와 동일한 임시 상태) 구성원을 직접 고르는 UX는 실 인증 완성 시 함께 개선 예정 |
 
 ### Q3. 가족·복지사 열람 = 제17조 제3자제공인가, 제26조 위탁범위 내 이용인가? — ✅ 확정
 

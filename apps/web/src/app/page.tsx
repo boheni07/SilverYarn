@@ -61,6 +61,9 @@ export default function HomePage() {
           <Button variant="secondary" onClick={() => goTo("/notification-settings")}>
             알림 수신 설정으로 이동
           </Button>
+          <Button variant="secondary" onClick={() => goTo("/consent")}>
+            대리 동의 관리로 이동
+          </Button>
         </div>
       </Card>
     </main>
