@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.43 (온디바이스 SLM 벤치마크 프로토콜 + 측정 하니스)
+> **Version**: 0.44 (법무·인프라·경영 미결 14건 일괄 확정 — decisions.md #52~#65)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -861,6 +861,7 @@ silveryarn/
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.44 | 2026-09-12 | 순수 결정 기록 — `blocked-decisions-tracker.md`의 법무 6건(Q1~Q6)·인프라 5건(I1~I5)·경영 3건 전부를 사용자와의 대화로 일괄 확정(decisions.md §2.9 #52~#65). 설계 변경 자체는 없음 — 각 결정의 실제 구현(retention_policies·organizations 테넌시·third_party_access consent·관측스택 등)은 후속 PR에서 따로 진행하며, 그때 이 문서의 해당 절(§7.1 RBAC·§7.2 백업정책 등)을 갱신한다 | NUBiz AX Initiative |
 | 0.43 | 2026-09-12 | Do 단계 — 온디바이스 SLM 실기기 벤치마크 프로토콜 + 측정 하니스(decisions #27/#31/#9 — "결정 아니라 실측이 먼저"인 3건, 사용자 요청). `docs/03-check/ondevice-slm-benchmark-protocol.md`(신규, SoR) — 실기기 3종(S10급/A35급/S24급) 준비물·테스트 픽스처·측정 절차·지표별 목표치·검증·비교표 방법. `apps/mobile/.../benchmark/` 신규(순수 Kotlin `BenchmarkModels`/`CsvReportWriter`+Android `DeviceProfiler`+오케스트레이터 `ConversationBenchmarkRunner`, JVM 유닛테스트 포함) + `app/src/androidTest`(신규 source set) `RealDeviceBenchmarkTest` — `SttEngine`/`SlmEngine` 실 구현체가 없어 `UnimplementedSttEngine`/`UnimplementedSlmEngine`로 의도적 미구현 상태(`NotImplementedError`), 픽스처 없으면 실패 아닌 스킵(`Assume`). `ci.yml` mobile job에 `assembleAndroidTest`(컴파일만, 실행은 로컬 실기기 전용) 추가. **이 PR은 준비물이지 실측 결과가 아니다** — 실행 환경에 물리 기기/Android SDK가 없어 실제 벤치마크는 미실행, `blocked-decisions-tracker.md` 3개 행을 "프로토콜+하니스 준비 완료"로 갱신 | NUBiz AX Initiative |
 | 0.27 | 2026-09-10 | **PDCA Check — 설계문서↔구현 갭 분석 반영.** ① §9.1 Layer Structure·§11.1 File Structure를 실제 모듈러 모놀리스 구조(`services/backend/src/core_service/modules/{name}/{4계층}` + `core/` + `shared/`, `main.py`/`worker.py`)로 교체 — 기존 `services/{engine}/` 6-서비스 트리는 미구현(decisions.md #44, structure.md v1.4는 이미 정정됨). ② §3.1 `interface Chapter`에서 `createdAt` 제거(테이블·ORM·응답·DDL 어디에도 없던 필드, v0.6 L-11에서 추가됐으나 미구현). ③ §8.1 Test Plan phase 열 정정(정서 모니터링 Phase 2·피처플래그 OFF, 출판 Phase 3 — §11.2/decisions #25와 정합). ④ §11.2 Implementation Order 체크박스를 실제 상태로 갱신. ⑤ §11 preamble: import-linter 미도입 상태 명시(모듈 경계·4계층은 준수 중이나 CI 회귀 방지 없음 — 후속). schema.md DDL ↔ 실 DB 21개 테이블은 일치 확인 | NUBiz AX Initiative |
 | 0.28 | 2026-09-10 | Do 단계 — 모바일 앱 시작 게이트 구현(§2.9 구현 상태 v0.28). `presentation/AppEntry.kt`가 `device_state.device_id`로 온보딩 스킵 판정, 없으면 온보딩 → `presentation/sync/FirstSyncScreen.kt`(최초 Wi-Fi 동기화, §2.9 흐름의 마지막 단계) → 홈. `installmode/KioskController.kt`로 install_mode="kiosk" 시 lockTask 진입(decisions.md #6). `SyncWorker.doWork()`의 동기화 절차를 `sync/SyncRunner.kt`로 분리(Worker·화면 공유). 가족 초대 화면은 미포함(Device Token은 `POST /invitations` 권한 없음 — 첫 가족 연결 경로 별도 결정 대기). mobile-schema.md v0.8 | NUBiz AX Initiative |
