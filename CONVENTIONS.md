@@ -178,12 +178,14 @@ import './styles.css'
 | `AUTH_` | 인증 (Keycloak SSO) | Server only | `AUTH_ISSUER_URL`, `AUTH_CLIENT_ID`, `AUTH_SECRET`, `AUTH_AUDIENCE`, `AUTH_JWKS_URL`, `AUTH_2FA_AMR_VALUES` *(decisions.md #17/#47 — `AUTH_ISSUER_URL` 미설정 시 웹 콘솔 인증 fail closed)* |
 | `SYNC_` | 배치 동기화 파라미터 | Server only | `SYNC_MAX_RETRY`, `SYNC_CHECKSUM_ALGO` |
 | `PII_` | PII 필드 암호화 KEK (신규, decisions.md #45) | Server only | `PII_KEK` *(Fernet 키, 콤마 구분 다중 키로 회전 대비 — Vault 이전 전까지 임시)* |
+| `BLIND_INDEX_KEY` | blind index(동등검색용 HMAC) 전용 키 (신규, decisions.md #60) | Server only | `BLIND_INDEX_KEY` *(`PII_KEK`와 별도 분리 — 하나 유출 시 둘 다 노출되는 것을 방지. 비우면 `PII_KEK`에서 유도하는 레거시 폴백, 경고 로그)* |
 
 ```
 ⚠️ 보안 원칙
 - NEXT_PUBLIC_* 외 어떤 것도 클라이언트에 노출 금지
 - 온프레미스 시크릿(DB/Storage/LLM/VectorDB 접속정보)은 시크릿 매니저(구체 도구는 인프라 설계에서 확정) 경유, .env 파일에 평문 커밋 금지
 - PII 자유텍스트 컬럼(schema.md §5) 자체는 애플리케이션 레벨 필드 암호화 + 사용자별 DEK로 보호한다(core/crypto.py). 환경변수로 두는 것은 그 DEK를 랩핑하는 KEK(`PII_KEK`)뿐이며, 이 값은 반드시 시크릿 매니저 경유·`.env.local` 커밋 금지 — 유출 시 crypto-shredding 전제(파기 수단)가 무너진다
+- blind index 키(`BLIND_INDEX_KEY`)는 `PII_KEK`와 반드시 다른 값이어야 한다(decisions.md #60) — 같은 값을 재사용하면 분리한 의미가 없다
 ```
 
 ### 4.1 모바일(Kotlin) 시크릿 관리 — v1.1 신규 (design-validator F-7)

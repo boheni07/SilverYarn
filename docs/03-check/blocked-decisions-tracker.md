@@ -99,14 +99,14 @@
 | 현재 | `organizations` 테이블·`family_members.org_id` 없음. B2G 시설 간 열람 격리 불가 |
 | 후속 작업 (미착수) | `organizations` 테이블 + `family_members.org_id` 마이그레이션 · 테넌시 인가 술어(시설 경계) · admin 콘솔 시설 관리 |
 
-### I3. `PII_KEK` Vault transit 이전 (PII 암호화 3차) — ✅ 확정 (부분 착수)
+### I3. `PII_KEK` Vault transit 이전 (PII 암호화 3차) — ✅ 확정, blind index 분리 ✔️ 구현 완료
 
 | | |
 |---|---|
-| 관련 | [decisions #60](../01-plan/decisions/silveryarn-platform.decisions.md)(신규), #45 3차 |
+| 관련 | [decisions #60](../01-plan/decisions/silveryarn-platform.decisions.md), #45 3차 |
 | 결정 | **2026-09-12, 사용자**: 환경변수 방식 유지(Vault/OpenBao 인프라 구축은 보류), blind index 키만 지금 `PII_KEK`에서 정식 분리 |
-| 현재 | KEK를 환경변수 `PII_KEK`로 주입. blind index 키는 KEK 첫 키에서 유도(정식 분리 안 됨) |
-| 후속 작업 (미착수) | `BLIND_INDEX_KEY` 환경변수 신설 · `core/crypto.py` `blind_index()` 소스 교체 · 기존 blind index 재계산·백필. Vault/OpenBao 이전 자체는 계속 보류 |
+| 구현 (2026-09-12) | `BLIND_INDEX_KEY` 환경변수 신설, `core/crypto.py` `PiiCrypto.__init__(bidx_key=)`/`from_settings` 교체(미설정 시 하위호환 폴백+경고 로그), `scripts/backfill_blind_index.py` 신규. 유닛테스트 3건. design.md v0.45 |
+| 남은 것 | Vault/OpenBao 인프라 이전 자체는 계속 보류(시크릿 매니저 인프라 선결 필요) |
 
 ### I4. 관측·에러추적 스택 — ✅ 확정 (지금 구축)
 

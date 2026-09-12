@@ -98,6 +98,11 @@ class Settings(BaseSettings):
     # repository가 처음 호출될 때 RuntimeError(생성 방법 안내 포함).
     pii_kek: str = Field(default="", alias="PII_KEK")
 
+    # blind index(동등검색용 HMAC, `contact_bidx` 등) 전용 키 — decisions.md #60(2026-09-12).
+    # PII_KEK와 같은 값에서 유도하던 이전 방식은 "하나 유출 시 둘 다 노출"되는 결함이라
+    # 정식 분리했다. 비어 있으면 crypto.py가 하위호환을 위해 PII_KEK에서 유도(경고 로그).
+    blind_index_key: str = Field(default="", alias="BLIND_INDEX_KEY")
+
     # --- Worker (arq, sync-contract.md §2) ---
     redis_host: str = Field(default="localhost", alias="REDIS_HOST")
     redis_port: int = Field(default=9671, alias="REDIS_PORT")
