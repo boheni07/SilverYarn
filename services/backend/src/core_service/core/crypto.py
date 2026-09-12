@@ -14,6 +14,9 @@
     (crypto-shredding — B3 보유기간/파기 정책의 파기 수단, 법무 확인 대기).
   - **KEK**(Key Encryption Key): 환경변수 `PII_KEK`(임시). 온프레미스 Vault 이전 시
     `PiiCrypto` 생성 지점만 교체하면 된다. 회전 대비로 MultiFernet(콤마 구분 다중 키).
+  - **blind index 키**: 환경변수 `BLIND_INDEX_KEY`(decisions.md #60, 2026-09-12) — KEK와
+    별도로 분리된 전용 키. 이전에는 KEK 첫 키에서 유도해 "하나 유출 시 둘 다 노출"되는
+    결함이 있었다. 비어 있으면 하위호환을 위해 KEK에서 유도하되 경고 로그를 남긴다.
   - **알고리즘**: Fernet(AES-128-CBC + HMAC-SHA256, `cryptography` 패키지).
   - **토큰 포맷**: `pii.v1.` 접두사 + Fernet 토큰. 접두사로 평문/암호문을 구분하므로
     (1) 로컬 개발 DB의 기존 평문 행은 복호화 시 그대로 통과하고 (2) 재저장 시 암호화된다.
@@ -77,7 +80,7 @@ class UserEncryptionKeyModel(Base):
 class PiiCrypto:
     """KEK 기반 DEK 랩핑 + DEK 기반 필드 암복호화. 상태가 없어 프로세스 싱글턴으로 공유한다."""
 
-    def __init__(self, kek_keys: list[str]):
+    def __init__(self, kek_keys: list[str], bidx_key: str = ""):
         if not kek_keys:
             raise RuntimeError(_KEK_MISSING_MSG)
         try:
@@ -85,17 +88,24 @@ class PiiCrypto:
         except (ValueError, TypeError) as exc:  # 잘못된 키 포맷
             raise RuntimeError(f"PII_KEK 형식이 올바른 Fernet 키가 아닙니다: {exc}") from exc
         self._kek = MultiFernet(fernets)
-        # blind index(동등검색용 HMAC) 키 — **첫 KEK에서만** 유도한다. KEK 회전 시에도
-        # 첫 KEK를 목록 마지막에 남겨두면 인덱스가 유지되고, 첫 KEK를 완전히 폐기하려면
-        # contact_bidx 백필 배치가 필요하다(decisions.md #45 2차 — 임시 방식).
+        # blind index(동등검색용 HMAC) 키 — decisions.md #60(2026-09-12)로 KEK와 정식
+        # 분리했다. `bidx_key`가 주어지면 그것에서, 비어 있으면 하위호환을 위해 첫
+        # KEK에서 유도한다(레거시 방식 — 새로 배포하는 환경은 BLIND_INDEX_KEY를 설정할 것).
+        source_key = bidx_key.strip() if bidx_key.strip() else kek_keys[0].strip()
+        if not bidx_key.strip():
+            logger.warning(
+                "BLIND_INDEX_KEY 미설정 — PII_KEK에서 유도한 레거시 방식을 사용합니다 "
+                "(decisions.md #60). 새 환경변수를 설정하고 scripts/backfill_blind_index.py로 "
+                "기존 blind index를 재계산하는 것을 권장합니다."
+            )
         self._bidx_key = hashlib.blake2b(
-            kek_keys[0].strip().encode(), person=b"silveryarn-bidx", digest_size=32
+            source_key.encode(), person=b"silveryarn-bidx", digest_size=32
         ).digest()
 
     @classmethod
     def from_settings(cls, settings: Settings) -> PiiCrypto:
         keys = [k for k in settings.pii_kek.split(",") if k.strip()]
-        return cls(keys)
+        return cls(keys, bidx_key=settings.blind_index_key)
 
     # --- DEK 수명주기 ---
     @staticmethod

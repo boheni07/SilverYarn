@@ -77,6 +77,43 @@ def test_blind_index_case_folded(crypto: PiiCrypto) -> None:
     assert crypto.blind_index("Family@Example.com") == crypto.blind_index("family@example.com")
 
 
+# --- blind index 키 분리 (decisions.md #60) ---
+
+
+def test_dedicated_bidx_key_differs_from_kek_derived() -> None:
+    """BLIND_INDEX_KEY를 주면 PII_KEK에서 유도한 레거시 값과 달라진다."""
+    kek = Fernet.generate_key().decode()
+    legacy = PiiCrypto([kek])  # bidx_key 미지정 — KEK에서 유도(폴백)
+    dedicated = PiiCrypto([kek], bidx_key="a-dedicated-blind-index-key")
+
+    assert legacy.blind_index("010-1234-5678") != dedicated.blind_index("010-1234-5678")
+
+
+def test_dedicated_bidx_key_independent_of_kek_rotation() -> None:
+    """전용 blind index 키를 쓰면 KEK가 회전해도 인덱스가 안 바뀐다."""
+    bidx_key = "stable-dedicated-key"
+    before = PiiCrypto([Fernet.generate_key().decode()], bidx_key=bidx_key)
+    after = PiiCrypto([Fernet.generate_key().decode()], bidx_key=bidx_key)
+
+    assert before.blind_index("010-1234-5678") == after.blind_index("010-1234-5678")
+
+
+def test_from_settings_passes_blind_index_key() -> None:
+    from core_service.core.config import Settings
+    from core_service.core.crypto import PiiCrypto as _PiiCrypto
+
+    kek = Fernet.generate_key().decode()
+    settings = Settings(
+        _env_file=None,  # type: ignore[call-arg]
+        PII_KEK=kek,
+        BLIND_INDEX_KEY="a-dedicated-blind-index-key",
+    )
+    crypto = _PiiCrypto.from_settings(settings)
+    dedicated = PiiCrypto([kek], bidx_key="a-dedicated-blind-index-key")
+
+    assert crypto.blind_index("test@example.com") == dedicated.blind_index("test@example.com")
+
+
 def test_empty_kek_raises() -> None:
     with pytest.raises(RuntimeError, match="PII_KEK"):
         PiiCrypto([])

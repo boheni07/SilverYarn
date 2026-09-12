@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.44 (법무·인프라·경영 미결 14건 일괄 확정 — decisions.md #52~#65)
+> **Version**: 0.45 (blind index 키 정식 분리 — decisions.md #60 구현)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -694,12 +694,12 @@ interface Publication {         // v1.1 신규
 
 CTO 보안 검토 B4가 "스키마 결정, Do 단계 이연 불가"로 지목한 항목. `pgcrypto`는 미채택(키 유출·인덱스 불가)하고 **애플리케이션 레벨 필드 암호화 + 사용자별 DEK** 구조를 채택했다.
 
-| 요소 | 1차 (v1.7) | 2차 (v1.11, 코드 반영 완료) | 3차 (예정) |
+| 요소 | 1차 (v1.7) | 2차 (v1.11, 코드 반영 완료) | 3차 (부분 완료 — [decisions.md #60](../../01-plan/decisions/silveryarn-platform.decisions.md), 2026-09-12) |
 |---|---|---|---|
 | 대상 컬럼 | `chapters.body_text`, `chapter_revisions.body_text_snapshot`, `conversation_chunks.{transcript_on_device, transcript_server, assistant_response}` | `family_members.contact`·`invitations.contact`(암호문 + `contact_bidx` HMAC), `users.birth_date`(DATE→VARCHAR 암호문). **`name`은 평문 유지 확정** (부분검색 UX, CTO B4도 최고위험 아님) | — |
-| 방식 | Fernet(AES-128-CBC+HMAC), 토큰 접두 `pii.v1.` | 동일 + blind index = HMAC-SHA256(정규화값), 키는 KEK 첫 키에서 유도 | 결정적 KEK 회전 절차(`key_version`), Vault transit 엔진 |
-| 키 | 사용자별 DEK(`user_encryption_keys`에 KEK 랩핑), KEK = env `PII_KEK`(임시) | 동일. blind index 키는 KEK 첫 키에서 유도(회전 시 백필 필요) | Vault 이전, blind index 키 정식 분리 |
-| 경계 | repository 계층 투명 암복호화 (`core/crypto.py`) | 동일 (`family_member`·`invitation`·`user` repo에 `PiiFieldEncryptor` 주입) | — |
+| 방식 | Fernet(AES-128-CBC+HMAC), 토큰 접두 `pii.v1.` | 동일 + blind index = HMAC-SHA256(정규화값), 키는 KEK 첫 키에서 유도 | 동일 알고리즘. **blind index 키만 `BLIND_INDEX_KEY`로 정식 분리 완료** — `PII_KEK` 회전과 무관해짐. KEK 자체 회전 절차(`key_version`)·Vault transit 엔진은 여전히 예정 |
+| 키 | 사용자별 DEK(`user_encryption_keys`에 KEK 랩핑), KEK = env `PII_KEK`(임시) | 동일. blind index 키는 KEK 첫 키에서 유도(회전 시 백필 필요) | blind index 키 = env `BLIND_INDEX_KEY`(신규, `PII_KEK`와 별도 값) — 미설정 시 하위호환으로 KEK에서 유도(경고 로그). 기존 값 재계산은 `scripts/backfill_blind_index.py`. Vault 이전 자체는 여전히 예정 |
+| 경계 | repository 계층 투명 암복호화 (`core/crypto.py`) | 동일 (`family_member`·`invitation`·`user` repo에 `PiiFieldEncryptor` 주입) | 동일 |
 
 - **crypto-shredding**: 사용자 파기 = `user_encryption_keys` 행 삭제 → 그 사용자의 PII 자유텍스트 전량 복호화 불가. B3(보유기간·파기정책) 파기 수단 후보 — 법무 회신(원문 검토항목 5) 대기.
 - **Qdrant 벡터**: B4가 "최고위험"으로 지목(embedding inversion). payload에 원문 미저장 원칙은 `upload_pipeline_service`에서 이미 준수(payload는 `user_id`만). 벡터 자체 격리·네트워크 통제는 인프라 설계 과제로 유지.
@@ -861,6 +861,7 @@ silveryarn/
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.45 | 2026-09-12 | Do 단계 — decisions.md #60(2026-09-12 사용자 결정) 구현. §7.3 PII 암호화 3차: blind index 키를 `PII_KEK`에서 유도하던 방식(하나 유출 시 둘 다 노출)을 신규 `BLIND_INDEX_KEY` 환경변수로 정식 분리. `core/crypto.py` `PiiCrypto.__init__`이 `bidx_key` 인자를 받고, 미설정 시 하위호환 폴백(경고 로그). `scripts/backfill_blind_index.py`(신규) — 기존 `family_members`/`invitations`의 `contact_bidx`를 새 키로 재계산. 유닛테스트 3건 추가(168개) | NUBiz AX Initiative |
 | 0.44 | 2026-09-12 | 순수 결정 기록 — `blocked-decisions-tracker.md`의 법무 6건(Q1~Q6)·인프라 5건(I1~I5)·경영 3건 전부를 사용자와의 대화로 일괄 확정(decisions.md §2.9 #52~#65). 설계 변경 자체는 없음 — 각 결정의 실제 구현(retention_policies·organizations 테넌시·third_party_access consent·관측스택 등)은 후속 PR에서 따로 진행하며, 그때 이 문서의 해당 절(§7.1 RBAC·§7.2 백업정책 등)을 갱신한다 | NUBiz AX Initiative |
 | 0.43 | 2026-09-12 | Do 단계 — 온디바이스 SLM 실기기 벤치마크 프로토콜 + 측정 하니스(decisions #27/#31/#9 — "결정 아니라 실측이 먼저"인 3건, 사용자 요청). `docs/03-check/ondevice-slm-benchmark-protocol.md`(신규, SoR) — 실기기 3종(S10급/A35급/S24급) 준비물·테스트 픽스처·측정 절차·지표별 목표치·검증·비교표 방법. `apps/mobile/.../benchmark/` 신규(순수 Kotlin `BenchmarkModels`/`CsvReportWriter`+Android `DeviceProfiler`+오케스트레이터 `ConversationBenchmarkRunner`, JVM 유닛테스트 포함) + `app/src/androidTest`(신규 source set) `RealDeviceBenchmarkTest` — `SttEngine`/`SlmEngine` 실 구현체가 없어 `UnimplementedSttEngine`/`UnimplementedSlmEngine`로 의도적 미구현 상태(`NotImplementedError`), 픽스처 없으면 실패 아닌 스킵(`Assume`). `ci.yml` mobile job에 `assembleAndroidTest`(컴파일만, 실행은 로컬 실기기 전용) 추가. **이 PR은 준비물이지 실측 결과가 아니다** — 실행 환경에 물리 기기/Android SDK가 없어 실제 벤치마크는 미실행, `blocked-decisions-tracker.md` 3개 행을 "프로토콜+하니스 준비 완료"로 갱신 | NUBiz AX Initiative |
 | 0.27 | 2026-09-10 | **PDCA Check — 설계문서↔구현 갭 분석 반영.** ① §9.1 Layer Structure·§11.1 File Structure를 실제 모듈러 모놀리스 구조(`services/backend/src/core_service/modules/{name}/{4계층}` + `core/` + `shared/`, `main.py`/`worker.py`)로 교체 — 기존 `services/{engine}/` 6-서비스 트리는 미구현(decisions.md #44, structure.md v1.4는 이미 정정됨). ② §3.1 `interface Chapter`에서 `createdAt` 제거(테이블·ORM·응답·DDL 어디에도 없던 필드, v0.6 L-11에서 추가됐으나 미구현). ③ §8.1 Test Plan phase 열 정정(정서 모니터링 Phase 2·피처플래그 OFF, 출판 Phase 3 — §11.2/decisions #25와 정합). ④ §11.2 Implementation Order 체크박스를 실제 상태로 갱신. ⑤ §11 preamble: import-linter 미도입 상태 명시(모듈 경계·4계층은 준수 중이나 CI 회귀 방지 없음 — 후속). schema.md DDL ↔ 실 DB 21개 테이블은 일치 확인 | NUBiz AX Initiative |
