@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import hashlib
+import uuid
+from typing import Protocol
 
 from fastapi import Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,6 +47,9 @@ __all__ = [
     "WRITE_ELDER_DATA_ROLES",
     "authorize_own_family_member",
     "authorize_user_access",
+    "authorize_elder_data_read",
+    "ConsentDirectory",
+    "get_consent_directory",
     "require_verified_subject",
     "require_family",
     "require_auth",
@@ -102,6 +107,72 @@ def get_family_directory(session: AsyncSession = Depends(get_db)) -> FamilyMembe
 
 def get_device_directory(session: AsyncSession = Depends(get_db)) -> DeviceTokenDirectory:
     return _DeviceTokenDirectory(session)
+
+
+# --------------------------------------------------------------------------- #
+# 동의 게이트 인가 (social_worker 제3자제공, decisions.md #54) — consent 모듈 의존이라
+# core/auth.py(순수)가 아니라 여기(composition root)에 둔다. FamilyMemberDirectory와
+# 동일하게 Protocol + 리포지토리 구현으로 분리해 순수 로직을 Fake로 단위 테스트한다.
+# --------------------------------------------------------------------------- #
+_SOCIAL_WORKER_READ_ROLES: frozenset[FamilyRole] = READ_ELDER_DATA_ROLES | {FamilyRole.SOCIAL_WORKER}
+
+
+class ConsentDirectory(Protocol):
+    async def has_third_party_access(self, user_id: uuid.UUID) -> bool: ...
+
+
+class _ConsentDirectory:
+    """`ConsentDirectory` 구현 — `consent_logs` 리포지토리 위임."""
+
+    def __init__(self, session: AsyncSession):
+        self._session = session
+
+    async def has_third_party_access(self, user_id: uuid.UUID) -> bool:
+        from core_service.modules.consent.domain.consent_log import ConsentType
+        from core_service.modules.consent.infrastructure.consent_log_repository import (
+            ConsentLogRepository,
+        )
+
+        logs = await ConsentLogRepository(self._session).list_by_user(user_id)
+        return next(
+            (log.granted for log in logs if log.consent_type == ConsentType.THIRD_PARTY_ACCESS), False
+        )
+
+
+def get_consent_directory(session: AsyncSession = Depends(get_db)) -> ConsentDirectory:
+    return _ConsentDirectory(session)
+
+
+async def authorize_elder_data_read(
+    principal: Principal,
+    target_user_id: uuid.UUID,
+    consent_directory: ConsentDirectory,
+    *,
+    require_2fa: bool = True,
+) -> None:
+    """챕터·사진·대화·일정 등 어르신 데이터 **조회** 전용 — `authorize_user_access`에
+    social_worker 게이트를 얹는다(decisions.md #54, 2026-09-12 사용자 결정).
+
+    Q3: 가족·caregiver는 제26조 위탁범위 내 이용이라 기존과 동일하게 무조건 허용.
+    복지사(social_worker)는 제17조 제3자제공으로 봐서, 어르신(또는 가족 대리)이
+    `third_party_access` 동의를 준 경우에만 허용한다 — 이전의 전면 fail-closed
+    (decisions.md #48)를 대체한다.
+    """
+    authorize_user_access(
+        principal, target_user_id, allowed_roles=_SOCIAL_WORKER_READ_ROLES, require_2fa=require_2fa
+    )
+
+    if not isinstance(principal, AuthContext) or principal.is_admin:
+        return
+    membership = principal.membership_for(target_user_id)
+    if membership is None or membership.role != FamilyRole.SOCIAL_WORKER:
+        return  # family/caregiver는 위 authorize_user_access 통과로 충분
+
+    if not await consent_directory.has_third_party_access(target_user_id):
+        raise ApiError(
+            "FORBIDDEN",
+            "복지사 열람에는 어르신(또는 가족 대리)의 제3자 제공 동의가 필요합니다.",
+        )
 
 
 # --------------------------------------------------------------------------- #

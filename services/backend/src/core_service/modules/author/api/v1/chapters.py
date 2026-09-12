@@ -15,7 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core_service.auth_deps import (
     WRITE_ELDER_DATA_ROLES,
     AuthContext,
+    ConsentDirectory,
+    authorize_elder_data_read,
     authorize_user_access,
+    get_consent_directory,
     require_auth,
 )
 from core_service.core.clients.llm_client import LLMClient
@@ -102,9 +105,10 @@ async def list_user_chapters(
     user_id: uuid.UUID,
     service: ChapterService = Depends(_service),
     ctx: AuthContext = Depends(require_auth),
+    consent_directory: ConsentDirectory = Depends(get_consent_directory),
 ) -> DataResponse[list[ChapterResponse]]:
     """design.md §4.2 — 챕터 목록/본문 조회."""
-    authorize_user_access(ctx, user_id)
+    await authorize_elder_data_read(ctx, user_id, consent_directory)
     chapters = await service.list_chapters_for_user(user_id)
     return DataResponse(data=[_to_response(c) for c in chapters])
 
@@ -114,9 +118,10 @@ async def get_chapter(
     chapter_id: uuid.UUID,
     service: ChapterService = Depends(_service),
     ctx: AuthContext = Depends(require_auth),
+    consent_directory: ConsentDirectory = Depends(get_consent_directory),
 ) -> DataResponse[ChapterResponse]:
     chapter = await service.get_chapter(chapter_id)
-    authorize_user_access(ctx, chapter.user_id)
+    await authorize_elder_data_read(ctx, chapter.user_id, consent_directory)
     return DataResponse(data=_to_response(chapter))
 
 
@@ -125,9 +130,10 @@ async def list_chapter_revisions(
     chapter_id: uuid.UUID,
     service: ChapterService = Depends(_service),
     ctx: AuthContext = Depends(require_auth),
+    consent_directory: ConsentDirectory = Depends(get_consent_directory),
 ) -> DataResponse[list[ChapterRevisionResponse]]:
     chapter = await service.get_chapter(chapter_id)
-    authorize_user_access(ctx, chapter.user_id)
+    await authorize_elder_data_read(ctx, chapter.user_id, consent_directory)
     revisions = await service.list_revisions(chapter_id)
     return DataResponse(
         data=[

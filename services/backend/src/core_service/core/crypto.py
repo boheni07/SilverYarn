@@ -93,8 +93,11 @@ class PiiCrypto:
         # KEK에서 유도한다(레거시 방식 — 새로 배포하는 환경은 BLIND_INDEX_KEY를 설정할 것).
         source_key = bidx_key.strip() if bidx_key.strip() else kek_keys[0].strip()
         if not bidx_key.strip():
+            # ⚠️ 이 메시지는 실제로 로깅되는 런타임 문자열이다(위는 docstring/주석) —
+            # 일부 Windows 콘솔(cp949 등)이 em dash(—) 같은 특수문자를 인코딩하지
+            # 못해 로그 자체가 깨지는 걸 겪었다. ASCII 안전 구두점만 쓴다.
             logger.warning(
-                "BLIND_INDEX_KEY 미설정 — PII_KEK에서 유도한 레거시 방식을 사용합니다 "
+                "BLIND_INDEX_KEY 미설정. PII_KEK에서 유도한 레거시 방식을 사용합니다 "
                 "(decisions.md #60). 새 환경변수를 설정하고 scripts/backfill_blind_index.py로 "
                 "기존 blind index를 재계산하는 것을 권장합니다."
             )

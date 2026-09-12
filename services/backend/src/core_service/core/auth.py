@@ -209,10 +209,13 @@ def build_family_context(verified: VerifiedSubject, memberships: list[Membership
 # --------------------------------------------------------------------------- #
 # design.md §7.1 RBAC 매트릭스 — 어르신 데이터(챕터·사진·대화·일정·동의) 조회 허용 역할.
 #
-# ⚠️ social_worker(복지사)는 매트릭스상 "동의 시" 열람인데, 그 '동의'를 표현할 consent
-# 유형이 아직 없고 CTO B2가 "가족·복지사 열람이 제17조 제3자제공인가"를 법무 질문으로
-# 지목했다(decisions.md #12/#46 관련). 그래서 **fail-closed** — 전용 consent 유형이
-# 확정될 때까지 social_worker는 이 목록에서 제외한다(정서 알림 조회 등 다른 경로는 유지).
+# ⚠️ social_worker(복지사)는 여기 없다 — family/caregiver/admin은 무조건 허용이지만,
+# 복지사는 decisions.md #54(2026-09-12 사용자 결정, Q3)로 "제17조 제3자제공"으로
+# 확정돼 **전용 동의(`third_party_access`)가 있을 때만** 허용해야 한다. 그 동의
+# 여부는 DB 조회가 필요해 이 순수 함수(모듈 의존 금지)로는 표현할 수 없다 — 실제
+# 게이트는 `auth_deps.authorize_elder_data_read()`(composition root)에 있다.
+# 이 상수를 직접 쓰는 호출부는 그 함수를 거치지 않으므로 social_worker가 자동으로
+# 막힌다(과거 fail-closed, decisions.md #48 — 이제 위 함수로 조건부 허용 대체).
 READ_ELDER_DATA_ROLES: frozenset[FamilyRole] = frozenset(
     {FamilyRole.FAMILY, FamilyRole.CAREGIVER, FamilyRole.ADMIN}
 )

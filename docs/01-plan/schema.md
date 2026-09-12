@@ -4,7 +4,7 @@
 
 **Project**: 은빛실타래 (SilverYarn)
 **Date**: 2026-09-07
-**Version**: 1.13 (Do 단계 — `users` 페르소나 스냅샷 컬럼 3종, 마이그레이션 0008)
+**Version**: 1.14 (Do 단계 — `consent_type` enum에 `third_party_access` 추가, 마이그레이션 0009, decisions.md #54)
 **Source**: Design 문서 §3 Data Model 초안 + UI/UX 화면설계서 필드 단위 대조 결과 반영
 **용어 정의**: [glossary.md](./glossary.md) 참조
 
@@ -337,7 +337,7 @@
 |-----------|------|----------|-------------|
 | id | UUID | Y | PK |
 | user_id | UUID | Y | FK → users.id |
-| consent_type | enum(`data_collection`,`external_tts_optin`,`external_llm_optin`) | Y | 동의 유형 |
+| consent_type | enum(`data_collection`,`external_tts_optin`,`external_llm_optin`,`third_party_access`) | Y | 동의 유형. `third_party_access`는 v1.14(마이그레이션 0009, decisions.md #54) — 복지사(social_worker)의 어르신 데이터 열람 전용 동의 |
 | granted | boolean | Y | 동의(true)/철회(false) |
 | granted_by | UUID | N | FK → family_members.id. **없으면 어르신 본인 동의(self), 있으면 가족 대리 동의(proxy)** — API 응답의 `actor` 필드가 이 유무에서 파생된다(저장 컬럼 아님). CTO 검토 B2의 명시적 `actor` enum·`legal_guardian`은 법무 확정 대기(decisions.md #46) |
 | granted_at | timestamptz | Y | 동의/철회 시각. `granted=false`가 철회이며, 매 동의/철회가 새 행(append-only) — 유형별 최신 행이 현재 상태 |
@@ -673,7 +673,10 @@ CREATE TABLE sync_sessions (
   finished_at TIMESTAMPTZ
 );
 
-CREATE TYPE consent_type AS ENUM ('data_collection', 'external_tts_optin', 'external_llm_optin');
+-- v1.14: 'third_party_access' 추가(마이그레이션 0009, decisions.md #54) — DDL은 최신
+-- 상태 기준, 실제 배포는 ALTER TYPE ... ADD VALUE로 증분 적용(Postgres는 enum 값
+-- 삽입/생성 시점 변경을 지원하지 않는다).
+CREATE TYPE consent_type AS ENUM ('data_collection', 'external_tts_optin', 'external_llm_optin', 'third_party_access');
 CREATE TABLE consent_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

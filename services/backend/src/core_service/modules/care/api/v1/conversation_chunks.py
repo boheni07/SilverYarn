@@ -13,7 +13,13 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core_service.auth_deps import AuthContext, authorize_user_access, require_auth
+from core_service.auth_deps import (
+    AuthContext,
+    ConsentDirectory,
+    authorize_elder_data_read,
+    get_consent_directory,
+    require_auth,
+)
 from core_service.core.db import get_db
 from core_service.modules.care.application.conversation_chunk_service import (
     ConversationChunkService,
@@ -85,8 +91,9 @@ async def list_conversation_chunks(
     offset: int = Query(default=0, ge=0),
     service: ConversationChunkService = Depends(_service),
     ctx: AuthContext = Depends(require_auth),
+    consent_directory: ConsentDirectory = Depends(get_consent_directory),
 ) -> DataResponse[list[ConversationChunkResponse]]:
-    authorize_user_access(ctx, user_id)
+    await authorize_elder_data_read(ctx, user_id, consent_directory)
     chunks = await service.list_chunks_for_user(user_id, limit=limit, offset=offset)
     return DataResponse(data=[_to_response(c) for c in chunks])
 
@@ -100,9 +107,10 @@ async def search_conversation_chunks(
     keyword: str = Query(min_length=1),
     service: ConversationChunkService = Depends(_service),
     ctx: AuthContext = Depends(require_auth),
+    consent_directory: ConsentDirectory = Depends(get_consent_directory),
 ) -> DataResponse[list[ConversationChunkResponse]]:
     """⚠️ 임시 검색 — 실제 하이브리드 서치(Qdrant, design.md §2.4)로 교체 예정."""
-    authorize_user_access(ctx, user_id)
+    await authorize_elder_data_read(ctx, user_id, consent_directory)
     chunks = await service.search_chunks(user_id, keyword)
     return DataResponse(data=[_to_response(c) for c in chunks])
 
@@ -116,10 +124,11 @@ async def count_conversation_chunks(
     since: datetime = Query(description="이 시각(포함) 이후 생성된 청크만 센다 — ISO 8601"),
     service: ConversationChunkService = Depends(_service),
     ctx: AuthContext = Depends(require_auth),
+    consent_directory: ConsentDirectory = Depends(get_consent_directory),
 ) -> DataResponse[ConversationChunkCountResponse]:
     """가족 대시보드(WF1) "오늘 대화" 통계 — transcript_*(PII)를 복호화하지 않고
     개수만 반환한다. "오늘"의 경계는 호출자가 정한다(클라이언트 로케일 자정)."""
-    authorize_user_access(ctx, user_id)
+    await authorize_elder_data_read(ctx, user_id, consent_directory)
     count = await service.count_chunks_since(user_id, since)
     return DataResponse(data=ConversationChunkCountResponse(count=count, since=since))
 
@@ -129,7 +138,8 @@ async def get_conversation_chunk(
     chunk_id: uuid.UUID,
     service: ConversationChunkService = Depends(_service),
     ctx: AuthContext = Depends(require_auth),
+    consent_directory: ConsentDirectory = Depends(get_consent_directory),
 ) -> DataResponse[ConversationChunkResponse]:
     chunk = await service.get_chunk(chunk_id)
-    authorize_user_access(ctx, chunk.user_id)
+    await authorize_elder_data_read(ctx, chunk.user_id, consent_directory)
     return DataResponse(data=_to_response(chunk))

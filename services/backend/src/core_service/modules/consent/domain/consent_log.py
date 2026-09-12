@@ -20,6 +20,11 @@ class ConsentType(StrEnum):
     DATA_COLLECTION = "data_collection"
     EXTERNAL_TTS_OPTIN = "external_tts_optin"
     EXTERNAL_LLM_OPTIN = "external_llm_optin"
+    # decisions.md #54(2026-09-12 사용자 결정, Q3) — 복지사(social_worker)의 어르신
+    # 데이터 열람은 제17조 제3자제공으로 봐서 전용 동의가 필요하다(가족은 제26조
+    # 위탁범위 내 이용이라 별도 동의 불필요). 이 동의가 있을 때만
+    # `auth_deps.authorize_elder_data_read`가 social_worker의 열람을 허용한다.
+    THIRD_PARTY_ACCESS = "third_party_access"
 
 
 class ConsentActor(StrEnum):
