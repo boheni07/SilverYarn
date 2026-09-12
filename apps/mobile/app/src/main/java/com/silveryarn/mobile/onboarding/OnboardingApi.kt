@@ -78,4 +78,8 @@ object ConsentTypes {
     const val DATA_COLLECTION = "data_collection"
     const val EXTERNAL_TTS_OPTIN = "external_tts_optin"
     const val EXTERNAL_LLM_OPTIN = "external_llm_optin"
+
+    // decisions.md #57(2026-09-12 사용자 결정, Q6) — FCM(구글, 미국) 유지 결정에 따른
+    // 국외이전 고지·동의. data_collection과 구분되는 별도 동의(마이그레이션 0010).
+    const val INTERNATIONAL_TRANSFER = "international_transfer"
 }
