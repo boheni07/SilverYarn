@@ -116,6 +116,11 @@ jobs:
       - name: assembleDebug
         run: gradle assembleDebug --no-daemon
 
+      # 온디바이스 SLM 벤치마크 하니스(app/src/androidTest) 컴파일만 검증 — 실행(connectedAndroidTest)은
+      # 실기기/에뮬레이터가 필요해 CI가 아니라 로컬에서만(docs/03-check/ondevice-slm-benchmark-protocol.md).
+      - name: assembleAndroidTest
+        run: gradle assembleAndroidTest --no-daemon
+
   admin:
     name: apps/admin
     runs-on: ubuntu-latest

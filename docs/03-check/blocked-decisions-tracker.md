@@ -151,9 +151,9 @@
 
 | 항목 | decisions | 대기 대상 | 병렬 착수 |
 |---|---|---|---|
-| 온디바이스 SLM 모델 선정 (Kanana-2 / Qwen2.5-0.5B 등) | [#27](../01-plan/decisions/silveryarn-platform.decisions.md) | 실기기 3종(S10급/A35급/S24급) STT+SLM+TTS 동시상주 벤치마크 (2주) | ✅ 예산과 무관하게 지금 가능 |
-| 로컬 "최근 5일" 캐시 기준 | [#9](../01-plan/decisions/silveryarn-platform.decisions.md) | 저사양 키오스크 단말 저장용량 실측 | 벤치마크와 함께 |
-| 실시간 대화 파이프라인 수치 (RAM ~850MB, 첫음성 0.8~1.2s 등) | [#31](../01-plan/decisions/silveryarn-platform.decisions.md) | 벤치마크 검증 | 벤치마크와 함께 |
+| 온디바이스 SLM 모델 선정 (Kanana-2 / Qwen2.5-0.5B 등) | [#27](../01-plan/decisions/silveryarn-platform.decisions.md) | 실기기 3종(S10급/A35급/S24급) STT+SLM+TTS 동시상주 벤치마크 (2주) | 🔄 **프로토콜+측정 하니스 준비 완료** — [ondevice-slm-benchmark-protocol.md](./ondevice-slm-benchmark-protocol.md), 코드는 `apps/mobile/.../benchmark/`. 실행에는 실기기+`SttEngine`/`SlmEngine` 실 구현체(추론 런타임 선정 별도)가 여전히 필요 — 실측 자체는 미실행 |
+| 로컬 "최근 5일" 캐시 기준 | [#9](../01-plan/decisions/silveryarn-platform.decisions.md) | 저사양 키오스크 단말 저장용량 실측 | 🔄 절차 문서화 완료 — [프로토콜 §7](./ondevice-slm-benchmark-protocol.md#7-부록--로컬-최근-5일-캐시-실측-decisions-9), 실기기 5일 축적 실측은 미실행 |
+| 실시간 대화 파이프라인 수치 (RAM ~850MB, 첫음성 0.8~1.2s 등) | [#31](../01-plan/decisions/silveryarn-platform.decisions.md) | 벤치마크 검증 | 🔄 측정 지표·목표치 매핑 완료 — [프로토콜 §4](./ondevice-slm-benchmark-protocol.md#4-측정-항목과-목표치), 검증 자체는 미실행 |
 | ~~모바일 첫 가족 구성원 연결 경로~~ | [#51](../01-plan/decisions/silveryarn-platform.decisions.md) | **완료 (PR #28)** — admin 중개 경로로 확정. `is_admin` 우회 재사용, 모바일 변경 없음 | — |
 | ~~Compaction Engine (design §2.11 — `sync/download`의 summary·keywords)~~ | — | **완료 (PR #15)** — 요약·키워드 부분 | — |
 | ~~페르소나 JSON 룰셋(§2.10 연동, "단기 압축 기억")~~ | — | **완료 (PR #27)** — CareAgent(은빛이) 전용으로 스코프 확정(Author/ScheduleAgent 표시명 미정이라 제외, 2026-09-11 사용자 결정: 보류). 서버 생성·다운로드·로컬 저장까지 완료, **온디바이스 SLM 소비만 남음**(아래 벤치마크 항목에 종속) | — |
@@ -170,5 +170,5 @@ Q5(보유기간·파기) ─────→ retention 정책 = 온보딩·동의
 Q6(국외이전)      ─────→ 알림 발송 실구현 전제
 
 I1(Zero Egress 범위) ─→ I2(테넌시)·I3(Vault)·I4(관측)의 상위 제약
-I5(GPU) ←── #27(SLM 벤치마크, 지금 병렬 착수 가능)
+I5(GPU) ←── #27(SLM 벤치마크, 프로토콜+하니스 준비 완료 — 실기기 실행만 남음)
 ```
