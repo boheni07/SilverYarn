@@ -2,6 +2,7 @@ package com.silveryarn.mobile.presentation.onboarding
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -51,11 +53,14 @@ fun OnboardingScreen(
     var step by remember { mutableStateOf<OnboardingStep>(OnboardingStep.EnterName) }
     var name by remember { mutableStateOf("") }
     var birthDate by remember { mutableStateOf("") }
+    // decisions.md #57(Q6) — 국외이전(FCM) 동의는 data_collection과 별개로 선택 사항이라
+    // 기본값 미동의(false)로 시작한다(notification_settings의 opt-in 관행과 동일).
+    var internationalTransferConsent by remember { mutableStateOf(false) }
 
     LaunchedEffect(step) {
         if (step is OnboardingStep.Submitting) {
             coordinator
-                .run(name, birthDate.ifBlank { null })
+                .run(name, birthDate.ifBlank { null }, internationalTransferConsent)
                 .onSuccess { step = OnboardingStep.Done(it) }
                 .onFailure { step = OnboardingStep.Failed(it.message ?: "알 수 없는 오류") }
         }
@@ -83,6 +88,8 @@ fun OnboardingScreen(
 
             OnboardingStep.Consent ->
                 ConsentStep(
+                    internationalTransferConsent = internationalTransferConsent,
+                    onInternationalTransferConsentChange = { internationalTransferConsent = it },
                     onAgree = { step = OnboardingStep.Submitting },
                     onBack = { step = OnboardingStep.EnterName },
                 )
@@ -132,6 +139,8 @@ private fun EnterNameStep(
 
 @Composable
 private fun ConsentStep(
+    internationalTransferConsent: Boolean,
+    onInternationalTransferConsentChange: (Boolean) -> Unit,
     onAgree: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -140,6 +149,26 @@ private fun ConsentStep(
         "구술 음성과 전사 텍스트, 사진, 일정 정보를 은빛실타래 서비스 제공 목적으로 수집·보관합니다. " +
             "이 정보는 온프레미스 서버에만 저장되며 동의를 철회하실 수 있습니다.",
     )
+
+    Spacer(Modifier.height(16.dp))
+
+    // decisions.md #57(Q6, 2026-09-12 사용자 결정) — FCM(구글, 미국) 유지에 따른 국외이전
+    // 고지·동의. data_collection과 구분되는 별도 항목(선택)이라 체크박스로 분리한다 —
+    // 끄고 진행해도 나머지 서비스는 그대로 쓸 수 있고, 푸시알림만 받지 못한다.
+    Text("국외이전 동의 (선택)", style = MaterialTheme.typography.titleSmall)
+    Text(
+        "가족에게 보내는 푸시알림은 구글의 해외(미국) 서버(Firebase Cloud Messaging)를 " +
+            "거쳐 전송됩니다. 이 과정에서 기기 식별 토큰이 국외로 이전됩니다. 동의하지 않아도 " +
+            "자서전 제작·말벗돌봄 등 나머지 서비스 이용에는 영향이 없습니다.",
+    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Checkbox(checked = internationalTransferConsent, onCheckedChange = onInternationalTransferConsentChange)
+        Text("국외이전에 동의합니다 (푸시알림 수신)")
+    }
+
     Spacer(Modifier.height(8.dp))
     Button(onClick = onAgree, modifier = Modifier.fillMaxWidth()) { Text("동의하고 시작하기") }
     TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("이전") }

@@ -25,11 +25,14 @@ class OnboardingCoordinator(
     /**
      * @param name 어르신 이름(필수)
      * @param birthDate ISO `yyyy-MM-dd` 또는 null
+     * @param internationalTransferConsent 국외이전(FCM, decisions.md #57) 동의 여부 —
+     *  data_collection과 별개로 항상 기록한다(동의/미동의 둘 다 이력이 남아야 함).
      * @return 성공 시 서버가 판정한 `install_mode`("kiosk"|"normal")
      */
     suspend fun run(
         name: String,
         birthDate: String?,
+        internationalTransferConsent: Boolean,
     ): Result<String> =
         runCatching {
             val user =
@@ -57,6 +60,15 @@ class OnboardingCoordinator(
                     ConsentRecordRequest(
                         consentType = ConsentTypes.DATA_COLLECTION,
                         granted = true,
+                    ),
+            )
+            RetrofitClient.onboardingApi.recordConsent(
+                deviceToken = token,
+                userId = user.id,
+                body =
+                    ConsentRecordRequest(
+                        consentType = ConsentTypes.INTERNATIONAL_TRANSFER,
+                        granted = internationalTransferConsent,
                     ),
             )
 

@@ -66,14 +66,14 @@
 | 상태 | 🔨 구현 대기 — **가장 큰 단일 작업** (CTO 추정 2~3주) |
 | 후속 작업 (미착수) | `retention_policies` 테이블(데이터종류별 보유일수) 마이그레이션 · `retention_until`/`purged_at` 컬럼 · apps/admin 보유기간 설정 화면 · 5-store(PostgreSQL·MinIO·Qdrant·Neo4j·모바일 Room) crypto-shredding 오케스트레이터(arq cron) · design §7.2 백업 정책 갱신 |
 
-### Q6. FCM/SMS/이메일 알림, Google Fonts CDN이 국외이전 고지·동의 대상? — ✅ 확정
+### Q6. FCM/SMS/이메일 알림, Google Fonts CDN이 국외이전 고지·동의 대상? — ✅ 확정, 🔨 부분 구현
 
 | | |
 |---|---|
-| 관련 결정 | [decisions #57](../01-plan/decisions/silveryarn-platform.decisions.md)(신규), CTO B6 |
+| 관련 결정 | [decisions #57](../01-plan/decisions/silveryarn-platform.decisions.md), CTO B6 |
 | 회신/결정 | **2026-09-12, 사용자**: FCM(구글, 미국) 유지 + 온보딩 동의 화면에 국외이전 고지·동의 UI 추가 |
-| 현재 코드 | 알림 발송 채널 미구현. 웹 폰트는 `design-tokens.md` 기준 로컬(문제 없음) |
-| 후속 작업 (미착수) | 알림 발송 어댑터 구현(FCM/SMS/이메일) · 온보딩 동의 화면에 국외이전 고지·동의 항목 추가 |
+| 구현 (2026-09-13) | `consent_type` enum에 `international_transfer` 추가(마이그레이션 0010). 모바일 `OnboardingScreen.kt`의 동의 단계에 `data_collection`과 구분되는 별도 체크박스(선택, 기본 미동의)와 고지 문구("구글의 해외(미국) 서버… 기기 식별 토큰이 국외로 이전됩니다") 추가. `OnboardingCoordinator`가 두 동의(data_collection=필수, international_transfer=선택)를 모두 `POST /consent-logs`로 기록 |
+| 남은 것 | 알림 발송 채널(FCM/SMS/이메일 어댑터) 자체는 여전히 미구현 — 지금은 동의 이력만 먼저 확보. 웹 폰트는 `design-tokens.md` 기준 이미 로컬이라 문제 없음 |
 
 ---
 
