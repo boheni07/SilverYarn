@@ -31,17 +31,18 @@ Claude automatically applies PDCA methodology. Commands are shortcuts for power 
 | Item | Value |
 |------|-------|
 | Level | **Enterprise** (온디바이스 AI + 온프레미스 GPU 서버 + 다중 마이크로서비스 + 엄격한 데이터 주권 요구) |
-| PDCA Phase | **Do 진행 중** (design v0.52). PR #1~#39 전부 main 머지 — 보안 블로커 B1~B6, Check 2회(`docs/03-check/gap-analysis-2026-09-10.md` + `gap-analysis-2026-09-11.md`) + Do 사이클 보고서(`docs/04-report/features/silveryarn-platform.report.md`) + Compaction Engine(PR #15)·Critic Agent(PR #16)·페르소나 룰셋(PR #27). **`docs/03-check/blocked-decisions-tracker.md`의 법무 6건·인프라 5건·경영 3건(Q1~Q6·I1~I5) 전부 확정+구현 완료**(2026-09-13, decisions.md #52~#65). 남은 후속은 이 트랙과 무관한 실측 작업(온디바이스 SLM 벤치마크, #27/#9/#31 — 프로토콜+하니스 준비완료, 실기기 대기)뿐 |
+| PDCA Phase | **Do 진행 중** (design v0.56). PR #1~#39 — 보안 블로커 B1~B6 + 법무·인프라·경영 미결 14건(Q1~Q6·I1~I5·경영3, decisions.md #52~#65) 전부 확정+구현 완료. PR #40~#47 후속 — 문서 정합성 점검, FP 기반 SW개발비 산정, Phase 3 출판 파이프라인(`publications` 모듈), **모바일 UI 패러다임 전환**(하단 4탭 제거 → 은실이 대화 화면 하나로 통합, 실 VAD 구현, decisions.md #66~#68). 남은 후속은 온디바이스 SLM 실기기 벤치마크(#27/#9/#31, 프로토콜+하니스 준비완료, 실기기 대기)뿐 |
 | 9-Phase Pipeline | Phase 1(Schema) ✅ · Phase 2(Convention) ✅ · Phase 3(Mockup, BI가이드+UI/UX설계서+design-tokens.md) ✅ · Phase 4(API 설계, sync-contract.md 포함) ✅ 완료 |
 | Primary Feature | `silveryarn-platform` |
 | 원본 기획 자료 | `Plan/` 폴더 (기획서 v0.5, 프로세스흐름도, BI가이드 v2.0, UI/UX설계서 v1.2) |
-| PDCA 문서 | `docs/01-plan/features/silveryarn-platform.plan.md`(v0.4), `docs/02-design/features/silveryarn-platform.design.md`(v0.52), `docs/03-check/gap-analysis-2026-09-10.md`, `docs/03-check/gap-analysis-2026-09-11.md`, `docs/03-check/blocked-decisions-tracker.md`(법무·인프라·경영 14건 완료 트래커), `docs/04-report/features/silveryarn-platform.report.md` |
-| 동기화 계약 | `docs/02-design/sync-contract.md`(v0.7) — 비동기 업로드(202+job_id), 엔티티별 충돌정책, Presigned URL, 증분 다운로드 |
-| 의사결정 로그 | `docs/01-plan/decisions/silveryarn-platform.decisions.md`(v0.25) (기획서 9장 + design-validator 반영 항목 + §2.9 법무·인프라·경영 14건 #52~#65) |
+| PDCA 문서 | `docs/01-plan/features/silveryarn-platform.plan.md`(v0.5), `docs/02-design/features/silveryarn-platform.design.md`(v0.57), `docs/03-check/gap-analysis-2026-09-10.md`, `docs/03-check/gap-analysis-2026-09-11.md`, `docs/03-check/blocked-decisions-tracker.md`(법무·인프라·경영 14건 완료 트래커), `docs/04-report/features/silveryarn-platform.report.md` |
+| 화면정의서 | `docs/02-design/screen-definitions.md`(v0.2) — 사용자 화면(UI/UX)만 기준 화면정의서, 모바일(4)·웹 사용자·가족(12)·웹 관리자(8) 총 24개 화면 전수 + 전체/영역별 Mermaid 흐름도 |
+| 동기화 계약 | `docs/02-design/sync-contract.md`(v0.8) — 비동기 업로드(202+job_id), 엔티티별 충돌정책, Presigned URL, 증분 다운로드 |
+| 의사결정 로그 | `docs/01-plan/decisions/silveryarn-platform.decisions.md`(v0.26) (기획서 9장 + design-validator 반영 항목 + §2.9 법무·인프라·경영 14건 #52~#65 + §2.10 모바일 UI 전환 #66~#68) |
 | 디자인 토큰 | `docs/02-design/design-tokens.md`(v1.2) (BI 가이드 컬러/타이포 → Tailwind 토큰, WCAG AA 대비 규칙, 접근성 최소기준) |
 | 데이터 분류 정책 | `docs/02-design/data-classification-policy.md`(v0.1, 신규) — PII/메타데이터 4단계 분류 + 외부 통신 경계(decisions.md #58/I1) |
-| 발표자료 | `docs/presentations/은빛실타래_개발착수회의_kickoff.pptx` (66슬라이드), `docs/presentations/은빛실타래_설계발표_슬라이드.html` (72슬라이드 HTML, 방향키 네비게이션) — [게시 링크](https://claude.ai/code/artifact/8c0fdb75-5c19-4916-b406-eb38275f2146) |
-| 워크플로우 다이어그램 | `docs/02-design/workflow-diagrams.md`(v0.5) — Mermaid 21종 (마스터 Closed-Loop, 분야별 프로세스, 스윔레인, 상태전이, 계정삭제·보유기간 파기 흐름 등) |
+| 발표자료 | `docs/presentations/은빛실타래_개발착수회의_kickoff.pptx` (66슬라이드), `docs/presentations/은빛실타래_설계발표_슬라이드.html` (72슬라이드 HTML, 방향키 네비게이션) — [게시 링크](https://claude.ai/code/artifact/8c0fdb75-5c19-4916-b406-eb38275f2146). 두 산출물 모두 2026-09-05 착수 시점 스냅샷 — 페르소나명("은빛이") 등 이후 변경분(#66) 미반영, 의도적으로 보존 |
+| 워크플로우 다이어그램 | `docs/02-design/workflow-diagrams.md`(v0.7) — Mermaid 21종 (마스터 Closed-Loop, 분야별 프로세스, 스윔레인, 상태전이, 계정삭제·보유기간 파기 흐름 등) |
 | CTO팀 검토 | `docs/02-design/cto-review-2026-09-05.md` — 7개 관점(아키텍처/인프라/보안/FE/백엔드·API/QA/PM) 착수 심사, 판정: **전원 Go with Conditions** (Blocker 28건, 전부 정책 확정 또는 구현 완료 — 실측 대기 항목만 잔존) |
 
 > **⚠️ CTO팀 착수 심사 이력**: 초기 검토에서 Blocker 28건 발견, 그중 보안 관점 **동의·보유기간·PII암호화·인가모델 5대 법적 리스크**는 이제 전부 해소됐다(아래 요약). 상세 원본은 `docs/02-design/cto-review-2026-09-05.md` 참조(착수 시점 스냅샷 — 이후 진행 상황은 이 파일과 decisions.md가 최신).
@@ -65,7 +66,7 @@ Claude automatically applies PDCA methodology. Commands are shortcuts for power 
 |------|------|------|
 | 모바일 | Android 네이티브(Kotlin), Device Owner Mode(COSU)로 키오스크 구현 | ✅ 확정 |
 | 온디바이스 SLM | Kanana-2, Qwen2.5-0.5B 등 경량(0.5~3B, 4bit 양자화) 후보 | **미정** (벤치마크 후보 2종 확보, 최종선정은 실기기 벤치마크 후 — decisions.md #27) |
-| 온디바이스 음성 파이프라인 | WebRTC VAD(800ms 묵음판정) + 경량 STT(Sherpa-ONNX 등 후보) + **SQLite FTS5 단독 RAG(Phase 1 확정, decisions #32)** + 문장단위 스트리밍 TTS + 네이티브 TTS, 원본음성 Opus(16kbps) 압축·업로드성공시 즉시삭제(#30) | 🔄 구조·기법 확정, 라이브러리·수치는 Do 단계 벤치마크 |
+| 온디바이스 음성 파이프라인 | WebRTC VAD(800ms 묵음판정) + 경량 STT(Sherpa-ONNX 등 후보) + **SQLite FTS5 단독 RAG(Phase 1 확정, decisions #32)** + 문장단위 스트리밍 TTS + 네이티브 TTS, 원본음성 Opus(16kbps) 압축·업로드성공시 즉시삭제(#30) | 🔄 구조·기법 확정, 라이브러리·수치는 Do 단계 벤치마크. **VAD만 임시 실구현**(`AmplitudeVoiceActivityDetector`, 진폭 임계값 기반, decisions #68) — WebRTC VAD 후보 자체는 여전히 벤치마크 대기, 무음판정 타이밍(800ms)만 재사용 |
 | 온디바이스 로컬 스키마 | Room/SQLite 6개 테이블 (`conversations`, `autobiography_fts` 등) | ✅ 초안 확정 — [mobile-schema.md](./docs/01-plan/mobile-schema.md) |
 | 데이터 모델링 & ERD | 서버 도메인 19개 엔티티(+부속 4개) + 온디바이스 6개 테이블 관계도 (흑백 Mermaid, 도메인별 3분할) | ✅ [erd.md](./docs/01-plan/erd.md) |
 | 서버 백엔드 | 자체 호스팅 Python 3.11+ / **FastAPI** | ✅ 확정 (decisions.md #15) |

@@ -14,8 +14,8 @@ vLLM의 OpenAI 호환 서버(`/v1/chat/completions`)를 그대로 쓴다고 가�
   심층 회고 질문 Top-3 JSON (design.md §2.11 3단계 Critic Agent,
   workflow-diagrams.md §4 "질문 이력 대조 → 신규/꼬리질문 생성")
 - `summarize_persona_memory`: 여러 챕터의 (요약, 키워드) → 이 어르신에 대한
-  "단기 압축 기억" 배경지식 JSON (design.md §2.11 4단계, 말벗돌봄 CareAgent
-  "은빛이"가 다음 대화에서 참고). ⚠️ 정서·심리 평가는 프롬프트에서 명시적으로
+  "단기 압축 기억" 배경지식 JSON (design.md §2.11 4단계, 말벗돌봄 CareAgent,
+  표시명 "은실이"가 다음 대화에서 참고). ⚠️ 정서·심리 평가는 프롬프트에서 명시적으로
   배제한다(decisions.md #25 — 정서 모니터링 파이프라인은 법무 회신 전까지 OFF)
 
 ⚠️ 전부 LLM에게 "JSON만 출력해라"/"문어체로 써라" 프롬프트로 요청하고 응답을

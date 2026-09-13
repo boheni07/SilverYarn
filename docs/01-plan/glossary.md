@@ -4,7 +4,7 @@
 >
 > **Project**: 은빛실타래 (SilverYarn)
 > **Date**: 2026-09-07
-> **Version**: 1.2
+> **Version**: 1.3
 > **Source**: `Plan/어르신_자서전_말벗돌봄_기획서.md`, `Plan/자서전_말벗돌봄_프로세스_흐름도.md`, [decisions.md](./decisions/silveryarn-platform.decisions.md)
 
 ---
@@ -34,7 +34,7 @@
 | 정서 모니터링 | Emotion Monitoring | 발화 톤·부정어 빈도 분석 기반 정서 상태 추적 | Sentiment Monitoring |
 | 정서 알림 | Emotion Alert | 정서 점수 임계치 초과 시 가족·복지사에게 발송되는 알림 | `EmotionAlert` |
 | 동의(옵트인) | Consent (Opt-in) | 외부 연계·개인정보 수집에 대한 사용자/보호자 명시적 동의 | `ConsentLog` |
-| 은빛이 | Eunbit-i | 말벗돌봄 모드(CareAgent)의 페르소나 이름 (화면설계서 확정 표시명) | CareAgent persona name |
+| 은실이 | Eunsil-i | AuthorAgent·CareAgent·ScheduleAgent 통합 페르소나 이름(2026-09-13 사용자 결정, decisions.md #66 — 원안 "은빛이"에서 재명명·CareAgent 전용에서 3개 에이전트 통합으로 확대) | Unified agent persona name |
 | 챕터 감수 이력 | Chapter Revision | 챕터의 승인/반려/코멘트 이력 (v1.1 신규) | `ChapterRevision` |
 | 사진 추가 요청 | Photo Request | 가족이 당사자에게 사진 업로드를 요청하는 흐름 (v1.1 신규) | `PhotoRequest` |
 | 출판 요청 | Publication | 인쇄용 PDF/ePub 조판·출판 요청 (v1.1 신규) | `Publication` |
@@ -127,3 +127,4 @@
 | 1.0 | 2026-09-05 | Phase 1 — 원본 기획서·프로세스흐름도 기반 용어집 초안 작성 | NUBiz AX Initiative |
 | 1.1 | 2026-09-06 → 2026-09-07 문서화 | Closed-Loop/실시간파이프라인 반영 신규 용어 추가(지식 그래프, 갭 분석 에이전트/Critic Agent, 경량화 패키징 엔진/Compaction Engine, 무신경망 검색/Zero-Neural RAG) — 이력 갱신 누락분 정정(L-15). SLM 정의 "1~3B급"→"0.5~3B급"로 정정(Qwen2.5-0.5B 후보 포함) | NUBiz AX Initiative |
 | 1.2 | 2026-09-13 | 문서 최신화 점검 — decisions.md #52~#65 구현(PR #32~#39)으로 신설된 용어 8건 누락 발견·추가: 시설/시설 테넌시 안전망(#59), 보유기간 정책/파기(redaction)/계정 전체 삭제/크립토 슈레딩(#56), 제3자제공 동의(#54), 국외이전 동의(#57). Mapping Table에 `organizations`/`retention_policies`/`deletion_records` 3행 추가 | NUBiz AX Initiative |
+| 1.3 | 2026-09-13 | 모바일 UI 패러다임 전환 후속(decisions.md #66) — "은빛이" 항목을 "은실이"로 정정. CareAgent 전용이던 정의를 AuthorAgent·CareAgent·ScheduleAgent 통합 페르소나로 갱신(하단 4탭 제거·화면 통합에 따른 변경) | NUBiz AX Initiative |

@@ -160,7 +160,7 @@
 | 실시간 대화 파이프라인 수치 (RAM ~850MB, 첫음성 0.8~1.2s 등) | [#31](../01-plan/decisions/silveryarn-platform.decisions.md) | 벤치마크 검증 | 🔄 측정 지표·목표치 매핑 완료 — [프로토콜 §4](./ondevice-slm-benchmark-protocol.md#4-측정-항목과-목표치), 검증 자체는 미실행 |
 | ~~모바일 첫 가족 구성원 연결 경로~~ | [#51](../01-plan/decisions/silveryarn-platform.decisions.md) | **완료 (PR #28)** — admin 중개 경로로 확정. `is_admin` 우회 재사용, 모바일 변경 없음 | — |
 | ~~Compaction Engine (design §2.11 — `sync/download`의 summary·keywords)~~ | — | **완료 (PR #15)** — 요약·키워드 부분 | — |
-| ~~페르소나 JSON 룰셋(§2.10 연동, "단기 압축 기억")~~ | — | **완료 (PR #27)** — CareAgent(은빛이) 전용으로 스코프 확정(Author/ScheduleAgent 표시명 미정이라 제외, 2026-09-11 사용자 결정: 보류). 서버 생성·다운로드·로컬 저장까지 완료, **온디바이스 SLM 소비만 남음**(아래 벤치마크 항목에 종속) | — |
+| ~~페르소나 JSON 룰셋(§2.10 연동, "단기 압축 기억")~~ | — | **완료 (PR #27)** — 최초엔 CareAgent(은빛이) 전용으로 스코프 확정(Author/ScheduleAgent 표시명 미정이라 제외, 2026-09-11 사용자 결정: 보류)했으나, 2026-09-13 페르소나가 "은실이" 하나로 통일되며(decisions.md #66) 그 제약이 해소됐다. 서버 생성·다운로드·로컬 저장·**온디바이스 mock 소비**(`ConversationSessionController.loadPersonaContext()`, PR #47)까지 완료 — 실 SLM이 내용을 실제로 해석하는 건 여전히 실기기 벤치마크(#27) 종속 | — |
 
 ---
 
