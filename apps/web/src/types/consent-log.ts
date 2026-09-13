@@ -1,6 +1,7 @@
-/** design.md §3.1 ConsentLog/Publication — `consent_logs`는 백엔드 구현됨(consent 모듈),
- * `publications`는 테이블만 있고 API 미구현(Phase 3). `NotificationSetting`은 백엔드
- * 구현이 끝나 별도 파일(`notification-setting.ts`)로 옮겼다 — 여기 두면 안 됨. */
+/** design.md §3.1 ConsentLog — `consent_logs`는 백엔드 구현됨(consent 모듈).
+ * `NotificationSetting`은 백엔드 구현이 끝나 별도 파일(`notification-setting.ts`)로
+ * 옮겼다 — 여기 두면 안 됨. `Publication`도 마찬가지로 실제 구현 후 `publication.ts`로
+ * 옮겼다(이전엔 미구현 placeholder였음, design.md §2.6). */
 export type ConsentType = "data_collection" | "external_tts_optin" | "external_llm_optin";
 
 export const CONSENT_TYPES: ConsentType[] = [
@@ -31,11 +32,3 @@ export interface ConsentLog {
  * 한 번도 기록이 없는 유형은 키가 아예 빠진다(백엔드 `ConsentService.current_state`
  * 문서 참조) — 미동의와 동일하게 취급해 `false`로 다뤄야 한다. */
 export type ConsentState = Partial<Record<ConsentType, boolean>>;
-
-export interface Publication {
-  id: string;
-  userId: string;
-  format: "hardcover_pdf" | "epub";
-  status: "requested" | "processing" | "ready" | "delivered";
-  storageRef?: string;
-}

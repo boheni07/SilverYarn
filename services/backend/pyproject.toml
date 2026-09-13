@@ -30,6 +30,10 @@ dependencies = [
     "prometheus-fastapi-instrumentator>=7.0,<8",
     "prometheus-client>=0.20,<1",
     "python-json-logger>=2.0,<3",
+    # 출판 파이프라인 조판 엔진(design.md §2.6, publications 모듈) — 순수 로컬
+    # 라이브러리라 vLLM/STT처럼 외부 서비스 계약을 추정할 필요가 없다.
+    "reportlab>=4.4,<5",
+    "EbookLib>=0.19,<1",
 ]
 
 [project.optional-dependencies]
@@ -97,6 +101,7 @@ containers = [
     "core_service.modules.organizations",
     "core_service.modules.photo_requests",
     "core_service.modules.photos",
+    "core_service.modules.publications",
     "core_service.modules.retention",
     "core_service.modules.schedule",
     "core_service.modules.sync",
@@ -118,6 +123,7 @@ source_modules = [
     "core_service.modules.notifications.domain",
     "core_service.modules.organizations.domain",
     "core_service.modules.photo_requests.domain",
+    "core_service.modules.publications.domain",
     "core_service.modules.retention.domain",
     "core_service.modules.photos.domain",
     "core_service.modules.schedule.domain",
