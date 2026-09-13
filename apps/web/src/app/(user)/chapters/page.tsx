@@ -4,24 +4,16 @@ import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CHAPTER_PERIOD_LABEL } from "@/types";
 import type { Chapter } from "@/types";
+import { resolveCurrentUserId } from "@/services/me";
 import { ApiError } from "@/services/errors";
 
 interface ChaptersPageProps {
-  searchParams: Promise<{ userId?: string }>;
+  searchParams: Promise<{ elder?: string }>;
 }
 
 export default async function ChaptersPage({ searchParams }: ChaptersPageProps) {
-  const { userId } = await searchParams;
-
-  if (!userId) {
-    return (
-      <main className="mx-auto max-w-2xl px-4 py-12">
-        <p className="text-ink-muted">
-          어르신 계정 ID가 필요합니다. <Link href="/" className="text-teal-deep underline">처음으로</Link>
-        </p>
-      </main>
-    );
-  }
+  const { elder } = await searchParams;
+  const userId = await resolveCurrentUserId(elder);
 
   let chapters: Chapter[];
   let error: string | null = null;
@@ -50,7 +42,7 @@ export default async function ChaptersPage({ searchParams }: ChaptersPageProps) 
       <ul className="mt-6 flex flex-col gap-4">
         {chapters.map((chapter) => (
           <li key={chapter.id}>
-            <Link href={`/chapters/${chapter.id}?userId=${userId}`}>
+            <Link href={`/chapters/${chapter.id}?elder=${userId}`}>
               <Card className="transition-shadow hover:shadow-md">
                 <div className="flex items-center justify-between gap-4">
                   <div>

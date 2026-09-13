@@ -31,14 +31,14 @@ Claude automatically applies PDCA methodology. Commands are shortcuts for power 
 | Item | Value |
 |------|-------|
 | Level | **Enterprise** (온디바이스 AI + 온프레미스 GPU 서버 + 다중 마이크로서비스 + 엄격한 데이터 주권 요구) |
-| PDCA Phase | **Do 진행 중** (design v0.56). PR #1~#39 — 보안 블로커 B1~B6 + 법무·인프라·경영 미결 14건(Q1~Q6·I1~I5·경영3, decisions.md #52~#65) 전부 확정+구현 완료. PR #40~#47 후속 — 문서 정합성 점검, FP 기반 SW개발비 산정, Phase 3 출판 파이프라인(`publications` 모듈), **모바일 UI 패러다임 전환**(하단 4탭 제거 → 은실이 대화 화면 하나로 통합, 실 VAD 구현, decisions.md #66~#68). 남은 후속은 온디바이스 SLM 실기기 벤치마크(#27/#9/#31, 프로토콜+하니스 준비완료, 실기기 대기)뿐 |
+| PDCA Phase | **Do 진행 중** (design v0.58). PR #1~#39 — 보안 블로커 B1~B6 + 법무·인프라·경영 미결 14건(Q1~Q6·I1~I5·경영3, decisions.md #52~#65) 전부 확정+구현 완료. PR #40~#48 후속 — 문서 정합성 점검(3회), FP 기반 SW개발비 산정, Phase 3 출판 파이프라인(`publications` 모듈), **모바일 UI 패러다임 전환**(하단 4탭 제거 → 은실이 대화 화면 하나로 통합, 실 VAD 구현, decisions.md #66~#68). **웹 실 인증 세션 연결**(decisions.md #69) — `GET /me` 신규로 apps/web `?userId=` 임시 URL 패턴 제거, 세션→어르신 자동 해석. 남은 후속은 온디바이스 SLM 실기기 벤치마크(#27/#9/#31, 프로토콜+하니스 준비완료, 실기기 대기)뿐 |
 | 9-Phase Pipeline | Phase 1(Schema) ✅ · Phase 2(Convention) ✅ · Phase 3(Mockup, BI가이드+UI/UX설계서+design-tokens.md) ✅ · Phase 4(API 설계, sync-contract.md 포함) ✅ 완료 |
 | Primary Feature | `silveryarn-platform` |
 | 원본 기획 자료 | `Plan/` 폴더 (기획서 v0.5, 프로세스흐름도, BI가이드 v2.0, UI/UX설계서 v1.2) |
-| PDCA 문서 | `docs/01-plan/features/silveryarn-platform.plan.md`(v0.5), `docs/02-design/features/silveryarn-platform.design.md`(v0.57), `docs/03-check/gap-analysis-2026-09-10.md`, `docs/03-check/gap-analysis-2026-09-11.md`, `docs/03-check/blocked-decisions-tracker.md`(법무·인프라·경영 14건 완료 트래커), `docs/04-report/features/silveryarn-platform.report.md` |
-| 화면정의서 | `docs/02-design/screen-definitions.md`(v0.2) — 사용자 화면(UI/UX)만 기준 화면정의서, 모바일(4)·웹 사용자·가족(12)·웹 관리자(8) 총 24개 화면 전수 + 전체/영역별 Mermaid 흐름도 |
+| PDCA 문서 | `docs/01-plan/features/silveryarn-platform.plan.md`(v0.5), `docs/02-design/features/silveryarn-platform.design.md`(v0.58), `docs/03-check/gap-analysis-2026-09-10.md`, `docs/03-check/gap-analysis-2026-09-11.md`, `docs/03-check/blocked-decisions-tracker.md`(법무·인프라·경영 14건 완료 트래커), `docs/04-report/features/silveryarn-platform.report.md` |
+| 화면정의서 | `docs/02-design/screen-definitions.md`(v0.3) — 사용자 화면(UI/UX)만 기준 화면정의서, 모바일(4)·웹 사용자·가족(12)·웹 관리자(8) 총 24개 화면 전수 + 전체/영역별 Mermaid 흐름도 |
 | 동기화 계약 | `docs/02-design/sync-contract.md`(v0.8) — 비동기 업로드(202+job_id), 엔티티별 충돌정책, Presigned URL, 증분 다운로드 |
-| 의사결정 로그 | `docs/01-plan/decisions/silveryarn-platform.decisions.md`(v0.26) (기획서 9장 + design-validator 반영 항목 + §2.9 법무·인프라·경영 14건 #52~#65 + §2.10 모바일 UI 전환 #66~#68) |
+| 의사결정 로그 | `docs/01-plan/decisions/silveryarn-platform.decisions.md`(v0.27) (기획서 9장 + design-validator 반영 항목 + §2.9 법무·인프라·경영 14건 #52~#65 + §2.10 모바일 UI 전환 #66~#68 + §2.11 웹 실 인증 세션 연결 #69) |
 | 디자인 토큰 | `docs/02-design/design-tokens.md`(v1.2) (BI 가이드 컬러/타이포 → Tailwind 토큰, WCAG AA 대비 규칙, 접근성 최소기준) |
 | 데이터 분류 정책 | `docs/02-design/data-classification-policy.md`(v0.1, 신규) — PII/메타데이터 4단계 분류 + 외부 통신 경계(decisions.md #58/I1) |
 | 발표자료 | `docs/presentations/은빛실타래_개발착수회의_kickoff.pptx` (66슬라이드), `docs/presentations/은빛실타래_설계발표_슬라이드.html` (72슬라이드 HTML, 방향키 네비게이션) — [게시 링크](https://claude.ai/code/artifact/8c0fdb75-5c19-4916-b406-eb38275f2146). 두 산출물 모두 2026-09-05 착수 시점 스냅샷 — 페르소나명("은빛이") 등 이후 변경분(#66) 미반영, 의도적으로 보존 |

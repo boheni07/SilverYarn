@@ -2,16 +2,18 @@ import Link from "next/link";
 import { getChapter } from "@/services/chapters";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CHAPTER_PERIOD_LABEL } from "@/types";
+import { resolveCurrentUserId } from "@/services/me";
 import { ApiError } from "@/services/errors";
 
 interface ChapterDetailPageProps {
   params: Promise<{ chapterId: string }>;
-  searchParams: Promise<{ userId?: string }>;
+  searchParams: Promise<{ elder?: string }>;
 }
 
 export default async function ChapterDetailPage({ params, searchParams }: ChapterDetailPageProps) {
   const { chapterId } = await params;
-  const { userId } = await searchParams;
+  const { elder } = await searchParams;
+  const userId = await resolveCurrentUserId(elder);
 
   let chapter;
   try {
@@ -27,7 +29,7 @@ export default async function ChapterDetailPage({ params, searchParams }: Chapte
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
-      <Link href={`/chapters?userId=${userId ?? ""}`} className="text-teal-deep underline">
+      <Link href={`/chapters?elder=${userId}`} className="text-teal-deep underline">
         ← 목록으로
       </Link>
 

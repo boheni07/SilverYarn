@@ -1,13 +1,13 @@
-import Link from "next/link";
 import { listPhotoRequests } from "@/services/photo-requests";
 import { listFamilyMembers } from "@/services/family-members";
 import { PhotoRequestForm } from "@/features/photo-request/PhotoRequestForm";
+import { resolveCurrentUserId } from "@/services/me";
 import { ApiError } from "@/services/errors";
 import { PHOTO_REQUEST_STATUS_LABEL } from "@/types";
 import type { FamilyMember, PhotoRequest } from "@/types";
 
 interface PhotoRequestsPageProps {
-  searchParams: Promise<{ userId?: string }>;
+  searchParams: Promise<{ elder?: string }>;
 }
 
 /** photo_requests API — 가족이 사진을 요청하고(WU3), 자기 요청의 상태(대기/충족/닫힘,
@@ -15,17 +15,8 @@ interface PhotoRequestsPageProps {
  * 업로드 완료 콜백이 자동 처리한다(photo_request_service.py 참조) — 그래서 여기엔
  * "충족 처리" 버튼이 없다. */
 export default async function PhotoRequestsPage({ searchParams }: PhotoRequestsPageProps) {
-  const { userId } = await searchParams;
-
-  if (!userId) {
-    return (
-      <main className="mx-auto max-w-2xl px-4 py-12">
-        <p className="text-ink-muted">
-          어르신 계정 ID가 필요합니다. <Link href="/" className="text-teal-deep underline">처음으로</Link>
-        </p>
-      </main>
-    );
-  }
+  const { elder } = await searchParams;
+  const userId = await resolveCurrentUserId(elder);
 
   let requests: PhotoRequest[];
   let requesters: FamilyMember[];

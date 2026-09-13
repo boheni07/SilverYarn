@@ -10,11 +10,9 @@ import type { ConsentState, ConsentType } from "@/types";
  * 가족 대리 동의 관리 화면(decisions.md #53, 2026-09-12 사용자 결정) — 어르신 본인이
  * 판단력 저하 등으로 직접 동의하기 어려운 경우, 선택한 가족 구성원 명의로 동의를
  * 부여/철회한다. 백엔드가 `grantedBy`를 호출자 본인 구성원 id로 검증하므로(consent_logs.py),
- * 여기서 넘기는 `actingFamilyMemberId`는 반드시 로그인 세션이 그 사람임을 전제한다.
- *
- * ⚠️ apps/web이 아직 세션→family_member를 자동 해석하지 않아(notification-settings와
- * 동일한 임시 상태) 페이지에서 구성원을 먼저 고르게 한다 — 실 인증이 화면별로
- * "로그인한 나"를 직접 알려주게 되면 이 선택 단계는 제거한다.
+ * 여기서 넘기는 `actingFamilyMemberId`는 반드시 로그인 세션이 그 사람임을 전제한다 —
+ * `app/(family)/consent/page.tsx`가 `resolveCurrentMembership()`(`GET /me`)으로
+ * 로그인 세션 자신의 family_member_id를 직접 넘겨주므로 실제로 항상 성립한다.
  */
 export function ConsentForm({
   userId,

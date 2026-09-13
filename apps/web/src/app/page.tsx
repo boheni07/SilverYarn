@@ -1,70 +1,76 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/Button";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/Card";
+import { getMyMemberships } from "@/services/me";
+import { getUser } from "@/services/users";
+import { ApiError } from "@/services/errors";
 
 /**
- * ⚠️ 임시 진입점: Keycloak 인증(core/auth.py, 백엔드 미검증 스텁)이 실제로 붙기 전까지,
- * 실제 로그인 흐름 대신 어르신 계정 ID를 직접 입력받아 화면을 연결한다. 가짜 로그인
- * 화면을 만드는 대신 이렇게 명시적으로 미완성 상태를 드러내는 쪽을 택했다 — 실 인증
- * 연동 시 이 페이지를 로그인 폼으로 교체한다.
+ * 로그인 세션 → 어르신 연결 홈. `GET /me`(백엔드 `AuthContext.memberships`)로
+ * 로그인한 가족구성원이 연결된 어르신을 자동 해석한다 — 예전 W-02 "임시 홈"(어르신
+ * 계정 ID를 직접 입력받던 화면)을 대체한다.
+ *
+ * - 연결된 어르신이 1명(파일럿 스코프의 지배적 케이스)이면 URL에 어르신 ID가 전혀
+ *   드러나지 않고 곧장 대시보드로 이동한다.
+ * - 여러 명이면 고를 수 있게 목록을 보여준다(클릭으로만 `?elder=`가 채워짐 — 직접
+ *   입력하지 않는다).
+ * - 0명(초대를 아직 수락하지 않은 계정)이면 `require_auth`가 403으로 알려주는 안내
+ *   문구를 그대로 보여준다.
  */
-export default function HomePage() {
-  const router = useRouter();
-  const [userId, setUserId] = useState("");
-
-  function goTo(path: string) {
-    if (!userId.trim()) return;
-    router.push(`${path}?userId=${encodeURIComponent(userId.trim())}`);
+export default async function HomePage() {
+  let memberships;
+  try {
+    memberships = await getMyMemberships();
+  } catch (e) {
+    const message =
+      e instanceof ApiError ? e.message : "연결된 어르신 정보를 불러오지 못했습니다.";
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
+        <div className="text-center">
+          <h1 className="font-editorial text-display font-bold text-ink">은빛실타래</h1>
+        </div>
+        <Card className="w-full max-w-md text-center">
+          <p className="text-body-compact text-ink-muted">{message}</p>
+        </Card>
+      </main>
+    );
   }
+
+  if (memberships.length === 1) {
+    redirect(`/dashboard?elder=${encodeURIComponent(memberships[0].userId)}`);
+  }
+
+  const elders = await Promise.all(
+    memberships.map(async (m) => {
+      try {
+        const user = await getUser(m.userId);
+        return { userId: m.userId, name: user.name };
+      } catch {
+        return { userId: m.userId, name: "어르신" };
+      }
+    }),
+  );
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
       <div className="text-center">
         <h1 className="font-editorial text-display font-bold text-ink">은빛실타래</h1>
-        <p className="mt-2 text-body-compact text-ink-muted">
-          어르신 자서전 제작 및 AI 말벗돌봄 플랫폼 — 웹 콘솔
-        </p>
+        <p className="mt-2 text-body-compact text-ink-muted">연결된 어르신 계정을 선택하세요.</p>
       </div>
 
       <Card className="w-full max-w-md">
-        <p className="mb-4 text-caption text-ink-muted">
-          ⚠️ 스캐폴딩 단계 임시 진입점입니다. 실제 인증(Keycloak) 연동 전까지 어르신
-          계정 ID를 직접 입력해 화면을 확인합니다.
-        </p>
-        <label htmlFor="userId" className="mb-2 block text-body-compact font-medium text-ink">
-          어르신 계정 ID (UUID)
-        </label>
-        <input
-          id="userId"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          placeholder="예: f645b7a3-e2fc-475d-b48c-ff18815b1f9b"
-          className="mb-4 min-h-11 w-full rounded-lg border border-border bg-paper px-4 text-body-compact text-ink outline-none focus-visible:border-teal-deep"
-        />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Button onClick={() => goTo("/chapters")}>자서전 뷰어로 이동</Button>
-          <Button variant="secondary" onClick={() => goTo("/dashboard")}>
-            가족 대시보드로 이동
-          </Button>
-          <Button variant="secondary" onClick={() => goTo("/photos")}>
-            사진 갤러리로 이동
-          </Button>
-          <Button variant="secondary" onClick={() => goTo("/review")}>
-            가족 감수 화면으로 이동
-          </Button>
-          <Button variant="secondary" onClick={() => goTo("/photo-requests")}>
-            사진 요청 관리로 이동
-          </Button>
-          <Button variant="secondary" onClick={() => goTo("/notification-settings")}>
-            알림 수신 설정으로 이동
-          </Button>
-          <Button variant="secondary" onClick={() => goTo("/consent")}>
-            대리 동의 관리로 이동
-          </Button>
-        </div>
+        <ul className="flex flex-col gap-2">
+          {elders.map((elder) => (
+            <li key={elder.userId}>
+              <Link
+                href={`/dashboard?elder=${encodeURIComponent(elder.userId)}`}
+                className="flex min-h-11 items-center rounded-lg border border-border-soft bg-surface px-4 text-ink hover:bg-subtle-2"
+              >
+                {elder.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </Card>
     </main>
   );

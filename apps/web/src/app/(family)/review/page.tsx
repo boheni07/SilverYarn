@@ -1,26 +1,17 @@
-import Link from "next/link";
 import { listChapters } from "@/services/chapters";
 import { listFamilyMembers } from "@/services/family-members";
 import { ChapterReviewPanel } from "@/features/chapter-review/ChapterReviewPanel";
+import { resolveCurrentUserId } from "@/services/me";
 import { ApiError } from "@/services/errors";
 import type { Chapter, FamilyMember } from "@/types";
 
 interface ReviewPageProps {
-  searchParams: Promise<{ userId?: string }>;
+  searchParams: Promise<{ elder?: string }>;
 }
 
 export default async function ReviewPage({ searchParams }: ReviewPageProps) {
-  const { userId } = await searchParams;
-
-  if (!userId) {
-    return (
-      <main className="mx-auto max-w-2xl px-4 py-12">
-        <p className="text-ink-muted">
-          어르신 계정 ID가 필요합니다. <Link href="/" className="text-teal-deep underline">처음으로</Link>
-        </p>
-      </main>
-    );
-  }
+  const { elder } = await searchParams;
+  const userId = await resolveCurrentUserId(elder);
 
   let chapters: Chapter[];
   let reviewers: FamilyMember[];

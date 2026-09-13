@@ -174,6 +174,16 @@
 
 ---
 
+## 2.11 웹 실 인증 세션 연결 (Do 단계, 2026-09-13 — 사용자 결정)
+
+> `docs/04-report/features/silveryarn-platform.report.md`의 "다음 사이클" 후보 3건(온디바이스 SLM 벤치마크 — 실기기 없어 착수 불가 확인됨 / 모바일 사진 화면 신규 / 웹 실 인증 세션 연결) 중 사용자가 선택.
+
+| # | 항목 | 결정 | 후속 작업 |
+|---|------|------|------|
+| 69 | apps/web·apps/admin의 `?userId=`/`?familyMemberId=` 임시 URL 파라미터 방식 존치 여부 | **제거 — 로그인 세션에서 자동 해석**(사용자 결정, 정확한 미리보기 문구: "변경 전: `/dashboard?userId=f645b7a3-...` → 변경 후: `/dashboard`(로그인 세션에서 자동 해석)"). 조사 결과 백엔드 `require_auth`가 이미 `AuthContext.memberships`로 "로그인한 나 = 어느 어르신(들)에 연결됐는지"를 전부 계산해 두고 있었으나 이를 클라이언트에 알려주는 엔드포인트가 없었을 뿐 — 새 도메인/서비스/레포지토리 로직 없이 API 레이어 1개 파일(`GET /me`)로 해결. apps/admin은 조사 결과 role 기반 전체 사용자 열람 구조라 이 문제 자체가 없음을 확인, 실제 영향 범위는 apps/web 9개 화면 + W-02(임시 홈) 재정의뿐 | ✅ **구현 완료**(2026-09-13) — 백엔드 `GET /me`(`modules/family_members/api/v1/me.py`), 프론트 `apps/web/src/services/me.ts`(`getMyMemberships`/`resolveCurrentUserId`/`resolveCurrentMembership`). `?elder=` 쿼리 파라미터는 여러 어르신 연결 시(파일럿 스코프상 희귀 케이스) 홈 화면의 클릭으로만 채워지고 직접 입력되지 않는다 — 쿠키/Server Action 기반 "현재 선택" 메커니즘은 YAGNI로 채택 안 함(decisions.md #63 파일럿 스코프 근거) |
+
+---
+
 ## 3. 별도 검토가 필요한 항목 (AI가 임의 결정하지 않음)
 
 | # | 항목 | 사유 | 상태 |
@@ -225,6 +235,7 @@
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.27 | 2026-09-13 | §2.11 신설 — 웹 실 인증 세션 연결(사용자 결정, report.md "다음 사이클" 후보 중 선택). #69(`?userId=`/`?familyMemberId=` 제거, `GET /me` 신규로 세션→어르신 자동 해석) | NUBiz AX Initiative (사용자 결정) |
 | 0.26 | 2026-09-13 | §2.10 신설 — 모바일 UI 패러다임 전환(사용자 결정). #66(에이전트 페르소나 "은실이"로 통일, 화면별 분리 폐지) · #67(하단 4탭 완전 제거, 대화 전용 화면으로 통합) · #68(발화 시작 트리거 — 버튼+VAD 자동감지 병행, `AmplitudeVoiceActivityDetector` 신규 구현). apps/mobile `presentation/companion/` 패키지 신설, 기존 `home`/`care`/`author`/`assistant` 4개 화면 삭제 | NUBiz AX Initiative (사용자 결정) |
 | 0.25 | 2026-09-13 | 문서 최신화 점검 — #58(I1) "PII 수준 경계 명문화" 후속 작업 완료 갱신(신규 `data-classification-policy.md`). 이로써 §2.9의 14건 전부(각 항목의 정책 확정 + 해당하는 후속 구현 작업)가 완결 상태 | NUBiz AX Initiative |
 | 0.24 | 2026-09-13 | Do 단계 — #56(Q5) 구현 완료 갱신. crypto-shredding(Postgres cascade, 마이그레이션 0012) + `UserErasureService`(Qdrant/Neo4j/MinIO) + `RetentionPurgeService`(대화 원문 시간기반 파기) + admin 보유기간 설정 화면. 이로써 `blocked-decisions-tracker.md`의 법무·인프라·경영 미결 14건(#52~#65) **전체 구현 완료** | NUBiz AX Initiative |
