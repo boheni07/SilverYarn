@@ -4,9 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { createInvitationAction } from "./actions";
 import { FAMILY_ROLE_LABEL } from "@/types";
-import type { FamilyRole } from "@/types";
+import type { FamilyRole, Organization } from "@/types";
 
 const INVITABLE_ROLES: FamilyRole[] = ["family", "caregiver", "social_worker"];
+// 개인(가족)은 시설 소속 개념이 없다 — decisions.md #59(I2)의 org_id는
+// caregiver/social_worker(시설 직원)에게만 의미가 있다.
+const ORG_AFFILIATABLE_ROLES: FamilyRole[] = ["caregiver", "social_worker"];
 
 const FAMILY_WEB_URL = process.env.NEXT_PUBLIC_FAMILY_WEB_URL ?? "http://localhost:3000";
 
@@ -16,22 +19,39 @@ const FAMILY_WEB_URL = process.env.NEXT_PUBLIC_FAMILY_WEB_URL ?? "http://localho
  * 초대를 만들고, 결과 링크를 운영자가 가족에게 전달한다(문자/이메일 발송 자체는
  * 스코프 밖 — 지금은 화면에 표시된 링크를 운영자가 복사해 전달).
  */
-export function InvitationForm({ userId }: { userId: string }) {
+export function InvitationForm({
+  userId,
+  organizations = [],
+}: {
+  userId: string;
+  /** decisions.md #59(I2) — caregiver/social_worker를 시설 소속으로 초대할 때 고를 목록.
+   * 등록된 시설이 없으면(B2C 전용 운영) 아예 안 보인다. */
+  organizations?: Organization[];
+}) {
   const [role, setRole] = useState<FamilyRole>("family");
   const [contact, setContact] = useState("");
+  const [orgId, setOrgId] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
+
+  const showOrgField = organizations.length > 0 && ORG_AFFILIATABLE_ROLES.includes(role);
 
   async function handleSubmit() {
     if (!contact.trim()) return;
     setPending(true);
     setError(null);
-    const result = await createInvitationAction({ userId, contact: contact.trim(), role });
+    const result = await createInvitationAction({
+      userId,
+      contact: contact.trim(),
+      role,
+      orgId: showOrgField && orgId ? orgId : undefined,
+    });
     setPending(false);
     if (result.ok) {
       setInviteLink(`${FAMILY_WEB_URL}/invitations/${result.invitation.token}`);
       setContact("");
+      setOrgId("");
     } else {
       setError(result.error);
     }
@@ -58,6 +78,24 @@ export function InvitationForm({ userId }: { userId: string }) {
           ))}
         </select>
       </label>
+
+      {showOrgField && (
+        <label className="mt-4 block text-caption text-ink-muted">
+          소속 시설 (선택 — decisions.md #59)
+          <select
+            value={orgId}
+            onChange={(e) => setOrgId(e.target.value)}
+            className="mt-1 block min-h-11 w-full rounded-lg border border-border bg-paper px-3 text-body-compact text-ink"
+          >
+            <option value="">소속 없음(개인)</option>
+            {organizations.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <label className="mt-4 block text-caption text-ink-muted">
         연락처 (전화번호 또는 이메일)

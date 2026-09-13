@@ -110,6 +110,9 @@ class Membership:
     user_id: uuid.UUID  # 이 구성원이 속한 어르신
     role: FamilyRole
     two_factor_enabled: bool
+    # B2G 시설 소속 — decisions.md #59(I2). NULL = 개인(대부분). 테넌시 안전망
+    # 체크(auth_deps.authorize_elder_data_read)에서만 쓴다.
+    org_id: uuid.UUID | None = None
 
 
 @dataclass

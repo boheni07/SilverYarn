@@ -29,6 +29,9 @@ from core_service.modules.invitations.api.v1.invitations import router as invita
 from core_service.modules.notifications.api.v1.notification_settings import (
     router as notification_settings_router,
 )
+from core_service.modules.organizations.api.v1.organizations import (
+    router as organizations_router,
+)
 from core_service.modules.photo_requests.api.v1.photo_requests import (
     router as photo_requests_router,
 )
@@ -71,6 +74,7 @@ app.include_router(consent_logs_router, prefix=settings.api_prefix)
 app.include_router(schedule_items_router, prefix=settings.api_prefix)
 app.include_router(photos_router, prefix=settings.api_prefix)
 app.include_router(photo_requests_router, prefix=settings.api_prefix)
+app.include_router(organizations_router, prefix=settings.api_prefix)
 
 _audit_logger = logging.getLogger("core_service.access_log")
 _AUDIT_SKIP_PATHS = frozenset({"/health", "/docs", "/openapi.json", "/redoc"})

@@ -29,6 +29,7 @@ class FakeFamilyMemberRepository:
         name: str,
         contact: str,
         keycloak_sub: str | None = None,
+        org_id: uuid.UUID | None = None,
     ) -> FamilyMember:
         member = FamilyMember(
             id=uuid.uuid4(),
@@ -39,6 +40,7 @@ class FakeFamilyMemberRepository:
             two_factor_enabled=False,
             keycloak_sub=keycloak_sub,
             created_at=datetime.now(UTC),
+            org_id=org_id,
         )
         self._store[member.id] = member
         return member

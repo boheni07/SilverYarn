@@ -90,14 +90,15 @@
 | 현재 | 벡터 payload에 원문 미저장 원칙은 `upload_pipeline_service`에서 준수(payload=`user_id`만) |
 | 후속 작업 (미착수) | "PII 수준" 경계를 CONVENTIONS.md 또는 별도 보안정책 문서에 명문화 |
 
-### I2. `organizations` B2G 시설 테넌시 — ✅ 확정 (지금 착수)
+### I2. `organizations` B2G 시설 테넌시 — ✅ 확정, ✔️ 구현 완료
 
 | | |
 |---|---|
-| 관련 | [decisions #59](../01-plan/decisions/silveryarn-platform.decisions.md)(신규), #47 보류, #1, erd.md §11 |
-| 결정 | **2026-09-12, 사용자**: 지금 착수 — organizations 테이블 + 시설 경계 인가 |
-| 현재 | `organizations` 테이블·`family_members.org_id` 없음. B2G 시설 간 열람 격리 불가 |
-| 후속 작업 (미착수) | `organizations` 테이블 + `family_members.org_id` 마이그레이션 · 테넌시 인가 술어(시설 경계) · admin 콘솔 시설 관리 |
+| 관련 | [decisions #59](../01-plan/decisions/silveryarn-platform.decisions.md), #47 보류, #1, erd.md §11 |
+| 결정 | **2026-09-12, 사용자**: 지금 착수. **2026-09-13, 사용자**: 접근권 부여 방식은 안전망(defense-in-depth) — 기존 1:1 `family_members` 연결(admin 중개 초대, #51) 유지, `organizations`는 시설 불일치 시 차단하는 2차 안전망으로만 사용. 정식 B2G 대량 권한 부여 모델은 스코프 밖 |
+| 구현 (2026-09-13) | 마이그레이션 0011(`organizations` 테이블 + `users`/`family_members`/`invitations`.`org_id`, 전부 `ON DELETE SET NULL`). 신규 `organizations` 모듈(domain/infra/application/api/deps, import-linter 컨테이너 등록). `auth_deps.py`에 `UserDirectory`(어르신 org_id 조회) + `ElderAccessContext`(기존 `ConsentDirectory` 단독 파라미터를 흡수한 번들) 추가, `authorize_elder_data_read()`가 caregiver/social_worker의 org_id와 어르신 org_id 불일치 시 403. `GET/POST /organizations`·`GET /organizations/{id}`·`PUT /users/{id}/organization`(전부 admin 전용) 신규. apps/admin `/organizations`(시설 등록·목록) + family-members 화면에 시설 배정 폼·초대 시 시설 선택 UI 추가 |
+| 검증 | 유닛테스트 19건 신규(197개) — `ElderAccessContext` 조합 시나리오(같은 시설 허용/다른 시설 차단/org_id 없는 B2C 무영향) 전부 Fake로 커버. **실 인프라**: Postgres에 직접 org A/B·어르신·caregiver 생성 후 같은 시설 허용→다른 시설로 재배정→차단 왕복 확인. apps/admin lint/type-check/build 통과 |
+| 남은 것 | 없음 — 이 안전망 스코프에서는 완료. 정식 B2G 대량 권한 부여 모델은 B2G 운영모델 확정 후 별도 라운드 |
 
 ### I3. `PII_KEK` Vault transit 이전 (PII 암호화 3차) — ✅ 확정, blind index 분리 ✔️ 구현 완료
 
@@ -167,6 +168,6 @@ Q2(대리동의, ✅#53)       ┘
 Q5(보유기간·파기, ✅#56) ─────→ retention_policies 테이블+admin UI+5-store 오케스트레이터 (최대 단일작업, 미착수)
 Q6(국외이전, ✅#57)      ─────→ 알림 발송 어댑터 구현 전제
 
-I1(Zero Egress 범위, ✅#58) ─→ I2(테넌시, ✅#59 지금착수)·I3(blind index만 분리, ✅#60)·I4(관측, ✅#61 지금구축)
+I1(Zero Egress 범위, ✅#58) ─→ I2(테넌시 안전망, ✔️#59 구현완료)·I3(blind index만 분리, ✔️#60 구현완료)·I4(관측, ✔️#61 구현완료)
 I5(GPU, 🔄#62 부분확정) ←── #27(SLM 벤치마크, 프로토콜+하니스 준비 완료 — 실기기 실행만 남음, VRAM 예산표는 여전히 보류)
 ```

@@ -4,7 +4,7 @@
 
 **Project**: 은빛실타래 (SilverYarn)
 **Date**: 2026-09-07
-**Version**: 1.15 (Do 단계 — `consent_type` enum에 `international_transfer` 추가, 마이그레이션 0010, decisions.md #57)
+**Version**: 1.16 (Do 단계 — `organizations` 테이블 신설 + `users`/`family_members`/`invitations`.`org_id`, 마이그레이션 0011, decisions.md #59)
 **Source**: Design 문서 §3 Data Model 초안 + UI/UX 화면설계서 필드 단위 대조 결과 반영
 **용어 정의**: [glossary.md](./glossary.md) 참조
 
@@ -66,6 +66,7 @@
 | `user_encryption_keys` **(부속 v1.7, 도메인 아님)** | 사용자별 PII DEK를 KEK로 랩핑 저장 (decisions.md #45) | user_id, dek_wrapped, key_version |
 | `device_credentials` **(부속 v1.8, 도메인 아님)** | Device Token 발급·회전·폐기 (SHA-256 해시 저장, decisions.md #47) | device_id, token_hash, revoked_at |
 | `access_logs` **(부속 v1.8, 도메인 아님)** | 접속기록 감사로그 (제8조, CTO B5(e)) | actor_kind, actor_subject, method, path, status_code |
+| `organizations` **(신규 v1.16, decisions.md #59)** | B2G 시설(요양원·복지관) — `users`/`family_members`/`invitations`의 `org_id`가 참조하는 테넌시 안전망 기준 | id, name, created_at |
 
 > **범위 밖 (스코프 아웃, decisions.md #18)**: 구독·결제(Subscription/Payment) 도메인은 본 스키마에 포함하지 않는다. PG사·요금제가 결정되지 않은 상태로 엔티티를 설계하면 임의 결정이 되므로, 경영진 결정 이후 별도 Phase에서 추가한다.
 
@@ -89,6 +90,7 @@
 | persona_summary | varchar(500) | N | design.md §2.11 4단계 "단기 압축 기억" — 요약된 챕터 전체를 가로지른 vLLM 요약. **v1.13 신규**. `compaction_summary`(chapters)와 동일하게 평문 |
 | persona_keywords | text[] | N | 위와 같은 배경지식의 핵심 키워드 5~8개. **v1.13 신규** |
 | persona_source_chapter_count | integer | N | 생성 시점에 참고한(=Compaction 요약이 있는) 챕터 수 — 값이 바뀌면 stale. **v1.13 신규** |
+| org_id | UUID | N | FK → organizations.id. **v1.16 신규**(decisions.md #59) — B2G 시설 소속. NULL = B2C 개인(대부분) |
 
 ---
 
@@ -106,6 +108,7 @@
 | two_factor_enabled | boolean | Y | 2FA 활성화 여부 |
 | keycloak_sub | varchar(255) | N | **v1.8** — Keycloak 토큰 `sub` claim ↔ 이 행 매핑(RBAC 강제 전제). **비유일**: 한 사람(1 Keycloak 계정)이 여러 어르신을 담당하면 같은 `sub`로 여러 행이 생긴다(erd.md §11 "UK" 제안과 달라진 이유는 decisions.md #47) |
 | created_at | timestamptz | Y | 생성 시각 |
+| org_id | UUID | N | FK → organizations.id. **v1.16 신규**(decisions.md #59) — 시설 소속 caregiver/social_worker만 채운다. `auth_deps.authorize_elder_data_read`의 테넌시 안전망 기준(어르신 `users.org_id`와 다르면 차단) |
 
 **Relationships**: 1:N → `notification_settings`, `invitations.invited_by`, `emotion_alerts.acknowledged_by`, `consent_logs.granted_by`, `chapter_revisions.reviewer_id`, `photo_requests.requested_by`
 
@@ -378,6 +381,7 @@
 | status | enum(`pending`,`accepted`,`expired`) | Y | 기본값 `pending` |
 | created_at | timestamptz | Y | 생성 시각 |
 | expires_at | timestamptz | Y | 만료 시각 |
+| org_id | UUID | N | FK → organizations.id. **v1.16 신규**(decisions.md #59) — 시설 소속 직원 초대 시 채우고, 수락 시점에 `family_members.org_id`로 그대로 옮겨진다 |
 
 ---
 
@@ -428,6 +432,20 @@
 
 ---
 
+### 3.20 organizations (B2G 시설) — 신규 v1.16
+
+**Description**: decisions.md #59(2026-09-13 사용자 결정, I2) — B2G 시설(요양원·복지관) 테넌시 안전망의 기준 엔티티. `users.org_id`/`family_members.org_id`/`invitations.org_id`가 이 테이블을 참조한다. 조직에 속한 어르신 전체를 자동 조회하는 권한 모델(B2G 대량 열람)은 스코프 밖 — 기존 1:1 `family_members` 연결(admin 중개 초대, decisions #51)이 여전히 1차 권한 부여 경로이고, `org_id`는 "다른 시설 소속끼리는 그 연결이 있어도 차단"하는 2차 안전망으로만 쓰인다.
+
+| Attribute | Type | Required | Description |
+|-----------|------|----------|-------------|
+| id | UUID | Y | PK |
+| name | varchar(200) | Y | 시설명 |
+| created_at | timestamptz | Y | 생성 시각 |
+
+**Relationships**: 1:N → `users.org_id`, `family_members.org_id`, `invitations.org_id`(전부 `ON DELETE SET NULL`)
+
+---
+
 ## 4. Entity Relationship Diagram
 
 > **정식 시각화 ERD**는 [`erd.md`](./erd.md)에서 관리한다 — 전체 관계 개요 + 도메인별(사용자/자서전/운영) Mermaid erDiagram, 속성·카디널리티·참조무결성 정책까지 포함한 완전판. 아래는 요약용 ASCII 스케치다.
@@ -471,6 +489,14 @@
 ```sql
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- v1.16(decisions.md #59) — users/family_members/invitations의 org_id가 참조하므로
+-- 그 세 테이블보다 먼저 만든다.
+CREATE TABLE organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(200) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(100) NOT NULL,                     -- 평문 (v1.11 확정)
@@ -480,8 +506,10 @@ CREATE TABLE users (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   persona_summary VARCHAR(500),                   -- v1.13 신규, 평문 (§2.11 4단계)
   persona_keywords TEXT[],                        -- v1.13 신규
-  persona_source_chapter_count INTEGER            -- v1.13 신규
+  persona_source_chapter_count INTEGER,           -- v1.13 신규
+  org_id UUID REFERENCES organizations(id) ON DELETE SET NULL  -- v1.16 신규
 );
+CREATE INDEX idx_users_org_id ON users(org_id);  -- v1.16
 
 CREATE TYPE family_role AS ENUM ('family', 'caregiver', 'social_worker', 'admin');
 CREATE TABLE family_members (
@@ -493,10 +521,12 @@ CREATE TABLE family_members (
   contact_bidx VARCHAR(64),                           -- v1.11: HMAC-SHA256 hex (동등검색)
   two_factor_enabled BOOLEAN NOT NULL DEFAULT false,
   keycloak_sub VARCHAR(255),                          -- v1.8: Keycloak 토큰 sub 매핑(비유일). decisions.md #47
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  org_id UUID REFERENCES organizations(id) ON DELETE SET NULL  -- v1.16 신규
 );
 CREATE INDEX idx_family_members_keycloak_sub ON family_members(keycloak_sub);  -- v1.8
 CREATE INDEX idx_family_members_contact_bidx ON family_members(contact_bidx);  -- v1.11
+CREATE INDEX idx_family_members_org_id ON family_members(org_id);  -- v1.16
 
 CREATE TYPE install_mode AS ENUM ('kiosk', 'normal');
 CREATE TABLE devices (
@@ -711,7 +741,8 @@ CREATE TABLE invitations (
   token VARCHAR(100) NOT NULL UNIQUE,
   status invitation_status NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  expires_at TIMESTAMPTZ NOT NULL
+  expires_at TIMESTAMPTZ NOT NULL,
+  org_id UUID REFERENCES organizations(id) ON DELETE SET NULL  -- v1.16 신규
 );
 CREATE INDEX idx_invitations_contact_bidx ON invitations(contact_bidx);  -- v1.11
 

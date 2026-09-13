@@ -12,6 +12,7 @@ export async function createInvitationAction(input: {
   userId: string;
   contact: string;
   role: FamilyRole;
+  orgId?: string;
 }): Promise<ActionResult> {
   try {
     const invitation = await createInvitation(input);

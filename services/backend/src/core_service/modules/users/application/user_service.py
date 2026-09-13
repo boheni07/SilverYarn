@@ -33,6 +33,16 @@ class UserService:
             raise ApiError("VALIDATION_ERROR", "name은 1~100자여야 합니다.")
         return await self._repo.create(name=name, birth_date=birth_date)
 
+    async def set_organization(self, user_id: uuid.UUID, org_id: uuid.UUID | None) -> User:
+        """decisions.md #59(I2) — 어르신을 B2G 시설에 소속시키거나(값) 해제한다(None).
+        존재하는 시설인지는 라우터가 `OrganizationService.ensure_exists`로 먼저 검증한다
+        (이 모듈은 organizations를 의존하지 않는다, 모듈 경계 유지)."""
+        try:
+            await self._repo.set_organization(user_id, org_id)
+        except LookupError as exc:
+            raise ApiError("NOT_FOUND", f"사용자({user_id})를 찾을 수 없습니다.") from exc
+        return await self.get_user(user_id)
+
     async def refresh_persona_snapshot(
         self,
         user_id: uuid.UUID,

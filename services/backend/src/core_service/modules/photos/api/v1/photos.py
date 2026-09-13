@@ -18,11 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core_service.auth_deps import (
     AuthContext,
-    ConsentDirectory,
+    ElderAccessContext,
     Principal,
     authorize_elder_data_read,
     authorize_user_access,
-    get_consent_directory,
+    get_elder_access_context,
     require_auth,
     require_principal,
 )
@@ -134,10 +134,10 @@ async def list_user_photos(
     user_id: uuid.UUID,
     service: PhotoService = Depends(_service),
     ctx: AuthContext = Depends(require_auth),
-    consent_directory: ConsentDirectory = Depends(get_consent_directory),
+    access: ElderAccessContext = Depends(get_elder_access_context),
 ) -> DataResponse[list[PhotoResponse]]:
     """design.md §4.2 — 사진 목록 조회."""
-    await authorize_elder_data_read(ctx, user_id, consent_directory)
+    await authorize_elder_data_read(ctx, user_id, access)
     photos = await service.list_photos_for_user(user_id)
     return DataResponse(
         data=[

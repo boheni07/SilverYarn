@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { getUser } from "@/services/users";
 import { listFamilyMembers } from "@/services/family-members";
+import { listOrganizations } from "@/services/organizations";
 import { InvitationForm } from "@/features/invitations/InvitationForm";
+import { AssignUserOrganizationForm } from "@/features/organizations/AssignUserOrganizationForm";
 import { Card } from "@/components/ui/Card";
 import { ApiError } from "@/services/errors";
 import { FAMILY_ROLE_LABEL } from "@/types";
-import type { FamilyMember, User } from "@/types";
+import type { FamilyMember, Organization, User } from "@/types";
 
 interface FamilyMembersPageProps {
   searchParams: Promise<{ userId?: string }>;
@@ -32,9 +34,14 @@ export default async function FamilyMembersPage({ searchParams }: FamilyMembersP
 
   let user: User | null = null;
   let members: FamilyMember[] = [];
+  let organizations: Organization[] = [];
   let error: string | null = null;
   try {
-    [user, members] = await Promise.all([getUser(userId), listFamilyMembers(userId)]);
+    [user, members, organizations] = await Promise.all([
+      getUser(userId),
+      listFamilyMembers(userId),
+      listOrganizations(),
+    ]);
   } catch (e) {
     error = e instanceof ApiError ? e.message : "정보를 불러오지 못했습니다.";
   }
@@ -52,6 +59,21 @@ export default async function FamilyMembersPage({ searchParams }: FamilyMembersP
 
       {!error && (
         <>
+          {organizations.length > 0 && (
+            <>
+              <h2 className="mt-8 font-editorial text-h2 font-semibold text-ink">
+                시설 배정 (decisions.md #59)
+              </h2>
+              <div className="mt-4">
+                <AssignUserOrganizationForm
+                  userId={userId}
+                  currentOrgId={user?.orgId}
+                  organizations={organizations}
+                />
+              </div>
+            </>
+          )}
+
           <h2 className="mt-8 font-editorial text-h2 font-semibold text-ink">등록된 구성원</h2>
           {members.length === 0 ? (
             <p className="mt-4 text-ink-muted">아직 등록된 가족/복지사가 없습니다.</p>
@@ -62,9 +84,16 @@ export default async function FamilyMembersPage({ searchParams }: FamilyMembersP
                   <Card>
                     <div className="flex items-center justify-between gap-4">
                       <p className="text-body-compact text-ink">{m.name}</p>
-                      <span className="shrink-0 rounded-full bg-subtle px-3 py-1 text-caption font-medium text-ink-muted">
-                        {FAMILY_ROLE_LABEL[m.role]}
-                      </span>
+                      <div className="flex shrink-0 gap-2">
+                        {m.orgId && (
+                          <span className="rounded-full bg-gold-tint px-3 py-1 text-caption font-medium text-gold-deep">
+                            {organizations.find((o) => o.id === m.orgId)?.name ?? "시설 소속"}
+                          </span>
+                        )}
+                        <span className="rounded-full bg-subtle px-3 py-1 text-caption font-medium text-ink-muted">
+                          {FAMILY_ROLE_LABEL[m.role]}
+                        </span>
+                      </div>
                     </div>
                   </Card>
                 </li>
@@ -74,7 +103,7 @@ export default async function FamilyMembersPage({ searchParams }: FamilyMembersP
 
           <h2 className="mt-10 font-editorial text-h2 font-semibold text-ink">새 구성원 초대</h2>
           <div className="mt-4">
-            <InvitationForm userId={userId} />
+            <InvitationForm userId={userId} organizations={organizations} />
           </div>
         </>
       )}

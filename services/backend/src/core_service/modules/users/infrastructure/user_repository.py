@@ -32,6 +32,8 @@ class UserModel(Base):
     persona_summary: Mapped[str | None] = mapped_column(String(500), nullable=True)
     persona_keywords: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
     persona_source_chapter_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # 마이그레이션 0011, decisions.md #59(I2) — B2G 시설 소속(안전망 테넌시 체크용)
+    org_id: Mapped[uuid.UUID | None] = mapped_column(PgUUID(as_uuid=True), nullable=True)
 
 
 class UserRepository:
@@ -58,6 +60,7 @@ class UserRepository:
             created_at=model.created_at,
             updated_at=model.updated_at,
             persona_snapshot=persona,
+            org_id=model.org_id,
         )
 
     async def get_by_id(self, user_id: uuid.UUID) -> User | None:
@@ -102,6 +105,20 @@ class UserRepository:
             model.birth_date = await self._pii.encrypt(self._session, model.id, birth_date.isoformat())
             await self._session.flush()
         return await self._to_domain(model)
+
+    async def get_org_id(self, user_id: uuid.UUID) -> uuid.UUID | None:
+        """`auth_deps.authorize_elder_data_read`의 테넌시 체크 전용 — PII 복호화가
+        필요 없는 얕은 조회라 `get_by_id`(전체 `_to_domain`)를 안 쓴다."""
+        model = await self._session.get(UserModel, user_id)
+        return model.org_id if model else None
+
+    async def set_organization(self, user_id: uuid.UUID, org_id: uuid.UUID | None) -> None:
+        model = await self._session.get(UserModel, user_id)
+        if model is None:
+            raise LookupError(f"user {user_id} not found")
+        model.org_id = org_id
+        model.updated_at = datetime.now(UTC)
+        await self._session.flush()
 
     async def set_primary_device(self, user_id: uuid.UUID, device_id: uuid.UUID) -> None:
         model = await self._session.get(UserModel, user_id)

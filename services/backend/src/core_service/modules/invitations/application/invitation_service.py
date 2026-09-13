@@ -33,7 +33,10 @@ class InvitationService:
         invited_by: uuid.UUID | None,
         contact: str,
         role: FamilyRole,
+        org_id: uuid.UUID | None = None,
     ) -> Invitation:
+        """`org_id`: decisions.md #59(I2) — 시설 소속 caregiver/social_worker를 초대할
+        때만 채운다. 존재하는 시설인지는 호출자(라우터)가 먼저 검증한다."""
         if not contact or len(contact) > 100:
             raise ApiError("VALIDATION_ERROR", "contact는 1~100자여야 합니다.")
         if await self._repo.exists_pending_for_contact(user_id, contact):
@@ -47,6 +50,7 @@ class InvitationService:
             role=role,
             token=token,
             expires_at=expires_at,
+            org_id=org_id,
         )
 
     async def get_invitation_by_token(self, token: str) -> Invitation:

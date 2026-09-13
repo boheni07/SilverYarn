@@ -7,4 +7,6 @@ export interface User {
   primaryDeviceId?: string;
   createdAt: string;
   updatedAt: string;
+  // B2G 시설 소속 — decisions.md #59(I2). 없으면 B2C 개인 사용자.
+  orgId?: string;
 }

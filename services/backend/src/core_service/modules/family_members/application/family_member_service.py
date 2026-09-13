@@ -29,16 +29,25 @@ class FamilyMemberService:
         name: str,
         contact: str,
         keycloak_sub: str | None = None,
+        org_id: uuid.UUID | None = None,
     ) -> FamilyMember:
         """초대 수락(invitations) 또는 임시 직접생성 경로.
 
         `keycloak_sub`: 수락 흐름에서 넘어온다 — 이 값이 있어야 이후 `require_family`가
         그 사람의 토큰 `sub`로 이 행을 찾아 로그인시킬 수 있다(없으면 계정 연결이 안 됨).
+        `org_id`: decisions.md #59(I2) — 시설 소속 caregiver/social_worker를 초대할 때만
+        채운다(초대(invitations)에서 넘어옴). 존재하는 시설인지는 호출자(라우터)가 먼저
+        검증한다(이 모듈은 organizations를 의존하지 않는다).
         """
         if not name or len(name) > 100:
             raise ApiError("VALIDATION_ERROR", "name은 1~100자여야 합니다.")
         if not contact or len(contact) > 100:
             raise ApiError("VALIDATION_ERROR", "contact는 1~100자여야 합니다.")
         return await self._repo.create(
-            user_id=user_id, role=role, name=name, contact=contact, keycloak_sub=keycloak_sub
+            user_id=user_id,
+            role=role,
+            name=name,
+            contact=contact,
+            keycloak_sub=keycloak_sub,
+            org_id=org_id,
         )

@@ -27,3 +27,7 @@ class FamilyMember:
     two_factor_enabled: bool
     keycloak_sub: str | None
     created_at: datetime
+    # B2G 시설 소속 — decisions.md #59(I2, 2026-09-13). NULL = 개인(대부분의 가족).
+    # 시설 소속 caregiver/social_worker만 채운다. organizations 모듈 참조는 순수
+    # 도메인이 다른 모듈에 의존하면 안 되므로 UUID만 든다.
+    org_id: UUID | None = None

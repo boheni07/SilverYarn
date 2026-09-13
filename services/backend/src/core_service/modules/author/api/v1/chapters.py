@@ -15,10 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core_service.auth_deps import (
     WRITE_ELDER_DATA_ROLES,
     AuthContext,
-    ConsentDirectory,
+    ElderAccessContext,
     authorize_elder_data_read,
     authorize_user_access,
-    get_consent_directory,
+    get_elder_access_context,
     require_auth,
 )
 from core_service.core.clients.llm_client import LLMClient
@@ -105,10 +105,10 @@ async def list_user_chapters(
     user_id: uuid.UUID,
     service: ChapterService = Depends(_service),
     ctx: AuthContext = Depends(require_auth),
-    consent_directory: ConsentDirectory = Depends(get_consent_directory),
+    access: ElderAccessContext = Depends(get_elder_access_context),
 ) -> DataResponse[list[ChapterResponse]]:
     """design.md §4.2 — 챕터 목록/본문 조회."""
-    await authorize_elder_data_read(ctx, user_id, consent_directory)
+    await authorize_elder_data_read(ctx, user_id, access)
     chapters = await service.list_chapters_for_user(user_id)
     return DataResponse(data=[_to_response(c) for c in chapters])
 
@@ -118,10 +118,10 @@ async def get_chapter(
     chapter_id: uuid.UUID,
     service: ChapterService = Depends(_service),
     ctx: AuthContext = Depends(require_auth),
-    consent_directory: ConsentDirectory = Depends(get_consent_directory),
+    access: ElderAccessContext = Depends(get_elder_access_context),
 ) -> DataResponse[ChapterResponse]:
     chapter = await service.get_chapter(chapter_id)
-    await authorize_elder_data_read(ctx, chapter.user_id, consent_directory)
+    await authorize_elder_data_read(ctx, chapter.user_id, access)
     return DataResponse(data=_to_response(chapter))
 
 
@@ -130,10 +130,10 @@ async def list_chapter_revisions(
     chapter_id: uuid.UUID,
     service: ChapterService = Depends(_service),
     ctx: AuthContext = Depends(require_auth),
-    consent_directory: ConsentDirectory = Depends(get_consent_directory),
+    access: ElderAccessContext = Depends(get_elder_access_context),
 ) -> DataResponse[list[ChapterRevisionResponse]]:
     chapter = await service.get_chapter(chapter_id)
-    await authorize_elder_data_read(ctx, chapter.user_id, consent_directory)
+    await authorize_elder_data_read(ctx, chapter.user_id, access)
     revisions = await service.list_revisions(chapter_id)
     return DataResponse(
         data=[

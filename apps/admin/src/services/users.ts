@@ -26,3 +26,9 @@ export async function listUsers(params: {
   const { data, pagination } = await apiClient.getPaginated<User>(`/users?${query}`);
   return { users: data, pagination };
 }
+
+/** PUT /users/{id}/organization — 어르신을 B2G 시설에 배정(orgId)하거나 해제(null).
+ * decisions.md #59(I2). */
+export async function setUserOrganization(userId: string, orgId: string | null): Promise<User> {
+  return apiClient.put<User>(`/users/${userId}/organization`, { orgId });
+}
