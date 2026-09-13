@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.54 (말벗돌봄 대화 화면·세션·mock STT/SLM 구현 완료 — §2.12)
+> **Version**: 0.55 (화면정의서 신규 분리 — §5.1)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -690,6 +690,8 @@ interface RetentionPolicy {     // v0.51 신규 — 보유기간 admin 설정(de
 ### 5.1 Screen Inventory
 
 > ✅ = apps/web·apps/mobile·apps/admin에 구현됨. 나머지는 미착수 또는 외부 결정 대기.
+>
+> **상세 화면정의서**: 아래는 요약표다 — 화면별 구성요소·사용자 액션·전체/영역별 화면 흐름도는 [`screen-definitions.md`](../screen-definitions.md)(v0.1, 신규) 참조.
 
 | 영역 | 화면 |
 |---|---|
@@ -985,6 +987,7 @@ silveryarn/
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.55 | 2026-09-13 | 사용자 요청 — "사용자 화면(UI/UX)만으로 화면설계(정의)서 작성, 첫 화면에 전체 흐름도, 사용자 웹·모바일앱·관리자 웹 구분". 신규 `docs/02-design/screen-definitions.md`(v0.1) — 실제 구현 코드 기준 모바일앱(M-01~M-07)·웹 사용자·가족 콘솔(W-01~W-12)·웹 관리자 콘솔(A-01~A-08) 27개 화면 전수 정의(목적·구성요소·사용자 액션·다음 화면·구현상태 뱃지). 최상단에 3영역 통합 전체 화면 흐름도, 각 Part 첫머리에 영역별 상세 흐름도(Mermaid, workflow-diagrams.md와 동일한 흑백 고대비 표기 규칙 재사용). §5.1에 상세 화면정의서로 가는 교차참조 추가(요약표는 design.md에 유지, 화면 단위 상세는 신규 문서로 분리) | NUBiz AX Initiative |
 | 0.54 | 2026-09-13 | **말벗돌봄 모드 대화 화면·세션 구현 완료**(§2.12) — 사용자가 "모바일앱 화면·동작 흐름은 SLM 모델 확정과 무관하게 지금 구현 가능하지 않냐"고 지적, 타당함을 인정하고 재프레이밍(진짜 블로커는 "모델 미선정"이 아니라 "인터페이스 뒤에 아무 구현도 없음") — 사용자가 "화면·흐름 완성 + mock 응답(STT/SLM 둘 다 가짜)"을 선택. 신규 `MockSttEngine`(고정 문장 순환)·`MockSlmEngine`(키워드 매칭 2문장, 문장 단위 스트리밍)을 각각 `SttEngine`/`SlmEngine` 인터페이스 구현체로 추가 — `benchmark/PlaceholderEngines.kt`의 의도적으로 예외를 던지는 `Unimplemented*Engine`과는 목적이 정반대(벤치마크 안전장치 vs 상시 동작하는 가짜 응답)라 재사용하지 않고 별도 신규. `CareConversationScreen` 전면 구현(대화 로그 LazyColumn, 듣기/생각/말하기 단계 표시, 마이크 버튼) + 신규 `ConversationSessionController`(STT→SLM 스트리밍→TTS→로컬 DB 기록 오케스트레이션, `ConversationBenchmarkRunner`와 동일한 단계 구성을 프로덕션 경로로 옮김). Room `conversations` 테이블에 실제 턴 기록, `AndroidNativeTtsEngine`으로 실제 음성 재생, 기록된 행은 기존 `SyncRunner`가 그대로 집어 업로드(§2.8) — 실 마이크 캡처(`AudioRecord`)가 아직 없어 "듣기"는 800ms 고정 지연으로 흉내 내고, `raw_audio_ref`가 없으면 `SyncRunner`가 업로드를 건너뛰므로 무음 더미 PCM 파일을 실제로 파일시스템에 써서 채운다(내용은 가짜, 파이프라인은 실물). 자서전 작가모드(M3)·비서모드(M5)는 이번 스코프에서 제외 — "대화 화면·세션·STT·SLM 연결"이라는 사용자 표현과 AppShell 자체의 "대화 탭 = 말벗돌봄 모드 고정 라우팅" 문서화에 맞춰 범위를 좁혔다. 유닛테스트 8건 신규(mobile Kotlin 누적 26개, Mock 엔진 순환·키워드 분기·스트리밍 검증) — Context 의존 `ConversationSessionController`는 기존 패턴대로(Robolectric 미도입) CI의 `assembleDebug`/계측 테스트로만 검증 | NUBiz AX Initiative |
 | 0.53 | 2026-09-13 | **출판/인쇄 파이프라인 구현 완료**(§2.6) — 법무·인프라·경영 미결 14건 완료 이후 "다음 사이클"로 Phase 3 출판 파이프라인 착수(사용자 결정, SLM 벤치마크는 환경상 실기기 없어 보류). 신규 `publications` 모듈(4계층) — `POST/GET /users/{id}/publications`, `GET /publications/{id}` 3개 엔드포인트. 조판 엔진은 reportlab(PDF, 한글 Adobe 표준 CJK CID 폰트)·EbookLib(ePub) — 둘 다 순수 로컬 라이브러리라 외부 서비스 계약 추정 불필요. `POST /sync/upload`와 동일한 비동기 arq 잡 패턴(`process_publication`). 전체 챕터 `confirmed` 전제조건을 서버가 검증. 완성본은 사진과 분리된 전용 MinIO 버킷(`STORAGE_BUCKET_PUBLICATIONS`)에 저장, presigned GET URL로만 노출(`StorageClient`에 버킷 파라미터화 + `put_object` 신규). **의도적 스코프 축소**: CMYK 300DPI 인쇄소 규격·표지 디자인·인쇄 발주·배송(`status=delivered`)은 디자인/조달 결정이 선행돼야 해 계속 스코프 밖(schema.md §3.17 원문 그대로). apps/web `(family)/publications` 화면(요청·이력·다운로드) 신규 — 기존 `types/consent-log.ts`에 있던 미구현 시절 `Publication` placeholder 인터페이스를 실제 API 응답 형태로 교체(`publication.ts` 신규). 유닛테스트 9건 신규(221개), 실 Postgres+MinIO E2E로 미확정 챕터 거부·PDF/ePub 실제 생성·presigned 다운로드·계정삭제 cascade까지 왕복 검증 | NUBiz AX Initiative |
 | 0.52 | 2026-09-13 | **문서 최신화 점검**(코드 대비 드리프트 정정, 신규 문서 추가 요청) — PR #37(organizations)·#39(retention/erasure)가 구현했지만 이 문서엔 반영이 누락돼 있던 부분을 정정. §1 파이프라인 참조 표(schema.md v1.4→v1.17, 엔티티 수 갱신). §3.1 TS 요약에 `User.orgId`·`FamilyMember.orgId`·`Invitation.orgId`·`ConversationChunk.retentionUntil`/`purgedAt`/`createdAt`·`ConsentLog.consentType`의 `third_party_access`/`international_transfer`(PR #34/#35 반영 누락분) 필드 보강 + `Organization`·`RetentionPolicy` 인터페이스 신규. §3.2 관계도에 Organization/RetentionPolicy 추가. §4.2 엔드포인트 표에 실제로는 이미 있었던 `GET/PUT /retention-policies`·`POST /users/{id}/erase` 3건 누락 추가(실행 중인 백엔드 `openapi.json`과 전수 대조해 이 3건 외엔 갭 없음을 확인). §5.1 화면 인벤토리에 시설 관리·보유기간 설정·계정 삭제 화면 반영. §7.1 RBAC 매트릭스에 3개 admin 전용 리소스 행 추가. §9.1/§11.1 모듈 트리에 `organizations`/`retention` 추가, 마이그레이션 범위 0001~0007→0001~0012. §11.2 item 1 테이블 수·버전 정정, item 5 페르소나 룰셋 "미구현"→구현됨 정정. 자매 문서도 동시 정비: `glossary.md`(organizations/retention/erasure 등 누락 용어 8건 추가), `workflow-diagrams.md`(§20 미결항목 다이어그램을 해결 상태로 갱신 + §21 계정 삭제·보유기간 파기 흐름 신규), `docs/01-plan/_INDEX.md`·`docs/02-design/_INDEX.md`(PDCA 현재 단계 Do로 정정, 전 문서 버전·상태 최신화). 신규 문서: `docs/02-design/data-classification-policy.md`(I1 후속 작업이던 "PII 수준" 경계 명문화) | NUBiz AX Initiative |

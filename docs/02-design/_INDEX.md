@@ -14,6 +14,7 @@
 | [design-tokens.md](./design-tokens.md) | ✅ Approved | 2026-09-07 (v1.2) | NUBiz AX Initiative | BI 가이드 컬러/타이포 → Tailwind 토큰 매핑, WCAG AA 대비 규칙, 접근성 최소기준 |
 | [workflow-diagrams.md](./workflow-diagrams.md) | 🔄 In Progress | 2026-09-13 (v0.6) | NUBiz AX Initiative | 비즈니스/업무/프로세스 흐름도 Mermaid 21종 (흑백 고대비판) |
 | [data-classification-policy.md](./data-classification-policy.md) | ✅ Approved | 2026-09-13 (v0.1, 신규) | NUBiz AX Initiative | PII/메타데이터 4단계 분류 + 외부 통신 경계 정책 (decisions.md #58/I1 후속) |
+| [screen-definitions.md](./screen-definitions.md) | 🔄 In Progress | 2026-09-13 (v0.1, 신규) | NUBiz AX Initiative | 사용자 화면(UI/UX) 기준 화면정의서 — 모바일앱·웹(사용자·가족)·웹(관리자) 27개 화면 전수, 전체/영역별 화면 흐름도 포함 |
 | [cto-review-2026-09-05.md](./cto-review-2026-09-05.md) | ✅ Approved | 2026-09-06 | CTO팀(7개 관점) | 개발팀 착수회의 대비 아키텍처/인프라/보안/FE/백엔드·API/QA/PM 심사 — Blocker 28건, 전원 Go with Conditions |
 
 ---
@@ -50,6 +51,7 @@ Plan(✅) → Design(✅ 기준선 확정, Do와 병행 갱신) → Do(🔄 현�
 ├── workflow-diagrams.md
 ├── sync-contract.md
 ├── data-classification-policy.md
+├── screen-definitions.md
 ├── cto-review-2026-09-05.md
 └── features/
     └── silveryarn-platform.design.md
@@ -84,3 +86,4 @@ Plan(✅) → Design(✅ 기준선 확정, Do와 병행 갱신) → Do(🔄 현�
 | 2026-09-05 | Index 생성, silveryarn-platform.design.md 등록 |
 | 2026-09-07 | 3차 design-validator 검증 M-4 반영 — design-tokens/workflow-diagrams 버전 표기 추가, sync-contract.md 신규 등록, Folder Structure 블록 실제 파일 목록 반영 |
 | 2026-09-13 | **문서 최신화 점검** — PDCA 현재 단계를 "Design"에서 "Do"로 정정(2026-09-08부터 실제로는 Do 단계였으나 이 표만 갱신 누락). 전 문서 버전·최종수정일을 실제 값으로 갱신(design.md v0.6→v0.52, workflow-diagrams v0.4→v0.5, sync-contract v0.1→v0.7 반영 누락 정정). 신규 `data-classification-policy.md` 등록(decisions.md #58/I1 후속). PDCA Status 블록에 법무·인프라·경영 미결 14건 완료 현황 반영 | NUBiz AX Initiative |
+| 2026-09-13 | 신규 `screen-definitions.md` 등록 — 사용자 화면(UI/UX)만을 기준으로 모바일앱·웹(사용자·가족)·웹(관리자) 27개 화면을 실제 구현 코드 기준 전수 정의(사용자 요청). 첫 절에 전체 화면 흐름도, 영역별로 별도 흐름도 포함 | NUBiz AX Initiative |
