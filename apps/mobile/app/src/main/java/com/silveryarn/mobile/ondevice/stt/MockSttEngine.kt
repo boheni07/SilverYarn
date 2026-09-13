@@ -8,7 +8,7 @@ package com.silveryarn.mobile.ondevice.stt
  * 그쪽은 실 구현체 없이 벤치마크를 돌리면 곧바로 예외로 실패하게 만드는 안전장치이고,
  * 이 클래스는 절대 실패하지 않고 그럴듯한 고정 문장을 순환 반환한다. 실 STT가 붙으면
  * 이 파일만 지우고 [SttEngine] 구현체로 교체하면 된다 — 호출부
- * ([com.silveryarn.mobile.presentation.care.ConversationSessionController])는 인터페이스만
+ * ([com.silveryarn.mobile.presentation.companion.ConversationSessionController])는 인터페이스만
  * 알아 변경이 필요 없다.
  *
  * `pcmAudio`는 내용을 보지 않는다 — 실 마이크 캡처([android.media.AudioRecord])가 아직

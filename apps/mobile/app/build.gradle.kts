@@ -69,6 +69,9 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    // 은실이 아바타 펄스 애니메이션(presentation/companion/CompanionScreen.kt) — material3가
+    // 전이 의존성으로 물고 오긴 하지만 API를 직접 쓰므로 명시.
+    implementation("androidx.compose.animation:animation-core")
     implementation("androidx.activity:activity-compose:1.9.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
 

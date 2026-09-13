@@ -162,6 +162,18 @@
 
 ---
 
+## 2.10 모바일 UI 패러다임 전환 — 대화 전용 인터페이스 (Do 단계, 2026-09-13 — 사용자 결정)
+
+> 사용자가 "어르신용 안드로이드폰의 UI/UX는 대화형으로 작동해야 한다 — 모든 조작이 대화로 가능해야 한다"고 요구, 컨셉 프로토타입(HTML) 검토 후 실제 Kotlin 구현으로 확정했다.
+
+| # | 항목 | 결정 | 후속 작업 |
+|---|------|------|------|
+| 66 | 에이전트 페르소나 명칭·통일 여부 (design.md §2.10, AuthorAgent/ScheduleAgent 표시명 "미정") | **"은실이" 하나로 통일**(사용자 결정 — 원안 "은빛이"에서 재명명). 자서전 작가모드·비서모드가 하던 일도 은실이가 하나의 대화 안에서 자연스럽게 수행 — 페르소나별 화면 분리를 없앤 것과 표리일체 결정 | design.md §2.10 표 갱신, `presentation/companion/` 패키지 전체가 이 이름을 씀(`CompanionScreen`, "은실이" 하드코딩 텍스트) |
+| 67 | 모바일 하단 4탭(대화/자서전/일정/설정, PR #23) 존치 여부 | **완전히 제거 — 화면 전체를 대화 하나로 통합**(사용자 결정, "탭은 유지하고 대화 탭만 교체" 대안 대신 선택). 설정만은 대화로 표현하기 애매한 기기 설정(Wi-Fi 등록 등)이라 예외적으로 남기되, 상시 탭이 아니라 `installMode == "normal"`일 때만 보이는 아주 작은 텍스트 진입점으로 축소 — 키오스크 모드는 원래도 COSU lockTask로 설정 접근이 잠겨 있었다(decisions.md #6) | ✅ **구현 완료**(2026-09-13) — `AppShell.kt` 전면 개편(`BottomTab` enum·`BottomNavBar` 제거). `HomeScreen`·`CareConversationScreen`·`AuthorInterviewScreen`·`AssistantHomeScreen` 4개 화면 삭제, `presentation/companion/CompanionScreen`으로 통합 |
+| 68 | 발화 시작 트리거 — 버튼 전용 vs 자동 감지 병행 | **두 경로 모두 지원**(사용자 결정: "눌러서 시작할 수도 있고 그냥 이야기를 시작해도 되는 구조") — 버튼을 누르면 진폭 임계값을 기다리지 않고 즉시 발화 중으로 간주하고, 그냥 말을 걸면 VAD가 스스로 진폭 임계값 초과를 감지해 같은 파이프라인을 탄다. 두 경로 모두 종료 판정(무음 800ms, decisions.md #32와 동일 기준)을 공유 | ✅ **구현 완료**(2026-09-13) — 신규 `ondevice/vad/VoiceActivityDetector`(`AmplitudeVoiceActivityDetector`, `AudioRecord` 진폭 임계값 기반). CONVENTIONS.md §2.2.1의 "WebRTC VAD" 후보 자체는 여전히 실기기 벤치마크 대기(#27/#9/#31) — 이 구현체는 그 자리를 채우는 임시 구현이며, 판정 타이밍(무음 800ms)만 이미 결정된 값을 재사용했다 |
+
+---
+
 ## 3. 별도 검토가 필요한 항목 (AI가 임의 결정하지 않음)
 
 | # | 항목 | 사유 | 상태 |
@@ -213,6 +225,7 @@
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.26 | 2026-09-13 | §2.10 신설 — 모바일 UI 패러다임 전환(사용자 결정). #66(에이전트 페르소나 "은실이"로 통일, 화면별 분리 폐지) · #67(하단 4탭 완전 제거, 대화 전용 화면으로 통합) · #68(발화 시작 트리거 — 버튼+VAD 자동감지 병행, `AmplitudeVoiceActivityDetector` 신규 구현). apps/mobile `presentation/companion/` 패키지 신설, 기존 `home`/`care`/`author`/`assistant` 4개 화면 삭제 | NUBiz AX Initiative (사용자 결정) |
 | 0.25 | 2026-09-13 | 문서 최신화 점검 — #58(I1) "PII 수준 경계 명문화" 후속 작업 완료 갱신(신규 `data-classification-policy.md`). 이로써 §2.9의 14건 전부(각 항목의 정책 확정 + 해당하는 후속 구현 작업)가 완결 상태 | NUBiz AX Initiative |
 | 0.24 | 2026-09-13 | Do 단계 — #56(Q5) 구현 완료 갱신. crypto-shredding(Postgres cascade, 마이그레이션 0012) + `UserErasureService`(Qdrant/Neo4j/MinIO) + `RetentionPurgeService`(대화 원문 시간기반 파기) + admin 보유기간 설정 화면. 이로써 `blocked-decisions-tracker.md`의 법무·인프라·경영 미결 14건(#52~#65) **전체 구현 완료** | NUBiz AX Initiative |
 | 0.23 | 2026-09-12 | Do 단계 — §2.9 신설. `blocked-decisions-tracker.md`의 법무·인프라·경영 미결 14건(Q1~Q6·I1~I5·경영 3건) **전체를 사용자와 대화로 일괄 확정**(#52~#65). 법무 6건은 정식 외부 법률자문을 대체하지 않는 잠정 회사 정책임을 명시. 핵심: 정서점수는 일반개인정보(#52)·가족대리동의 유효(#53)·가족=위탁이용/복지사=제3자제공(#54)·정서기능 "진단" 표현 회피(#55)·crypto-shredding 파기채택+보유기간 admin 설정화(#56)·FCM 유지+국외이전고지 UI(#57)·PII만 egress 차단(#58)·organizations 테넌시 지금 착수(#59)·blind index 키만 지금 분리(#60)·관측스택(GlitchTip+Prometheus/Grafana/Loki) 지금 구축(#61)·서버LLM 비실시간 전용 확정(#62)·3개월 파일럿 목표(#63)·결제도메인 계속 스코프아웃(#64)·외부TTS Phase3 유예 재확인(#65). §3 표의 #12·#13·#14·#23·#46·#48 상태 갱신 | NUBiz AX Initiative (사용자 결정) |

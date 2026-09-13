@@ -89,6 +89,6 @@ fun AppEntry(
                 onDone = { state = AppState.Home(current.installMode) },
             )
 
-        is AppState.Home -> AppShell(modifier = modifier)
+        is AppState.Home -> AppShell(modifier = modifier, installMode = current.installMode)
     }
 }
