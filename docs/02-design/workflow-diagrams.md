@@ -1,12 +1,12 @@
 # 은빛실타래 — 비즈니스/업무/프로세스 흐름도 (Workflow Diagrams)
 
-> **Summary**: 현재(v0.52) 설계 상태를 반영한 전체 업무·프로세스 흐름도 모음 — Mermaid 다이어그램 21종 (흑백 고대비판)
+> **Summary**: 현재(v0.56) 설계 상태를 반영한 전체 업무·프로세스 흐름도 모음 — Mermaid 다이어그램 21종 (흑백 고대비판)
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.6 *(문서 정합성 점검 — 스테일 버전 참조·엔티티 수 정정, 상세 이력은 하단 Version History)*
+> **Version**: 0.7 *(문서 정합성 점검 — 페르소나명 "은실이" 통일 반영, 상세 이력은 하단 Version History)*
 > **Date**: 2026-09-13
 > **Status**: Draft
-> **Source of truth**: [`silveryarn-platform.design.md`](./features/silveryarn-platform.design.md)(v0.52), [`sync-contract.md`](./sync-contract.md)(v0.7), [`schema.md`](../01-plan/schema.md)(v1.17), [`mobile-schema.md`](../01-plan/mobile-schema.md)(v0.11), [`decisions.md`](../01-plan/decisions/silveryarn-platform.decisions.md)(v0.25)
+> **Source of truth**: [`silveryarn-platform.design.md`](./features/silveryarn-platform.design.md)(v0.57), [`sync-contract.md`](./sync-contract.md)(v0.8), [`schema.md`](../01-plan/schema.md)(v1.18), [`mobile-schema.md`](../01-plan/mobile-schema.md)(v0.11), [`decisions.md`](../01-plan/decisions/silveryarn-platform.decisions.md)(v0.26)
 
 > 원본 `Plan/자서전_말벗돌봄_프로세스_흐름도.md`(기획서 v0.5 기준)를 대체하지 않고, **그 이후 확정된 아키텍처 변경분**(Closed-Loop, 실시간 대화 파이프라인, Zero-Neural RAG, Neo4j 지식그래프, 온프레미스 vLLM 확정)까지 반영해 전체를 다시 정리한 현재판이다. 원본은 기획 의도 이해용으로 계속 보존한다(CLAUDE.md SoR 원칙).
 >
@@ -271,7 +271,7 @@ flowchart TD
     Sync --> Session["다음 대화 세션 시작"]
     Session --> Mode{"진입 모드"}
     Mode -- "자서전 작가 모드" --> Author["인터뷰 형식으로 사진 제시<br/>'이 사진 기억나세요?'"]
-    Mode -- "말벗돌봄 모드" --> Care["은빛이가 자연스러운 회상 대화로 제시"]
+    Mode -- "말벗돌봄 모드" --> Care["은실이가 자연스러운 회상 대화로 제시"]
     Author --> Answer["음성 답변 수집 · 로컬 저장"]
     Care --> Answer
     Answer --> Link["사진ID + 회고 음성/전사 연결<br/>recall_status=completed"]
@@ -572,13 +572,15 @@ flowchart LR
 
 ## 19. 에이전트 라우팅 — 3대 모드 의도 분류
 
+> **2026-09-13 갱신**: 모바일 UI는 하단 4탭·화면 4종을 걷어내고 은실이 대화 화면 하나로 통합됐다(decisions.md #67) — 그러나 이 도표가 그리는 **의도 분류 자체**(회고/일상/일정 중 어디로 처리할지)는 여전히 유효하다. 화면이 사라진 건 "그 결과를 다른 화면으로 보여주던 것"뿐이고, 은실이는 하나의 대화 안에서 이 세 톤을 오가며 응답한다(design.md §2.10 페르소나 통일). `presentation/companion/ConversationSessionController`의 얕은 키워드 매칭("자서전" 언급 → `author` 모드 기록)이 이 라우터의 극도로 단순화된 임시 구현이다.
+
 ```mermaid
 %%{init: {'theme':'base', 'themeVariables': {'primaryColor':'#ffffff','primaryTextColor':'#111111','primaryBorderColor':'#111111','lineColor':'#111111','background':'#ffffff','mainBkg':'#ffffff','textColor':'#111111','edgeLabelBackground':'#ffffff'}}}%%
 flowchart TD
     Input["온디바이스 STT 텍스트"] --> Router{"경량 온디바이스 라우터"}
-    Router -- "회고/구술 키워드" --> Author["AuthorAgent<br/>인터뷰어 페르소나 (표시명 미정)"]
-    Router -- "감성/일상 발화" --> Care["CareAgent<br/>은빛이"]
-    Router -- "일정/복약 키워드" --> Sched["ScheduleAgent<br/>비서 페르소나 (표시명 미정)"]
+    Router -- "회고/구술 키워드" --> Author["AuthorAgent<br/>은실이(인터뷰어 톤)"]
+    Router -- "감성/일상 발화" --> Care["CareAgent<br/>은실이(오랜 벗 톤)"]
+    Router -- "일정/복약 키워드" --> Sched["ScheduleAgent<br/>은실이(비서 톤)"]
     Author --> A1["로컬 질문목록 조회"] --> AT["TTS 출력"]
     Care --> A2["FTS5 회상 검색(§5)"] --> AT
     Sched --> A3["로컬 엔티티 파서(§9)"] --> AT
@@ -668,6 +670,7 @@ flowchart TD
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.7 | 2026-09-13 | 문서 정합성 점검(모바일 UI 패러다임 전환, decisions.md #66~#68 후속) — §16(사진 미회고)·§19(에이전트 라우팅) 다이어그램의 "은빛이" 라벨을 "은실이"로 정정, §19의 AuthorAgent/ScheduleAgent "표시명 미정" 표기를 통일된 톤 표기로 정정. §19에 2026-09-13 갱신 노트 추가 — 화면은 통합됐지만 의도 분류 개념 자체는 여전히 유효함을 명시 | NUBiz AX Initiative |
 | 0.6 | 2026-09-13 | 문서 정합성 점검 — 헤더 Source of truth의 decisions.md 참조(v0.24→v0.25) 정정. §18 다이어그램 라벨의 스테일 엔티티 수("17개"→"도메인 19개+부속 4개") 정정 | NUBiz AX Initiative |
 | 0.5 | 2026-09-13 | 문서 최신화 점검. §20을 "미결 의사결정" 경고판에서 "해결 현황"으로 전면 갱신 — D1(#52/#55)·D2(#63)·D6(#56)는 확정+구현 완료(strong 스타일)로 정정, D3(#27)·D4(#9)는 여전히 실측 대기지만 "법무 아님, 벤치마크 하니스 준비 완료"로 라벨 정정. §21 신규 — 계정 삭제(erasure) 시퀀스 + 보유기간 만료 파기 배치 플로우차트(decisions.md #56, Q5). 헤더 Source of truth 버전 전체 최신화 | NUBiz AX Initiative |
 | 0.1 | 2026-09-06 | Closed-Loop/실시간파이프라인/Neo4j/FTS5 반영한 현재판 워크플로우 20종 신규 작성 | NUBiz AX Initiative |

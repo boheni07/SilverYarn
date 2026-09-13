@@ -2,7 +2,7 @@
 
 > Phase 2 Deliverable — 모노레포 전체 구조 (Design 문서 §11.1을 실행 가능한 수준으로 구체화)
 
-**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-13 · **Version**: 1.40
+**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-13 · **Version**: 1.41
 
 ---
 
@@ -107,13 +107,14 @@ services/backend/src/core_service/
 
 ```
 apps/mobile/src/main/java/com/silveryarn/mobile/
-├── presentation/        # Jetpack Compose 화면 — 온보딩, 홈, 작가/말벗돌봄/비서 모드 UI
+├── presentation/        # Jetpack Compose 화면 — 온보딩 + 은실이 대화 화면 하나로 통합(2026-09-13,
+│   │                     # decisions.md #66~#68 — 구 author/care/assistant/home 4개 패키지는 삭제됨)
 │   ├── onboarding/
-│   ├── author/
-│   ├── care/
-│   ├── assistant/
-│   └── settings/
+│   ├── sync/             # FirstSyncScreen(최초 동기화)
+│   ├── companion/         # CompanionScreen(은실이 대화, 유일한 홈) + ConversationSessionController
+│   └── settings/          # 일반 모드 전용 최소 진입점(하단 탭 아님)
 ├── ondevice/             # VAD·STT·SLM·TTS, 온디바이스 의도분류 라우터
+│   ├── vad/               # AmplitudeVoiceActivityDetector(진폭 임계값 임시 구현, decisions.md #68)
 │   ├── stt/
 │   ├── slm/
 │   └── tts/
@@ -153,7 +154,7 @@ apps/web/src/
 | UI/UX 화면설계서 화면 | 매핑 경로 |
 |---|---|
 | 온보딩·초기설정 (모바일) | `apps/mobile/.../presentation/onboarding/` |
-| 자서전 작가모드 인터뷰 (모바일) | `apps/mobile/.../presentation/author/` |
+| 은실이 대화 화면 (모바일, 회고·자서전·사진·일정 통합, v1.41) | `apps/mobile/.../presentation/companion/` |
 | 자서전 뷰어·챕터 읽기 (웹) | `apps/web/.../app/(user)/chapters/` |
 | 원고 감수·대조 편집 (웹·가족) | `apps/web/.../app/(family)/review/` |
 | Wi-Fi 동기화 모니터링 (웹·관리자) | `apps/admin/.../app/(admin)/sync-monitor/` |
@@ -238,3 +239,4 @@ Presentation ──→ Application ──→ Domain ←── Infrastructure
 | 1.38 | 2026-09-13 | `retention` 모듈 신규(4계층 전부) — 보유기간 정책 CRUD + 계정 삭제(erasure) 오케스트레이션(decisions #56 Q5, PR #39). `care` 모듈이 `RetentionPolicyService`를 교차 참조해 `conversation_chunks` 생성 시점에 `retention_until`을 계산 | NUBiz AX Initiative |
 | 1.39 | 2026-09-13 | **문서 정합성 점검** — §1/§2의 모듈 수를 "12개"에서 **14개**로 정정(`organizations`/`retention` 누락 반영, 위 1.37/1.38 갱신 누락분). 헤더 Version이 실제 최신 변경이력(1.36)보다 뒤처져 있던 걸 발견(1.27로 정지) — 정정. **버전 이력 표 자체가 1.22 이후 뒤죽박죽(날짜순 아님)으로 append돼 있던 걸 발견해 1.22→1.39 오름차순으로 재정렬**(내용은 변경 없음, 순서만 정정) | NUBiz AX Initiative |
 | 1.40 | 2026-09-13 | `publications` 모듈 신규(4계층 전부) — 출판/인쇄 파이프라인(design.md §2.6, v0.53). §1/§2 모듈 수를 14개→**15개**로 정정. `author` 모듈의 `deps.py`를 교차 참조해 전체 챕터 confirmed 여부를 검증. 조판 엔진(reportlab/EbookLib)은 외부 서비스가 아니라 이 모듈만의 로직이라 `core/clients/`가 아니라 `application/book_builder_service.py`에 위치시킨 이유를 명시 | NUBiz AX Initiative |
+| 1.41 | 2026-09-13 | **문서 정합성 점검(모바일 UI 패러다임 전환 후속, decisions.md #66~#68)** — §3(모바일 내부 구조) 트리가 이미 삭제된 `presentation/{author,care,assistant}` 패키지를 여전히 보여주고 있던 걸 발견해 정정: 하나로 통합된 `presentation/companion/`으로 교체, 실제로는 있었지만 트리에 누락돼 있던 `presentation/sync/`도 추가, `ondevice/vad/`(신규 `AmplitudeVoiceActivityDetector`) 반영. §5 화면 인벤토리 매핑 표의 "자서전 작가모드 인터뷰 → presentation/author/" 행을 "은실이 대화 화면 → presentation/companion/"으로 교체 | NUBiz AX Initiative |
