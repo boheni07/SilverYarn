@@ -43,6 +43,11 @@ export default function HomePage() {
             전체 기기 통합 모니터링
           </Button>
         </Link>
+        <Link href="/organizations" className="mt-3 block">
+          <Button variant="secondary" className="w-full">
+            시설 관리 (B2G)
+          </Button>
+        </Link>
 
         <div className="my-5 flex items-center gap-3 text-caption text-ink-faint">
           <span className="h-px flex-1 bg-border" />

@@ -44,6 +44,8 @@ class InvitationModel(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # 마이그레이션 0011, decisions.md #59(I2) — 시설 소속 직원 초대 시 채움
+    org_id: Mapped[uuid.UUID | None] = mapped_column(PgUUID(as_uuid=True), nullable=True)
 
 
 class InvitationRepository:
@@ -62,6 +64,7 @@ class InvitationRepository:
             status=InvitationStatus(model.status),
             created_at=model.created_at,
             expires_at=model.expires_at,
+            org_id=model.org_id,
         )
 
     async def get_by_id(self, invitation_id: uuid.UUID) -> Invitation | None:
@@ -100,6 +103,7 @@ class InvitationRepository:
         role: FamilyRole,
         token: str,
         expires_at: datetime,
+        org_id: uuid.UUID | None = None,
     ) -> Invitation:
         model = InvitationModel(
             id=uuid.uuid4(),
@@ -112,6 +116,7 @@ class InvitationRepository:
             status=InvitationStatus.PENDING.value,
             created_at=datetime.now(UTC),
             expires_at=expires_at,
+            org_id=org_id,
         )
         self._session.add(model)
         await self._session.flush()

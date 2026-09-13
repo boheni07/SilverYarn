@@ -14,6 +14,8 @@ export async function createInvitation(input: {
   contact: string;
   role: FamilyRole;
   invitedBy?: string;
+  // 시설 소속 caregiver/social_worker를 초대할 때만 채운다 — decisions.md #59(I2).
+  orgId?: string;
 }): Promise<Invitation> {
   return apiClient.post<Invitation>("/invitations", input);
 }

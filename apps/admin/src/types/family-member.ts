@@ -9,6 +9,8 @@ export interface FamilyMember {
   name: string;
   contact: string;
   twoFactorEnabled: boolean;
+  // B2G 시설 소속 — decisions.md #59(I2). caregiver/social_worker만 채워진다.
+  orgId?: string;
 }
 
 export const FAMILY_ROLE_LABEL: Record<FamilyRole, string> = {

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from dataclasses import dataclass
 from typing import Protocol
 
 from fastapi import Depends, Header, Request
@@ -50,6 +51,10 @@ __all__ = [
     "authorize_elder_data_read",
     "ConsentDirectory",
     "get_consent_directory",
+    "UserDirectory",
+    "get_user_directory",
+    "ElderAccessContext",
+    "get_elder_access_context",
     "require_verified_subject",
     "require_family",
     "require_auth",
@@ -82,6 +87,7 @@ class _FamilyMemberDirectory:
                 user_id=m.user_id,
                 role=m.role,
                 two_factor_enabled=m.two_factor_enabled,
+                org_id=m.org_id,
             )
             for m in members
         ]
@@ -143,20 +149,66 @@ def get_consent_directory(session: AsyncSession = Depends(get_db)) -> ConsentDir
     return _ConsentDirectory(session)
 
 
+class UserDirectory(Protocol):
+    """B2G 테넌시 안전망(decisions.md #59, I2) — 어르신의 시설 소속 조회."""
+
+    async def get_org_id(self, user_id: uuid.UUID) -> uuid.UUID | None: ...
+
+
+class _UserDirectory:
+    """`UserDirectory` 구현 — `users` 리포지토리 위임. PII 복호화가 필요 없는
+    얕은 조회(org_id만)라 전용 메서드를 쓴다(`UserRepository.get_by_id`는
+    birth_date 복호화까지 하는 무거운 조회)."""
+
+    def __init__(self, session: AsyncSession):
+        self._session = session
+
+    async def get_org_id(self, user_id: uuid.UUID) -> uuid.UUID | None:
+        from core_service.modules.users.infrastructure.user_repository import UserRepository
+
+        return await UserRepository(self._session).get_org_id(user_id)
+
+
+def get_user_directory(session: AsyncSession = Depends(get_db)) -> UserDirectory:
+    return _UserDirectory(session)
+
+
+@dataclass
+class ElderAccessContext:
+    """`authorize_elder_data_read`가 필요로 하는 조회 포트 묶음 — 라우터마다
+    ConsentDirectory·UserDirectory를 따로 선언하지 않도록 하나로 합친다."""
+
+    consent: ConsentDirectory
+    users: UserDirectory
+
+
+def get_elder_access_context(
+    consent_directory: ConsentDirectory = Depends(get_consent_directory),
+    user_directory: UserDirectory = Depends(get_user_directory),
+) -> ElderAccessContext:
+    return ElderAccessContext(consent=consent_directory, users=user_directory)
+
+
 async def authorize_elder_data_read(
     principal: Principal,
     target_user_id: uuid.UUID,
-    consent_directory: ConsentDirectory,
+    access: ElderAccessContext,
     *,
     require_2fa: bool = True,
 ) -> None:
     """챕터·사진·대화·일정 등 어르신 데이터 **조회** 전용 — `authorize_user_access`에
-    social_worker 게이트를 얹는다(decisions.md #54, 2026-09-12 사용자 결정).
+    두 가지를 얹는다: ① social_worker 동의 게이트(decisions.md #54), ② B2G 시설
+    테넌시 안전망(decisions.md #59, I2).
 
     Q3: 가족·caregiver는 제26조 위탁범위 내 이용이라 기존과 동일하게 무조건 허용.
     복지사(social_worker)는 제17조 제3자제공으로 봐서, 어르신(또는 가족 대리)이
     `third_party_access` 동의를 준 경우에만 허용한다 — 이전의 전면 fail-closed
     (decisions.md #48)를 대체한다.
+
+    I2: caregiver/social_worker가 시설(org_id) 소속이면, 그 어르신도 같은 시설
+    소속일 때만 허용한다. 개별 초대(family_members)가 이미 있어도 시설이 다르면
+    차단 — 설정 실수로 다른 시설 직원이 잘못 연결된 경우의 안전망이다. B2C
+    가족(org_id 없음)은 이 체크 자체를 안 탄다.
     """
     authorize_user_access(
         principal, target_user_id, allowed_roles=_SOCIAL_WORKER_READ_ROLES, require_2fa=require_2fa
@@ -165,14 +217,20 @@ async def authorize_elder_data_read(
     if not isinstance(principal, AuthContext) or principal.is_admin:
         return
     membership = principal.membership_for(target_user_id)
-    if membership is None or membership.role != FamilyRole.SOCIAL_WORKER:
-        return  # family/caregiver는 위 authorize_user_access 통과로 충분
-
-    if not await consent_directory.has_third_party_access(target_user_id):
+    if membership is None:
+        return  # 여기 도달했다는 건 admin인 경우뿐(위에서 이미 return) — 방어적 처리
+    if membership.role == FamilyRole.SOCIAL_WORKER and not await access.consent.has_third_party_access(
+        target_user_id
+    ):
         raise ApiError(
             "FORBIDDEN",
             "복지사 열람에는 어르신(또는 가족 대리)의 제3자 제공 동의가 필요합니다.",
         )
+
+    if membership.org_id is not None:
+        elder_org_id = await access.users.get_org_id(target_user_id)
+        if elder_org_id != membership.org_id:
+            raise ApiError("FORBIDDEN", "다른 시설 소속 어르신의 데이터는 열람할 수 없습니다.")
 
 
 # --------------------------------------------------------------------------- #

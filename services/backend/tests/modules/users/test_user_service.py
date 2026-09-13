@@ -42,6 +42,15 @@ class FakeUserRepository:
             summary=summary, keywords=list(keywords), source_chapter_count=source_chapter_count
         )
 
+    async def set_organization(self, user_id: uuid.UUID, org_id: uuid.UUID | None) -> None:
+        if user_id not in self._store:
+            raise LookupError(f"user {user_id} not found")
+        self._store[user_id].org_id = org_id
+
+    async def get_org_id(self, user_id: uuid.UUID) -> uuid.UUID | None:
+        user = self._store.get(user_id)
+        return user.org_id if user else None
+
 
 class FakeSummarizer:
     """§2.11 4단계 — LLMClient.summarize_persona_memory 대역."""
@@ -222,3 +231,28 @@ class TestPersonaSnapshot:
 
         with pytest.raises(RuntimeError):
             await service.refresh_persona_snapshot(user.id, [("요약1", ["k1"])], FakeSummarizer(fail=True))
+
+
+class TestOrganizationAssignment:
+    """decisions.md #59(I2) — 어르신을 B2G 시설에 배정/해제."""
+
+    async def test_set_organization_assigns_org(self, service: UserService) -> None:
+        user = await service.create_user(name="김순자", birth_date=None)
+        org_id = uuid.uuid4()
+
+        result = await service.set_organization(user.id, org_id)
+
+        assert result.org_id == org_id
+        assert (await service.get_user(user.id)).org_id == org_id
+
+    async def test_set_organization_none_clears_it(self, service: UserService) -> None:
+        user = await service.create_user(name="김순자", birth_date=None)
+        await service.set_organization(user.id, uuid.uuid4())
+
+        result = await service.set_organization(user.id, None)
+
+        assert result.org_id is None
+
+    async def test_set_organization_missing_user_raises_not_found(self, service: UserService) -> None:
+        with pytest.raises(ApiError, match="찾을 수 없습니다"):
+            await service.set_organization(uuid.uuid4(), uuid.uuid4())

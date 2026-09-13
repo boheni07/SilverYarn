@@ -28,6 +28,9 @@ class Invitation:
     status: InvitationStatus
     created_at: datetime
     expires_at: datetime
+    # decisions.md #59(I2) — 시설 소속 직원을 초대할 때만 채운다. 수락 시점에
+    # family_members.org_id로 그대로 옮겨진다.
+    org_id: UUID | None = None
 
     def is_expired(self, now: datetime | None = None) -> bool:
         return (now or datetime.now(UTC)) >= self.expires_at

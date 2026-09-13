@@ -33,6 +33,9 @@ class User:
     created_at: datetime
     updated_at: datetime
     persona_snapshot: PersonaSnapshot | None = None
+    # B2G 시설 소속 — decisions.md #59(I2, 2026-09-13). NULL = B2C 개인 사용자(대부분).
+    # organizations 모듈 참조는 순수 도메인이 다른 모듈에 의존하면 안 되므로 UUID만 든다.
+    org_id: UUID | None = None
 
     def validate_name(self) -> None:
         """비즈니스 규칙: name은 schema.md상 NOT NULL, VARCHAR(100)."""

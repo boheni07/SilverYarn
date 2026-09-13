@@ -36,6 +36,9 @@ from core_service.modules.invitations.infrastructure.invitation_repository impor
 from core_service.modules.notifications.infrastructure.notification_setting_repository import (  # noqa: F401
     NotificationSettingModel,
 )
+from core_service.modules.organizations.infrastructure.organization_repository import (  # noqa: F401
+    OrganizationModel,
+)
 from core_service.modules.photo_requests.infrastructure.photo_request_repository import (  # noqa: F401
     PhotoRequestModel,
 )

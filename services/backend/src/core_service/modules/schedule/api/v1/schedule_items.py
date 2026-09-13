@@ -14,11 +14,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core_service.auth_deps import (
     WRITE_ELDER_DATA_ROLES,
     AuthContext,
-    ConsentDirectory,
+    ElderAccessContext,
     Principal,
     authorize_elder_data_read,
     authorize_user_access,
-    get_consent_directory,
+    get_elder_access_context,
     require_auth,
     require_principal,
 )
@@ -91,10 +91,10 @@ async def list_schedule_items(
     user_id: uuid.UUID,
     service: ScheduleItemService = Depends(_service),
     ctx: AuthContext = Depends(require_auth),
-    consent_directory: ConsentDirectory = Depends(get_consent_directory),
+    access: ElderAccessContext = Depends(get_elder_access_context),
 ) -> DataResponse[list[ScheduleItemResponse]]:
     """design.md §4.2 — 일정/복약 목록 조회(L-12)."""
-    await authorize_elder_data_read(ctx, user_id, consent_directory)
+    await authorize_elder_data_read(ctx, user_id, access)
     items = await service.list_schedule_items_for_user(user_id)
     return DataResponse(data=[_to_response(i) for i in items])
 
@@ -125,10 +125,10 @@ async def get_schedule_item(
     schedule_item_id: uuid.UUID,
     service: ScheduleItemService = Depends(_service),
     ctx: AuthContext = Depends(require_auth),
-    consent_directory: ConsentDirectory = Depends(get_consent_directory),
+    access: ElderAccessContext = Depends(get_elder_access_context),
 ) -> DataResponse[ScheduleItemResponse]:
     item = await service.get_schedule_item(schedule_item_id)
-    await authorize_elder_data_read(ctx, item.user_id, consent_directory)
+    await authorize_elder_data_read(ctx, item.user_id, access)
     return DataResponse(data=_to_response(item))
 
 

@@ -39,6 +39,8 @@ class FamilyMemberModel(Base):
     # 한 사람이 여러 어르신을 담당하면 같은 sub로 여러 행이 생긴다.
     keycloak_sub: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # 마이그레이션 0011, decisions.md #59(I2) — B2G 시설 소속(안전망 테넌시 체크용)
+    org_id: Mapped[uuid.UUID | None] = mapped_column(PgUUID(as_uuid=True), nullable=True)
 
 
 class FamilyMemberRepository:
@@ -56,6 +58,7 @@ class FamilyMemberRepository:
             two_factor_enabled=model.two_factor_enabled,
             keycloak_sub=model.keycloak_sub,
             created_at=model.created_at,
+            org_id=model.org_id,
         )
 
     async def get_by_id(self, family_member_id: uuid.UUID) -> FamilyMember | None:
@@ -86,6 +89,7 @@ class FamilyMemberRepository:
         name: str,
         contact: str,
         keycloak_sub: str | None = None,
+        org_id: uuid.UUID | None = None,
     ) -> FamilyMember:
         model = FamilyMemberModel(
             id=uuid.uuid4(),
@@ -97,6 +101,7 @@ class FamilyMemberRepository:
             two_factor_enabled=False,
             keycloak_sub=keycloak_sub,
             created_at=datetime.now(UTC),
+            org_id=org_id,
         )
         self._session.add(model)
         await self._session.flush()

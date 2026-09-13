@@ -31,6 +31,8 @@ class FamilyMemberCreateRequest(BaseModel):
     role: FamilyRole
     name: str
     contact: str
+    # decisions.md #59(I2) — 시설 소속 caregiver/social_worker를 만들 때만 채운다.
+    org_id: uuid.UUID | None = None
 
 
 class FamilyMemberResponse(BaseModel):
@@ -41,6 +43,7 @@ class FamilyMemberResponse(BaseModel):
     contact: str
     two_factor_enabled: bool
     created_at: datetime
+    org_id: uuid.UUID | None = None
 
 
 def _to_response(member) -> FamilyMemberResponse:  # noqa: ANN001 — FamilyMember 도메인 dataclass
@@ -52,6 +55,7 @@ def _to_response(member) -> FamilyMemberResponse:  # noqa: ANN001 — FamilyMemb
         contact=member.contact,
         two_factor_enabled=member.two_factor_enabled,
         created_at=member.created_at,
+        org_id=member.org_id,
     )
 
 
@@ -80,6 +84,6 @@ async def create_family_member(
     """
     authorize_user_access(ctx, user_id, allowed_roles=WRITE_ELDER_DATA_ROLES)
     member = await service.create_family_member(
-        user_id=user_id, role=body.role, name=body.name, contact=body.contact
+        user_id=user_id, role=body.role, name=body.name, contact=body.contact, org_id=body.org_id
     )
     return DataResponse(data=_to_response(member))

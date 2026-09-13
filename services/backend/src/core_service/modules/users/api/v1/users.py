@@ -9,6 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core_service.auth_deps import AuthContext, authorize_user_access, require_auth, require_roles
 from core_service.core.db import get_db
+from core_service.modules.organizations.application.organization_service import (
+    OrganizationService,
+)
+from core_service.modules.organizations.deps import get_organization_service
 from core_service.modules.users.application.user_service import UserService
 from core_service.modules.users.infrastructure.user_repository import UserRepository
 from core_service.shared.domain_enums import FamilyRole
@@ -29,6 +33,11 @@ class UserResponse(BaseModel):
     primary_device_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
+    org_id: uuid.UUID | None = None
+
+
+class UserOrganizationRequest(BaseModel):
+    org_id: uuid.UUID | None
 
 
 def _service(session: AsyncSession = Depends(get_db)) -> UserService:
@@ -70,4 +79,20 @@ async def get_user(
 ) -> DataResponse[UserResponse]:
     authorize_user_access(ctx, user_id)
     user = await service.get_user(user_id)
+    return DataResponse(data=UserResponse(**user.__dict__))
+
+
+@router.put("/{user_id}/organization", response_model=DataResponse[UserResponse])
+async def set_user_organization(
+    user_id: uuid.UUID,
+    body: UserOrganizationRequest,
+    service: UserService = Depends(_service),
+    org_service: OrganizationService = Depends(get_organization_service),
+    # decisions.md #59(I2) — 어르신을 B2G 시설에 소속시키는 건 admin(B2G 운영) 전용.
+    _admin=Depends(require_roles(FamilyRole.ADMIN)),  # noqa: ANN001
+) -> DataResponse[UserResponse]:
+    """apps/admin "시설 관리" — 어르신을 시설에 배정(`org_id` 지정)하거나 해제(null)."""
+    if body.org_id is not None:
+        await org_service.ensure_exists(body.org_id)  # 없으면 VALIDATION_ERROR
+    user = await service.set_organization(user_id, body.org_id)
     return DataResponse(data=UserResponse(**user.__dict__))

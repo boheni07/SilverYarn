@@ -30,6 +30,10 @@ from core_service.modules.invitations.application.invitation_service import Invi
 from core_service.modules.invitations.infrastructure.invitation_repository import (
     InvitationRepository,
 )
+from core_service.modules.organizations.application.organization_service import (
+    OrganizationService,
+)
+from core_service.modules.organizations.deps import get_organization_service
 from core_service.shared.domain_enums import FamilyRole
 from core_service.shared.schemas import DataResponse
 
@@ -41,6 +45,8 @@ class InvitationCreateRequest(BaseModel):
     invited_by: uuid.UUID | None = None
     contact: str
     role: FamilyRole
+    # decisions.md #59(I2) — 시설 소속 caregiver/social_worker를 초대할 때만 채운다.
+    org_id: uuid.UUID | None = None
 
 
 class InvitationResponse(BaseModel):
@@ -53,6 +59,7 @@ class InvitationResponse(BaseModel):
     status: str
     created_at: datetime
     expires_at: datetime
+    org_id: uuid.UUID | None = None
 
 
 class InvitationAcceptRequest(BaseModel):
@@ -77,6 +84,7 @@ def _to_response(invitation) -> InvitationResponse:  # noqa: ANN001 — Invitati
         status=invitation.status.value,
         created_at=invitation.created_at,
         expires_at=invitation.expires_at,
+        org_id=invitation.org_id,
     )
 
 
@@ -85,17 +93,25 @@ async def create_invitation(
     body: InvitationCreateRequest,
     service: InvitationService = Depends(_service),
     family_service: FamilyMemberService = Depends(get_family_member_service),
+    org_service: OrganizationService = Depends(get_organization_service),
     ctx: AuthContext = Depends(require_auth),
 ) -> DataResponse[InvitationResponse]:
     """design.md §4.2 — 가족 구성원 초대. 초대는 접근 권한 부여이므로 family/admin + 2FA.
-    `invited_by`가 오면 호출자 본인의 구성원 id여야 한다(타인 명의 초대 방지)."""
+    `invited_by`가 오면 호출자 본인의 구성원 id여야 한다(타인 명의 초대 방지).
+    `org_id`(decisions.md #59, I2)가 오면 존재하는 시설인지 먼저 확인한다."""
     authorize_user_access(ctx, body.user_id, allowed_roles=WRITE_ELDER_DATA_ROLES)
     if body.invited_by is not None:
         if not ctx.is_admin and body.invited_by not in {m.family_member_id for m in ctx.memberships}:
             raise ApiError("FORBIDDEN", "다른 구성원 명의로 초대할 수 없습니다.")
         await family_service.get_family_member(body.invited_by)  # 존재하지 않으면 NOT_FOUND
+    if body.org_id is not None:
+        await org_service.ensure_exists(body.org_id)
     invitation = await service.create_invitation(
-        user_id=body.user_id, invited_by=body.invited_by, contact=body.contact, role=body.role
+        user_id=body.user_id,
+        invited_by=body.invited_by,
+        contact=body.contact,
+        role=body.role,
+        org_id=body.org_id,
     )
     return DataResponse(data=_to_response(invitation))
 
@@ -136,6 +152,7 @@ async def accept_invitation(
         name=body.name,
         contact=invitation.contact,
         keycloak_sub=subject.subject,
+        org_id=invitation.org_id,
     )
     _ = member  # 응답은 초대 자체를 반환 — family_member 조회는 별도 엔드포인트(family_members 모듈)
     return DataResponse(data=_to_response(invitation))

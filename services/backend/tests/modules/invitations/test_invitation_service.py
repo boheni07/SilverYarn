@@ -38,6 +38,7 @@ class FakeInvitationRepository:
         role: FamilyRole,
         token: str,
         expires_at: datetime,
+        org_id: uuid.UUID | None = None,
     ) -> Invitation:
         invitation = Invitation(
             id=uuid.uuid4(),
@@ -49,6 +50,7 @@ class FakeInvitationRepository:
             status=InvitationStatus.PENDING,
             created_at=datetime.now(UTC),
             expires_at=expires_at,
+            org_id=org_id,
         )
         self._store[invitation.id] = invitation
         return invitation
