@@ -43,3 +43,7 @@ class ConversationChunk:
     mode: ConversationMode | None
     assistant_response: str | None  # PII, 암호화 대상 (schema.md §5)
     created_at: datetime
+    # decisions.md #56(Q5, 2026-09-13) — 보유기간 만료 시각/실제 파기 시각.
+    # retention_until은 생성 시점의 retention_policies 정책으로 계산해 채워진다.
+    retention_until: datetime | None = None
+    purged_at: datetime | None = None

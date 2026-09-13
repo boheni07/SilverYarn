@@ -8,7 +8,7 @@ UploadPipelineService가 호출하며 공개 POST 엔드포인트로 노출하�
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from core_service.core.errors import ApiError
@@ -16,11 +16,19 @@ from core_service.modules.care.domain.conversation_chunk import ConversationChun
 from core_service.modules.care.infrastructure.conversation_chunk_repository import (
     ConversationChunkRepository,
 )
+from core_service.modules.retention.application.retention_policy_service import RetentionPolicyService
+from core_service.modules.retention.domain.retention_policy import RetentionCategory
+
+# decisions.md #56(Q5) — retention_policies 행이 아직 없을 때(신규 배포 직후 시딩
+# 실패 등)를 대비한 안전망 기본값. 마이그레이션 0012가 365일로 시딩하므로 정상
+# 운영에서는 이 값이 실제로 쓰일 일이 없다.
+_DEFAULT_TRANSCRIPT_RETENTION_DAYS = 365
 
 
 class ConversationChunkService:
-    def __init__(self, repo: ConversationChunkRepository):
+    def __init__(self, repo: ConversationChunkRepository, retention: RetentionPolicyService | None = None):
         self._repo = repo
+        self._retention = retention
 
     async def get_chunk(self, chunk_id: uuid.UUID) -> ConversationChunk:
         chunk = await self._repo.get_by_id(chunk_id)
@@ -87,7 +95,21 @@ class ConversationChunkService:
             meta_prosody=meta_prosody,
             linked_photo_id=linked_photo_id,
             assistant_response=assistant_response,
+            retention_until=await self._compute_retention_until(),
         )
+
+    async def _compute_retention_until(self) -> datetime:
+        """decisions.md #56(Q5) — 생성 시점의 `conversation_transcript` 정책으로
+        만료 시각을 계산한다. `retention` 서비스가 주입되지 않은 호출자(과거
+        테스트·미래의 다른 composition root)를 위해 기본값 폴백도 겸한다."""
+        days = (
+            await self._retention.get_retention_days(
+                RetentionCategory.CONVERSATION_TRANSCRIPT, default=_DEFAULT_TRANSCRIPT_RETENTION_DAYS
+            )
+            if self._retention is not None
+            else _DEFAULT_TRANSCRIPT_RETENTION_DAYS
+        )
+        return datetime.now(UTC) + timedelta(days=days)
 
     async def attach_knowledge_refs(
         self, chunk_id: uuid.UUID, embedding_id: str | None, graph_node_ref: str | None

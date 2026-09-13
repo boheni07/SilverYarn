@@ -32,3 +32,10 @@ export async function listUsers(params: {
 export async function setUserOrganization(userId: string, orgId: string | null): Promise<User> {
   return apiClient.put<User>(`/users/${userId}/organization`, { orgId });
 }
+
+/** POST /users/{id}/erase — decisions.md #56(Q5) 정보주체 삭제요청권(PIPA) 행사.
+ * crypto-shredding + Qdrant/Neo4j/MinIO 정리까지 되돌릴 수 없는 작업 — 호출 전
+ * 반드시 화면에서 확인 문구를 받는다(features/users/EraseUserButton.tsx). */
+export async function eraseUser(userId: string, reason: string): Promise<void> {
+  await apiClient.post<void>(`/users/${userId}/erase`, { reason });
+}

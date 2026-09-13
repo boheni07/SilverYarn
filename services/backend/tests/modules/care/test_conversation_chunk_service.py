@@ -64,6 +64,7 @@ class FakeConversationChunkRepository:
         meta_prosody: dict | None = None,
         linked_photo_id: uuid.UUID | None = None,
         assistant_response: str | None = None,
+        retention_until: datetime | None = None,
     ) -> ConversationChunk:
         chunk = ConversationChunk(
             id=uuid.uuid4(),
@@ -84,14 +85,29 @@ class FakeConversationChunkRepository:
             mode=mode,
             assistant_response=assistant_response,
             created_at=datetime.now(UTC),
+            retention_until=retention_until,
         )
         self._store[chunk.id] = chunk
         return chunk
 
 
+class FakeRetentionPolicyService:
+    """decisions.md #56(Q5) — `get_retention_days`만 흉내 낸다(record_chunk가 쓰는 유일한 메서드)."""
+
+    def __init__(self, days: int = 30) -> None:
+        self.days = days
+
+    async def get_retention_days(self, category: str, *, default: int) -> int:
+        _ = category, default
+        return self.days
+
+
 @pytest.fixture
 def service() -> ConversationChunkService:
-    return ConversationChunkService(FakeConversationChunkRepository())  # type: ignore[arg-type]
+    return ConversationChunkService(
+        FakeConversationChunkRepository(),  # type: ignore[arg-type]
+        FakeRetentionPolicyService(),  # type: ignore[arg-type]
+    )
 
 
 async def test_record_chunk_succeeds(service: ConversationChunkService) -> None:
@@ -182,3 +198,28 @@ async def test_count_chunks_since_filters_by_user_and_time(service: Conversation
     assert await service.count_chunks_since(user_id, datetime(2020, 1, 1, tzinfo=UTC)) == 1
     assert await service.count_chunks_since(user_id, datetime(2999, 1, 1, tzinfo=UTC)) == 0
     assert await service.count_chunks_since(other_id, datetime(2020, 1, 1, tzinfo=UTC)) == 1
+
+
+async def test_record_chunk_computes_retention_until_from_policy(
+    service: ConversationChunkService,
+) -> None:
+    """decisions.md #56(Q5) — 주입된 RetentionPolicyService의 보유일수(30일)로 계산된다."""
+    before = datetime.now(UTC)
+    chunk = await service.record_chunk(
+        user_id=uuid.uuid4(), raw_audio_ref="a.opus", transcript_on_device="A", mode=None
+    )
+    assert chunk.retention_until is not None
+    delta = chunk.retention_until - before
+    assert 29 <= delta.days <= 30
+
+
+async def test_record_chunk_falls_back_to_default_retention_without_service() -> None:
+    """`retention` 서비스가 주입되지 않아도(과거 호출자 호환) 기본값(365일)으로 안전하게 동작한다."""
+    service = ConversationChunkService(FakeConversationChunkRepository())  # type: ignore[arg-type]
+    before = datetime.now(UTC)
+    chunk = await service.record_chunk(
+        user_id=uuid.uuid4(), raw_audio_ref="a.opus", transcript_on_device="A", mode=None
+    )
+    assert chunk.retention_until is not None
+    delta = chunk.retention_until - before
+    assert 364 <= delta.days <= 365

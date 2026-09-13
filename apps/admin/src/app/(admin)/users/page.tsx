@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listUsers } from "@/services/users";
 import { Card } from "@/components/ui/Card";
+import { EraseUserButton } from "@/features/users/EraseUserButton";
 import { ApiError } from "@/services/errors";
 import type { Pagination } from "@/services/users";
 import type { User } from "@/types";
@@ -106,6 +107,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
               >
                 가족 구성원 관리
               </Link>
+              <EraseUserButton userId={user.id} userName={user.name} />
             </Card>
           </li>
         ))}

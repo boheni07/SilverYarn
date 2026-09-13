@@ -55,6 +55,9 @@ class ConversationChunkModel(Base):
     )
     assistant_response: Mapped[str | None] = mapped_column(Text, nullable=True)  # 저장 시 암호문
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # 마이그레이션 0012, decisions.md #56(Q5) — 보유기간 만료/실제 파기 시각
+    retention_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    purged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class ConversationChunkRepository:
@@ -88,6 +91,8 @@ class ConversationChunkRepository:
                 self._session, model.user_id, model.assistant_response
             ),
             created_at=model.created_at,
+            retention_until=model.retention_until,
+            purged_at=model.purged_at,
         )
 
     async def get_by_id(self, chunk_id: uuid.UUID) -> ConversationChunk | None:
@@ -168,11 +173,17 @@ class ConversationChunkRepository:
         meta_prosody: dict[str, Any] | None = None,
         linked_photo_id: uuid.UUID | None = None,
         assistant_response: str | None = None,
+        retention_until: datetime | None = None,
     ) -> ConversationChunk:
         """workflow-diagrams.md §2/§3 — 온디바이스 발화 업로드 시 서버가 적재.
 
         Append-Only라 upsert가 아니라 항상 신규 insert다. embedding_id/graph_node_ref는
         지식화 파이프라인(§3)이 나중에 채운다 — 이 메서드는 그 이전 단계 값만 받는다.
+
+        `retention_until`(decisions.md #56, Q5): 호출자(`ConversationChunkService`)가
+        그 시점의 `retention_policies` 정책으로 계산해서 넘긴다 — 이 리포지토리는
+        정책 조회 방법을 모른다(다른 모듈인 retention에 의존하지 않기 위해, 계산
+        결과인 timestamp만 받는다).
 
         멱등성: `(user_id, session_id, turn_id)`가 중복되면(동시 실행되던 다른 잡이
         먼저 INSERT) `uq_conversation_chunks_turn`(마이그레이션 0004)이 IntegrityError를
@@ -203,6 +214,7 @@ class ConversationChunkRepository:
             mode=mode.value if mode else None,
             assistant_response=await self._pii.encrypt_opt(self._session, user_id, assistant_response),
             created_at=datetime.now(UTC),
+            retention_until=retention_until,
         )
         self._session.add(model)
         try:
@@ -215,6 +227,47 @@ class ConversationChunkRepository:
                     return existing
             raise
         return await self._to_domain(model)
+
+    async def list_expired_unpurged(self, limit: int = 100) -> list[ConversationChunk]:
+        """decisions.md #56(Q5) — 보유기간 만료된(파기 대상) 청크 배치 조회.
+
+        `retention_until <= now() AND purged_at IS NULL`. 마이그레이션 0012의
+        부분 인덱스(`idx_conversation_chunks_retention_until ... WHERE purged_at
+        IS NULL`)를 그대로 타도록 조건을 똑같이 맞췄다. `retention_until`이
+        NULL인 행(구버전 데이터 백필 누락 등 예외 상황)은 대상에서 제외한다 —
+        보유기간을 모르는 채로 함부로 지우지 않기 위한 안전장치.
+        """
+        result = await self._session.execute(
+            select(ConversationChunkModel)
+            .where(
+                ConversationChunkModel.retention_until.is_not(None),
+                ConversationChunkModel.retention_until <= datetime.now(UTC),
+                ConversationChunkModel.purged_at.is_(None),
+            )
+            .order_by(ConversationChunkModel.retention_until.asc())
+            .limit(limit)
+        )
+        return [await self._to_domain(m) for m in result.scalars().all()]
+
+    async def redact_and_mark_purged(self, chunk_id: uuid.UUID) -> None:
+        """decisions.md #56(Q5) — 보유기간 만료 청크 1건의 실제 파기(redaction).
+
+        원본 구술/응답 텍스트(`transcript_on_device`, `transcript_server`,
+        `assistant_response`)만 NULL로 지운다 — `meta_*`(기간/인물/장소/감정 등
+        구조화 메타데이터)는 자서전 집필(author 모드) 참고용으로 계속 남기고,
+        Append-Only 원칙(모듈 상단 docstring)의 또 다른 예외로 문서화한다.
+        Qdrant/Neo4j 쪽 삭제(`VectorDBClient.delete_chunk_embedding`,
+        `GraphClient.delete_chunk_node`)는 호출자(retention 오케스트레이터)가
+        이 메서드 전후로 별도 호출한다 — 이 리포지토리는 Postgres만 안다.
+        """
+        model = await self._session.get(ConversationChunkModel, chunk_id)
+        if model is None:
+            raise LookupError(f"conversation_chunk {chunk_id} not found")
+        model.transcript_on_device = ""
+        model.transcript_server = None
+        model.assistant_response = None
+        model.purged_at = datetime.now(UTC)
+        await self._session.flush()
 
     async def attach_knowledge_refs(
         self, chunk_id: uuid.UUID, embedding_id: str | None, graph_node_ref: str | None

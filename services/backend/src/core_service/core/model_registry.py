@@ -12,6 +12,7 @@ import 목록을 여러 진입점(main.py/worker.py/migrations/env.py)에 따로
 
 from core_service.core.access_log import AccessLogModel  # noqa: F401
 from core_service.core.crypto import UserEncryptionKeyModel  # noqa: F401
+from core_service.core.deletion_log import DeletionRecordModel  # noqa: F401
 from core_service.modules.author.infrastructure.chapter_repository import ChapterModel  # noqa: F401
 from core_service.modules.author.infrastructure.chapter_revision_repository import (  # noqa: F401
     ChapterRevisionModel,
@@ -43,6 +44,9 @@ from core_service.modules.photo_requests.infrastructure.photo_request_repository
     PhotoRequestModel,
 )
 from core_service.modules.photos.infrastructure.photo_repository import PhotoModel  # noqa: F401
+from core_service.modules.retention.infrastructure.retention_policy_repository import (  # noqa: F401
+    RetentionPolicyModel,
+)
 from core_service.modules.schedule.infrastructure.schedule_item_repository import (  # noqa: F401
     ScheduleItemModel,
 )

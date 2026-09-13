@@ -48,6 +48,11 @@ export default function HomePage() {
             시설 관리 (B2G)
           </Button>
         </Link>
+        <Link href="/retention-policies" className="mt-3 block">
+          <Button variant="secondary" className="w-full">
+            보유기간 설정
+          </Button>
+        </Link>
 
         <div className="my-5 flex items-center gap-3 text-caption text-ink-faint">
           <span className="h-px flex-1 bg-border" />

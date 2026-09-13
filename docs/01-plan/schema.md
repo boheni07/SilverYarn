@@ -4,7 +4,7 @@
 
 **Project**: 은빛실타래 (SilverYarn)
 **Date**: 2026-09-07
-**Version**: 1.16 (Do 단계 — `organizations` 테이블 신설 + `users`/`family_members`/`invitations`.`org_id`, 마이그레이션 0011, decisions.md #59)
+**Version**: 1.17 (Do 단계 — `retention_policies`/`deletion_records` 테이블 신설 + `conversation_chunks`.`retention_until`/`purged_at`, 마이그레이션 0012, decisions.md #56)
 **Source**: Design 문서 §3 Data Model 초안 + UI/UX 화면설계서 필드 단위 대조 결과 반영
 **용어 정의**: [glossary.md](./glossary.md) 참조
 
@@ -67,6 +67,8 @@
 | `device_credentials` **(부속 v1.8, 도메인 아님)** | Device Token 발급·회전·폐기 (SHA-256 해시 저장, decisions.md #47) | device_id, token_hash, revoked_at |
 | `access_logs` **(부속 v1.8, 도메인 아님)** | 접속기록 감사로그 (제8조, CTO B5(e)) | actor_kind, actor_subject, method, path, status_code |
 | `organizations` **(신규 v1.16, decisions.md #59)** | B2G 시설(요양원·복지관) — `users`/`family_members`/`invitations`의 `org_id`가 참조하는 테넌시 안전망 기준 | id, name, created_at |
+| `retention_policies` **(신규 v1.17, decisions.md #56)** | 카테고리별 보유기간 설정(admin 콘솔 조정) | id, category, retention_days |
+| `deletion_records` **(신규 v1.17, 도메인 아님, decisions.md #56)** | 어르신 계정 전체 삭제(erasure) 실행 이력 감사로그 | id, user_id, requested_by, reason, purged_stores |
 
 > **범위 밖 (스코프 아웃, decisions.md #18)**: 구독·결제(Subscription/Payment) 도메인은 본 스키마에 포함하지 않는다. PG사·요금제가 결정되지 않은 상태로 엔티티를 설계하면 임의 결정이 되므로, 경영진 결정 이후 별도 Phase에서 추가한다.
 
@@ -244,6 +246,8 @@
 | mode | enum(`author`,`care`,`assist`) | N | 발생 모드(작가/말벗돌봄/비서) — v1.3 신규 |
 | assistant_response | text | N | 온디바이스 SLM 응답 텍스트 (PII — 암호화 대상) — v1.3 신규, 2차 검증 H-2 반영. Critic Agent 대화품질 회고분석·대화 복원에 필요 |
 | created_at | timestamptz | Y | 생성 시각 |
+| retention_until | timestamptz | N | 보유기간 만료 시각 — **v1.17 신규**(decisions.md #56). 생성 시점의 `retention_policies.conversation_transcript` 정책으로 계산해 채운다. 기존 행은 마이그레이션 0012가 `created_at + 365일`로 백필 |
+| purged_at | timestamptz | N | 실제 파기(redaction) 시각 — **v1.17 신규**. NULL이면 미파기. 파기 시 `transcript_on_device`/`transcript_server`/`assistant_response`만 지운다 — `meta_*`는 자서전 집필 참고용으로 남긴다(Append-Only 원칙의 두 번째 예외) |
 
 ---
 
@@ -446,6 +450,38 @@
 
 ---
 
+### 3.21 retention_policies (보유기간 설정) — 신규 v1.17
+
+**Description**: decisions.md #56(2026-09-13 사용자 결정, Q5) — 보유기간을 하드코딩하지 않고 admin 콘솔에서 운영자가 직접 조정할 수 있는 설정 테이블. 카테고리는 지금은 `conversation_transcript`(대화 원문) 하나뿐이다 — 원본음성은 업로드 성공 시 즉시삭제(decisions #30)이고 챕터·사진은 자서전 결과물이라 계정 존속기간 동안 보관(별도 만료 정책 대상 아님). `category`가 도메인 enum이 아니라 자유 문자열인 이유: 운영 중 코드 배포 없이 새 카테고리를 먼저 만들어볼 수 있게 하기 위해서다.
+
+| Attribute | Type | Required | Description |
+|-----------|------|----------|-------------|
+| id | UUID | Y | PK |
+| category | varchar(50) | Y | 카테고리 식별자, UNIQUE. 초기값 `conversation_transcript` |
+| retention_days | integer | Y | 보유일수. 초기값 365(1차 잠정값 — 이 숫자 자체는 운영 판단이라 admin이 언제든 변경 가능) |
+| updated_at | timestamptz | Y | 마지막 변경 시각 |
+
+**Relationships**: 없음(다른 테이블이 이 값을 조회만 함, FK 없음)
+
+---
+
+### 3.22 deletion_records (계정 삭제 감사로그) — 신규 v1.17, 부속, 도메인 아님
+
+**Description**: decisions.md #56(Q5) — 어르신 계정 전체 삭제(erasure) 실행 이력. `access_logs`(§3.19)와 동일 성격의 순수 감사 테이블이다. `user_id`가 FK가 아닌 이유: 이 행이 만들어지는 시점엔 그 `users` 행이 이미 없거나(정상 흐름 — Postgres 삭제가 erasure의 마지막 단계) 삭제 직전이라, FK를 걸면 순서상 항상 위반된다 — 감사 목적상 삭제된 뒤에도 "누구를·언제·왜·어디까지 지웠는지" 기록이 남아야 한다.
+
+| Attribute | Type | Required | Description |
+|-----------|------|----------|-------------|
+| id | UUID | Y | PK |
+| user_id | UUID | Y | 삭제된 어르신 id (FK 아님 — 위 설명 참조) |
+| requested_by | UUID | N | 요청을 실행한 구성원(family_members.id, FK 아님 — 동일 이유). NULL이면 시스템/익명 |
+| reason | varchar(50) | Y | 삭제 사유(정보주체 요청 등) |
+| purged_stores | text[] | Y | 실제 정리된 저장소 목록 — `["qdrant", "neo4j", "minio", "postgres"]` |
+| created_at | timestamptz | Y | 삭제 실행 시각 |
+
+**Relationships**: 없음(FK 의도적 배제, 위 설명 참조)
+
+---
+
 ## 4. Entity Relationship Diagram
 
 > **정식 시각화 ERD**는 [`erd.md`](./erd.md)에서 관리한다 — 전체 관계 개요 + 도메인별(사용자/자서전/운영) Mermaid erDiagram, 속성·카디널리티·참조무결성 정책까지 포함한 완전판. 아래는 요약용 ASCII 스케치다.
@@ -635,7 +671,10 @@ CREATE TABLE conversation_chunks (
   turn_id INTEGER,
   mode conversation_mode,
   assistant_response TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- v1.17(decisions.md #56, 마이그레이션 0012) — 보유기간 만료/실제 파기 시각
+  retention_until TIMESTAMPTZ,
+  purged_at TIMESTAMPTZ
 );
 
 ALTER TABLE photos
@@ -797,6 +836,25 @@ CREATE TABLE access_logs (
 CREATE INDEX idx_access_logs_created ON access_logs(created_at DESC);
 CREATE INDEX idx_access_logs_subject ON access_logs(actor_subject, created_at DESC);
 
+-- v1.17(decisions.md #56, Q5, 마이그레이션 0012) — 보유기간 설정 + 계정 삭제 감사로그
+CREATE TABLE retention_policies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  category VARCHAR(50) NOT NULL UNIQUE,
+  retention_days INTEGER NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO retention_policies (category, retention_days) VALUES ('conversation_transcript', 365);
+
+CREATE TABLE deletion_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,          -- FK 아님 — §3.22 설명 참조(삭제 시점엔 이미 없거나 삭제 직전)
+  requested_by UUID,               -- FK 아님, 동일 이유
+  reason VARCHAR(50) NOT NULL,
+  purged_stores TEXT[] NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_deletion_records_user_id ON deletion_records(user_id);
+
 -- 조회 성능을 위한 기본 인덱스
 CREATE INDEX idx_chapters_user ON chapters(user_id);
 CREATE INDEX idx_photos_user_recall ON photos(user_id, recall_status);
@@ -804,6 +862,9 @@ CREATE INDEX idx_chunks_user ON conversation_chunks(user_id);
 -- v1.9: 업로드 멱등성 — 한 대화 턴 = 한 행 (sync-contract.md §2.3, 마이그레이션 0004)
 CREATE UNIQUE INDEX uq_conversation_chunks_turn ON conversation_chunks (user_id, session_id, turn_id)
   WHERE session_id IS NOT NULL AND turn_id IS NOT NULL;
+-- v1.17: 보유기간 만료 파기 배치(worker.py purge_expired_conversation_chunks)가 스캔하는 인덱스
+CREATE INDEX idx_conversation_chunks_retention_until ON conversation_chunks(retention_until)
+  WHERE purged_at IS NULL;
 CREATE INDEX idx_schedule_user_due ON schedule_items(user_id, due_at);
 CREATE INDEX idx_sync_device ON sync_sessions(device_id, started_at DESC);
 CREATE INDEX idx_sync_started_at ON sync_sessions(started_at DESC);  -- v1.5 신규 — 전체 기기 통합 모니터링(기기로 필터 없이 전역 정렬)용

@@ -120,6 +120,23 @@ class UserRepository:
         model.updated_at = datetime.now(UTC)
         await self._session.flush()
 
+    async def delete(self, user_id: uuid.UUID) -> None:
+        """decisions.md #56(Q5) — 계정 전체 삭제(erasure)의 Postgres 쪽 마지막 단계.
+
+        schema.md의 거의 모든 하위 테이블이 이미 `user_id ... ON DELETE CASCADE`로
+        걸려 있어(devices, chapters, photos, conversation_chunks, questions,
+        schedule_items, emotion_*, consent_logs, invitations,
+        **user_encryption_keys 포함**) 이 한 줄이면 Postgres 쪽은 전부 정리된다 —
+        크립토 슈레딩용 키 삭제도 자동 포함(cascade). `UserErasureService`가 Qdrant·
+        Neo4j·MinIO를 먼저 지운 **다음** 마지막으로 이걸 호출한다(외부 저장소
+        삭제가 실패하면 이 메서드까지 오지 않아 재시도 가능한 상태로 남는다).
+        """
+        model = await self._session.get(UserModel, user_id)
+        if model is None:
+            raise LookupError(f"user {user_id} not found")
+        await self._session.delete(model)
+        await self._session.flush()
+
     async def set_primary_device(self, user_id: uuid.UUID, device_id: uuid.UUID) -> None:
         model = await self._session.get(UserModel, user_id)
         if model is None:
