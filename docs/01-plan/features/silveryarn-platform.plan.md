@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 어르신 자서전 제작과 AI 말벗돌봄을 온디바이스(오프라인 우선)-온프레미스 서버 하이브리드 구조로 통합 제공하는 플랫폼
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.4 (3차 design-validator 검증 반영)
+> **Version**: 0.5 (문서 정합성 점검 — §8.3/§9 스테일 버전·상태 정정)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-07
 > **Status**: Draft
@@ -230,7 +230,7 @@ Selected Level: Enterprise (On-Premise 변형)
 
 | Phase | Status | Document Location | Command |
 |-------|:------:|-------------------|---------|
-| Phase 1 (Schema) | ✅ | [`docs/01-plan/schema.md`](../schema.md)(v1.4), [`erd.md`](../erd.md), [`glossary.md`](../glossary.md) | `/phase-1-schema` |
+| Phase 1 (Schema) | ✅ | [`docs/01-plan/schema.md`](../schema.md)(v1.17), [`erd.md`](../erd.md), [`glossary.md`](../glossary.md) | `/phase-1-schema` |
 | Phase 2 (Convention) | ✅ | [`CONVENTIONS.md`](../../../CONVENTIONS.md), [`naming.md`](../naming.md), [`structure.md`](../structure.md) | `/phase-2-convention` |
 | Phase 3 (Mockup) | ✅ | [`design-tokens.md`](../../02-design/design-tokens.md) — 컬러/타이포/접근성 최소기준 | — |
 | Phase 4 (API 설계) | ✅ | [`silveryarn-platform.design.md §4`](../../02-design/features/silveryarn-platform.design.md), [`sync-contract.md`](../../02-design/sync-contract.md) | — |
@@ -241,12 +241,12 @@ Selected Level: Enterprise (On-Premise 변형)
 
 1. [x] Design 문서 작성 (`silveryarn-platform.design.md`) — 본 등록 작업에서 초안 작성 완료
 2. [x] 원본 기획서 9장 미결 사항 1차 정리 — 14개 중 11개 확정/보류 처리, 3개는 법무·경영 검토 필요로 분류 ([decisions.md](../decisions/silveryarn-platform.decisions.md))
-3. [x] `/phase-1-schema`로 엔티티 정식 스키마 정의 완료, 3차 design-validator까지 반영한 현재 v1.4(17개 엔티티) ([schema.md](../schema.md), [glossary.md](../glossary.md))
+3. [x] `/phase-1-schema`로 엔티티 정식 스키마 정의 완료, 3차 design-validator까지 반영한 당시 v1.4(17개 엔티티) — [schema.md](../schema.md)는 이후 Do 단계 구현을 거쳐 v1.17(도메인 19개+부속 4개)까지 계속 확장됨 ([glossary.md](../glossary.md))
 4. [x] `/phase-2-convention`으로 서버(Python)·모바일(Kotlin)·웹(TS) 컨벤션 확정 ([CONVENTIONS.md](../../../CONVENTIONS.md))
 5. [x] `design-validator` 에이전트로 기획서·프로세스흐름도·UI/UX 3개 원본 문서 간 정합성 검증 완료, High+Medium 23건 및 원본 문서 오류 7건 수정 완료 (2026-09-05)
-6. [ ] 온프레미스 인프라(K8s/베어메탈 GPU 클러스터) 설계 — infra-architect 상담
-7. [ ] 정서 모니터링 알림의 법적/윤리적 기준 — 법무·윤리 검토 착수 (decisions.md #12)
-8. [ ] Phase 1(MVP) 착수 일정·예산·인력 — 경영진 승인 대기 (decisions.md #14)
+6. [ ] 온프레미스 인프라(K8s/베어메탈 GPU 클러스터) 설계 — infra-architect 상담(여전히 미착수, 로컬 Docker Compose 기반 개발 인프라만 구축됨)
+7. [x] 정서 모니터링 알림의 법적/윤리적 기준 — **2026-09-12 사용자 결정으로 상위 법적 분류는 확정**(decisions.md #52/#55: 일반 개인정보로 취급, "진단" 표현 회피). 다만 "언제 알림을 발송할지"의 구체 임계치 로직 자체는 여전히 별도 검토 대기(decisions.md #19) — 기능 자체도 Phase 1 피처플래그 OFF 유지
+8. [x] Phase 1(MVP) 착수 일정·예산·인력 — **2026-09-12 사용자 결정으로 대략적 목표 확정**(decisions.md #63: 정식 예산·인력은 미결이나 "3개월 내 소규모 파일럿"을 목표로 우선순위 조정)
 
 ---
 
@@ -254,6 +254,7 @@ Selected Level: Enterprise (On-Premise 변형)
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.5 | 2026-09-13 | 문서 정합성 점검 — §8.3 Pipeline Integration의 schema.md 버전 참조(v1.4→v1.17) 정정. §9 Next Steps item 3(schema.md가 v1.4 이후 v1.17까지 계속 확장됐음을 주석), item 7·8을 실제 진행 상태([x])로 갱신 — decisions.md #52/#55(정서 알림 법적 분류)·#63(3개월 파일럿 목표)이 이미 확정됐음을 반영 | NUBiz AX Initiative |
 | 0.1 | 2026-09-05 | Plan/ 폴더 원본 기획서(v0.5) 기반 초안 등록 | NUBiz AX Initiative |
 | 0.2 | 2026-09-05 | design-validator 1차 검증(33건) 반영, decisions.md #1~#23 의사결정 로그 연동, 스택 확정사항(FastAPI/Next.js/Keycloak) 동기화 | NUBiz AX Initiative |
 | 0.3 | 2026-09-07 | 2차 design-validator 검증 반영 — Vector DB/Neo4j 행 추가(§7.2), 챕터윤문 LLM 확정 행 추가, 정서모니터링 In Scope/FR-07에 Phase 1 OFF 명시(M-10), "경량VectorDB"→FTS5 표현 정정(M-8) | NUBiz AX Initiative |

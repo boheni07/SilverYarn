@@ -12,7 +12,7 @@
 | [features/silveryarn-platform.design.md](./features/silveryarn-platform.design.md) | 🔄 In Progress | 2026-09-13 (v0.52) | NUBiz AX Initiative | 온디바이스-온프레미스 하이브리드 아키텍처, 데이터 모델, API/UI 인벤토리 — Do 단계 구현과 지속 동기화 |
 | [sync-contract.md](./sync-contract.md) | ✅ Approved | 2026-09-11 (v0.7) | NUBiz AX Initiative | 온디바이스↔서버 동기화 계약 — 비동기 처리, 엔티티별 충돌정책, Presigned URL, 증분 다운로드 |
 | [design-tokens.md](./design-tokens.md) | ✅ Approved | 2026-09-07 (v1.2) | NUBiz AX Initiative | BI 가이드 컬러/타이포 → Tailwind 토큰 매핑, WCAG AA 대비 규칙, 접근성 최소기준 |
-| [workflow-diagrams.md](./workflow-diagrams.md) | 🔄 In Progress | 2026-09-13 (v0.5) | NUBiz AX Initiative | 비즈니스/업무/프로세스 흐름도 Mermaid 21종 (흑백 고대비판) |
+| [workflow-diagrams.md](./workflow-diagrams.md) | 🔄 In Progress | 2026-09-13 (v0.6) | NUBiz AX Initiative | 비즈니스/업무/프로세스 흐름도 Mermaid 21종 (흑백 고대비판) |
 | [data-classification-policy.md](./data-classification-policy.md) | ✅ Approved | 2026-09-13 (v0.1, 신규) | NUBiz AX Initiative | PII/메타데이터 4단계 분류 + 외부 통신 경계 정책 (decisions.md #58/I1 후속) |
 | [cto-review-2026-09-05.md](./cto-review-2026-09-05.md) | ✅ Approved | 2026-09-06 | CTO팀(7개 관점) | 개발팀 착수회의 대비 아키텍처/인프라/보안/FE/백엔드·API/QA/PM 심사 — Blocker 28건, 전원 Go with Conditions |
 

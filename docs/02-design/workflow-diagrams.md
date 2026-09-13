@@ -3,10 +3,10 @@
 > **Summary**: 현재(v0.52) 설계 상태를 반영한 전체 업무·프로세스 흐름도 모음 — Mermaid 다이어그램 21종 (흑백 고대비판)
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.5 *(§20 갱신 + §21 신규 — 법무·인프라·경영 미결 14건 구현 완료 반영, 상세 이력은 하단 Version History)*
+> **Version**: 0.6 *(문서 정합성 점검 — 스테일 버전 참조·엔티티 수 정정, 상세 이력은 하단 Version History)*
 > **Date**: 2026-09-13
 > **Status**: Draft
-> **Source of truth**: [`silveryarn-platform.design.md`](./features/silveryarn-platform.design.md)(v0.52), [`sync-contract.md`](./sync-contract.md)(v0.7), [`schema.md`](../01-plan/schema.md)(v1.17), [`mobile-schema.md`](../01-plan/mobile-schema.md)(v0.11), [`decisions.md`](../01-plan/decisions/silveryarn-platform.decisions.md)(v0.24)
+> **Source of truth**: [`silveryarn-platform.design.md`](./features/silveryarn-platform.design.md)(v0.52), [`sync-contract.md`](./sync-contract.md)(v0.7), [`schema.md`](../01-plan/schema.md)(v1.17), [`mobile-schema.md`](../01-plan/mobile-schema.md)(v0.11), [`decisions.md`](../01-plan/decisions/silveryarn-platform.decisions.md)(v0.25)
 
 > 원본 `Plan/자서전_말벗돌봄_프로세스_흐름도.md`(기획서 v0.5 기준)를 대체하지 않고, **그 이후 확정된 아키텍처 변경분**(Closed-Loop, 실시간 대화 파이프라인, Zero-Neural RAG, Neo4j 지식그래프, 온프레미스 vLLM 확정)까지 반영해 전체를 다시 정리한 현재판이다. 원본은 기획 의도 이해용으로 계속 보존한다(CLAUDE.md SoR 원칙).
 >
@@ -552,7 +552,7 @@ flowchart TD
 ```mermaid
 %%{init: {'theme':'base', 'themeVariables': {'primaryColor':'#ffffff','primaryTextColor':'#111111','primaryBorderColor':'#111111','lineColor':'#111111','background':'#ffffff','mainBkg':'#ffffff','textColor':'#111111','clusterBkg':'#ffffff','clusterBorder':'#111111','edgeLabelBackground':'#ffffff'}}}%%
 flowchart LR
-    subgraph SRV["🖥️ 서버 PostgreSQL (schema.md, 17개 엔티티)"]
+    subgraph SRV["🖥️ 서버 PostgreSQL (schema.md, 도메인 19개+부속 4개)"]
         sc[("chapters")]; sp[("photos")]; sq[("questions")]; ss[("schedule_items")]; scc[("conversation_chunks")]
     end
     subgraph MOB["📱 온디바이스 SQLite (mobile-schema.md, 6개 테이블)"]
@@ -668,6 +668,7 @@ flowchart TD
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.6 | 2026-09-13 | 문서 정합성 점검 — 헤더 Source of truth의 decisions.md 참조(v0.24→v0.25) 정정. §18 다이어그램 라벨의 스테일 엔티티 수("17개"→"도메인 19개+부속 4개") 정정 | NUBiz AX Initiative |
 | 0.5 | 2026-09-13 | 문서 최신화 점검. §20을 "미결 의사결정" 경고판에서 "해결 현황"으로 전면 갱신 — D1(#52/#55)·D2(#63)·D6(#56)는 확정+구현 완료(strong 스타일)로 정정, D3(#27)·D4(#9)는 여전히 실측 대기지만 "법무 아님, 벤치마크 하니스 준비 완료"로 라벨 정정. §21 신규 — 계정 삭제(erasure) 시퀀스 + 보유기간 만료 파기 배치 플로우차트(decisions.md #56, Q5). 헤더 Source of truth 버전 전체 최신화 | NUBiz AX Initiative |
 | 0.1 | 2026-09-06 | Closed-Loop/실시간파이프라인/Neo4j/FTS5 반영한 현재판 워크플로우 20종 신규 작성 | NUBiz AX Initiative |
 | 0.2 | 2026-09-06 | 색상(남색/보라/청록/골드) 기반 구분을 전면 폐지하고 흑백 고대비 스타일로 재작성 — 모든 다이어그램에 흑백 강제 테마 지시자 추가, 역할 구분은 노드 도형·subgraph 레이블·선 스타일로 대체 | NUBiz AX Initiative (사용자 피드백 반영) |

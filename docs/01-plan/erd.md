@@ -1,6 +1,6 @@
 # 데이터 모델링 및 ERD (Entity-Relationship Diagram)
 
-> **Summary**: [`schema.md`](./schema.md)(v1.4, PostgreSQL DDL)와 [`mobile-schema.md`](./mobile-schema.md)(온디바이스 SQLite)를 시각적 ER 다이어그램으로 정리한 데이터 모델링 문서
+> **Summary**: [`schema.md`](./schema.md)(v1.17, PostgreSQL DDL)와 [`mobile-schema.md`](./mobile-schema.md)(온디바이스 SQLite)를 시각적 ER 다이어그램으로 정리한 데이터 모델링 문서
 >
 > **Project**: 은빛실타래 (SilverYarn)
 > **Date**: 2026-09-07
