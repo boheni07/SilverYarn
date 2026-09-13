@@ -34,4 +34,22 @@ class MockSlmEngineTest {
             val chunks = MockSlmEngine().generateStreamed(userQuery = "아무 말이나 해봤어요", context = "").toList()
             assertEquals(listOf("그러셨군요.", "오늘 하루는 어떠셨어요?"), chunks)
         }
+
+    @Test
+    fun `매 3턴째는 먼저 기억을 꺼내 묻는 문장을 덧붙인다`() =
+        runBlocking {
+            val engine = MockSlmEngine()
+            engine.generateStreamed(userQuery = "아무 말이나 해봤어요", context = "").toList()
+            engine.generateStreamed(userQuery = "아무 말이나 해봤어요", context = "").toList()
+            val thirdTurn = engine.generateStreamed(userQuery = "아무 말이나 해봤어요", context = "").toList()
+            assertEquals(3, thirdTurn.size)
+            assertTrue(thirdTurn.last().isNotBlank())
+        }
+
+    @Test
+    fun `첫 턴에는 먼저 묻는 문장이 없다`() =
+        runBlocking {
+            val chunks = MockSlmEngine().generateStreamed(userQuery = "아무 말이나 해봤어요", context = "").toList()
+            assertEquals(2, chunks.size)
+        }
 }
