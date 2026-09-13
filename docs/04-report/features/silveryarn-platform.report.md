@@ -1,10 +1,10 @@
 # silveryarn-platform — Do 단계 사이클 보고서
 
-> **작성일**: 2026-09-10 (§1 최초 작성 시점 — PR #1~11 기준. §1의 지표·서술은 그 시점 스냅샷으로 남겨두고, #12 이후 확장분은 아래 **§3-2**·부록에 이어 적었다)
-> **갱신일**: 2026-09-11 — PR #12~24 반영
-> **대상 사이클**: CTO 착수 심사(`docs/02-design/cto-review-2026-09-05.md`) 보안 블로커 해소 + Design v0.6→v0.39 잔여 구현
-> **PR 범위**: #1 ~ #24 (전부 main squash 머지)
-> **PDCA 위치**: Do 대부분 완료 → Check 2회(`docs/03-check/gap-analysis-2026-09-10.md`, `-11.md`) → 본 Report. 남은 항목은 전부 [`blocked-decisions-tracker.md`](../../03-check/blocked-decisions-tracker.md) 외부 회신 대기
+> **작성일**: 2026-09-10 (§1 최초 작성 시점 — PR #1~11 기준. §1의 지표·서술은 그 시점 스냅샷으로 남겨두고, #12 이후 확장분은 아래 **§3-2**·**§3-3**·부록에 이어 적었다)
+> **갱신일**: 2026-09-11 — PR #12~24 반영 → **2026-09-13 재갱신 — PR #25~42 반영, §3-3 신설**
+> **대상 사이클**: CTO 착수 심사(`docs/02-design/cto-review-2026-09-05.md`) 보안 블로커 해소 + Design v0.6→v0.52 잔여 구현 + 법무·인프라·경영 미결 14건 전체 확정·구현
+> **PR 범위**: #1 ~ #42 (전부 main squash 머지, #38 결번)
+> **PDCA 위치**: Do 완료 → Check 2회(`docs/03-check/gap-analysis-2026-09-10.md`, `-11.md`) → 본 Report. **[`blocked-decisions-tracker.md`](../../03-check/blocked-decisions-tracker.md)의 법무 6건·인프라 5건·경영 3건(14건 전체)이 2026-09-13 PR #39로 전부 확정+구현 완료** — 이 사이클이 추적하던 외부 회신 대기 항목은 더 이상 없다(§5 갱신 참조). 남은 후속은 실측 성격의 온디바이스 SLM 벤치마크(§3-3)뿐
 
 ---
 
@@ -30,12 +30,12 @@ CTO팀 착수 심사(2026-09-05, 7개 관점 전원 "Go with Conditions")에서 
 
 | 블로커 | 계획(심사 지적) | 실적 | 상태 |
 |---|---|---|---|
-| **B1** 정서 데이터는 "기록" 시점부터 위법 소지 | 정서 파이프라인 OFF, 알림 수신은 opt-in | 정서 파이프라인 피처플래그 OFF(decisions #25), `emotion_scores`/`emotion_alerts` 엔드포인트 미구현. `notification_settings.receives_emotion_alerts` 기본값 **opt-out(false)** + `(family_member_id, channel)` UNIQUE (PR #3, 마이그레이션 0005) | ✅ 코드분 완료 / ⚖️ 정서 모니터링 법적 기준은 법무 대기 (Phase 2) |
-| **B2** 대리동의 법적 근거 공백 | 동의 주체(self/proxy/legal_guardian) 구분 | `consent` 모듈 신규(PR #1). `ConsentLog.actor`(self/proxy)를 `granted_by` 유무에서 파생. 온보딩이 `recordConsent(data_collection)` 호출 | 🟡 부분 — 명시적 enum(`legal_guardian`)·`data_subject` RBAC 행은 성년후견 대리동의 법적 근거 확정(decisions #12) 대기 |
-| **B3** 보유기간·파기정책이 전 문서에 없음 | `retention_until`/`purged_at` + 파기 오케스트레이션 | **crypto-shredding 수단 확보**: 사용자 파기 = `user_encryption_keys` 행 삭제 → 그 사용자 PII 자유텍스트·contact·birth_date 전량 복호화 불가 (PR #1/#4). `e2e_pii_auth_check`가 실제로 검증 | 🟡 파기 수단만 / ⚖️ 보유기간 수치·5개 저장소(PG·MinIO·Qdrant·Neo4j·Room) 통합 삭제 오케스트레이션은 법무 회신 대기 — **미착수** |
-| **B4** PII 암호화 방식 미결 = 스키마 결정, 이연 불가 | 애플리케이션 레벨 필드 암호화 + 사용자별 DEK | **완료**. `core/crypto.py` — Fernet(AES-128-CBC+HMAC), 사용자별 DEK를 `PII_KEK`로 랩핑(`user_encryption_keys`), `pii.v1.` 토큰 접두. 1차(PR #1): `chapters.body_text`·`chapter_revisions.body_text_snapshot`·`conversation_chunks.{transcript_on_device,transcript_server,assistant_response}`. 2차(PR #4): `family_members.contact`·`invitations.contact`(암호문 + `contact_bidx` HMAC 동등검색), `users.birth_date`(DATE→VARCHAR 암호문). `name`은 평문 확정 | ✅ 완료 / 🔜 3차: `PII_KEK` Vault transit 이전, blind index 키 정식 분리 |
-| **B5** 인증/인가/테넌시/감사모델 구조적 공백 | Keycloak 실검증, RBAC/IDOR, 감사로그, 테넌시 | **대부분 완료**. Keycloak JWKS RS256 검증 + `sub`→`family_members.keycloak_sub` 매핑(PR #1). Device Token = `device_credentials` SHA-256(PR #1). `authorize_user_access(principal, user_id, roles, require_2fa)` RBAC + IDOR 방지 — 13개 라우터 적용(PR #1/#2). 초대 수락→계정 연결(PR #2). social_worker fail-closed(PR #5). `access_logs` HTTP 미들웨어 감사로그(PR #1). 무인증 401(≠500) 버그 수정(PR #7). 로컬 Keycloak realm + e2e(PR #8) | ✅ 인증·인가·감사 완료 / ⚖️ `organizations` B2G 시설 테넌시는 운영모델 확정 대기 — **미착수** |
-| **B6** Zero External Data Egress가 설계 내부와 충돌 | egress 범위 정의 + 통제 | 벡터 payload에 원문 미저장 원칙은 `upload_pipeline_service`에서 준수(payload=`user_id`만). egress 범위 정의·네트워크 통제는 인프라 설계 과제 | ❌ **미착수** — 인프라 설계(infra-architect) 필요 |
+| **B1** 정서 데이터는 "기록" 시점부터 위법 소지 | 정서 파이프라인 OFF, 알림 수신은 opt-in | 정서 파이프라인 피처플래그 OFF(decisions #25), `emotion_scores`/`emotion_alerts` 엔드포인트 미구현. `notification_settings.receives_emotion_alerts` 기본값 **opt-out(false)** + `(family_member_id, channel)` UNIQUE (PR #3, 마이그레이션 0005) | ✅ 코드분 완료 / ✅ **법적 분류 확정**(2026-09-12, decisions #52/#55 — 일반 개인정보로 충분, "진단" 표현 회피). 기능 자체는 여전히 Phase 1 피처플래그 OFF(제품 판단), "발송 임계치" 세부 로직만 별도 대기(decisions #19) |
+| **B2** 대리동의 법적 근거 공백 | 동의 주체(self/proxy/legal_guardian) 구분 | `consent` 모듈 신규(PR #1). `ConsentLog.actor`(self/proxy)를 `granted_by` 유무에서 파생. 온보딩이 `recordConsent(data_collection)` 호출 | ✅ **완료**(2026-09-12, decisions #53) — 가족(1촌 이내) 대리동의를 유효로 확정. 명시적 enum(`legal_guardian`)은 여전히 미도입이나 YAGNI 판단(actor는 파생값으로 충분). `apps/web` `/consent` 대리 동의 관리 화면(PR #33) |
+| **B3** 보유기간·파기정책이 전 문서에 없음 | `retention_until`/`purged_at` + 파기 오케스트레이션 | **crypto-shredding 수단 확보**: 사용자 파기 = `user_encryption_keys` 행 삭제 → 그 사용자 PII 자유텍스트·contact·birth_date 전량 복호화 불가 (PR #1/#4). `e2e_pii_auth_check`가 실제로 검증 | ✅ **완료**(2026-09-13, decisions #56, PR #39) — crypto-shredding을 파기 수단으로 정식 채택. Postgres cascade가 이미 4개 저장소 중 3개(PG 자체+DEK)를 커버함을 재조사로 확인, 남은 Qdrant/Neo4j/MinIO는 `UserErasureService`가 오케스트레이션. 시간기반 보유기간은 `conversation_chunks` 원문에 한정(`retention_policies`+`RetentionPurgeService`) |
+| **B4** PII 암호화 방식 미결 = 스키마 결정, 이연 불가 | 애플리케이션 레벨 필드 암호화 + 사용자별 DEK | **완료**. `core/crypto.py` — Fernet(AES-128-CBC+HMAC), 사용자별 DEK를 `PII_KEK`로 랩핑(`user_encryption_keys`), `pii.v1.` 토큰 접두. 1차(PR #1): `chapters.body_text`·`chapter_revisions.body_text_snapshot`·`conversation_chunks.{transcript_on_device,transcript_server,assistant_response}`. 2차(PR #4): `family_members.contact`·`invitations.contact`(암호문 + `contact_bidx` HMAC 동등검색), `users.birth_date`(DATE→VARCHAR 암호문). `name`은 평문 확정 | ✅ 완료 / ✅ **3차 중 blind index 분리 완료**(2026-09-12, decisions #60, PR #32 — `BLIND_INDEX_KEY` 정식 분리). `PII_KEK` 자체의 Vault transit 이전은 시크릿 매니저 인프라 선결 필요로 계속 보류 |
+| **B5** 인증/인가/테넌시/감사모델 구조적 공백 | Keycloak 실검증, RBAC/IDOR, 감사로그, 테넌시 | **대부분 완료**. Keycloak JWKS RS256 검증 + `sub`→`family_members.keycloak_sub` 매핑(PR #1). Device Token = `device_credentials` SHA-256(PR #1). `authorize_user_access(principal, user_id, roles, require_2fa)` RBAC + IDOR 방지 — 13개 라우터 적용(PR #1/#2). 초대 수락→계정 연결(PR #2). social_worker fail-closed(PR #5). `access_logs` HTTP 미들웨어 감사로그(PR #1). 무인증 401(≠500) 버그 수정(PR #7). 로컬 Keycloak realm + e2e(PR #8) | ✅ 인증·인가·감사 완료 / ✅ **social_worker 조건부 재포함**(2026-09-13, decisions #54, PR #34 — `third_party_access` 동의 게이트) / ✅ **`organizations` B2G 시설 테넌시 완료**(2026-09-13, decisions #59, PR #37 — 안전망 스코프로 착수, 정식 B2G 대량열람 모델은 계속 스코프 밖) |
+| **B6** Zero External Data Egress가 설계 내부와 충돌 | egress 범위 정의 + 통제 | 벡터 payload에 원문 미저장 원칙은 `upload_pipeline_service`에서 준수(payload=`user_id`만). egress 범위 정의·네트워크 통제는 인프라 설계 과제 | ✅ **완료**(2026-09-13, decisions #58 + [`data-classification-policy.md`](../../02-design/data-classification-policy.md) 신규) — PII/원본데이터 vs 메타데이터 4단계(Tier 1~4) 경계 명문화. self-hosted 관측 스택(PR #36)도 이 원칙 위에서 구축(SaaS APM 배제) |
 
 ---
 
@@ -74,6 +74,33 @@ Check #1 이후 이 사이클을 종료하지 않고 이어서 §2.11 서버측 
 
 ---
 
+## 3-3. 3차 확장 — PR #25~42, 법무·인프라·경영 14건 전체 확정+구현 완료 (갱신일 2026-09-13)
+
+§3-2까지는 CTO 블로커 B1~B6가 전부 "외부 회신 대기"였다. 이 구간에서 그 구도가 완전히 바뀌었다 —
+**사용자가 "결정이 필요한 항목을 하나씩 대화하면서 결정해나가자"고 요청**해, `blocked-decisions-tracker.md`가
+추적하던 법무 6건(Q1~Q6)·인프라 5건(I1~I5)·경영 3건 **14건 전체를 일괄 확정**(decisions.md #52~#65,
+PR #31, 순수 문서)한 뒤, 그 결정들을 작은 것부터 순서대로 전부 구현했다. **PR #39로 14건 전체 구현 완료**
+— §2 표의 B1~B6 상태 열이 이를 반영한다.
+
+| 영역 | 실적 | 관련 decisions | PR |
+|---|---|---|---|
+| 문서 정비 | 결정 대기 트래커 완료 항목 갱신(첫 가족 연결·페르소나 룰셋) | #51 | #29 |
+| 실측 준비 | 온디바이스 SLM 벤치마크 프로토콜 + 측정 하니스(`ondevice-slm-benchmark-protocol.md`, `apps/mobile/.../benchmark/`) — 실기기 없어 실측 자체는 미실행 | #27/#9/#31 | #30 |
+| **법무·인프라·경영 14건 일괄 확정** | Q1~Q6(법무, 잠정 회사정책 명시)·I1~I5(인프라)·경영 3건을 AskUserQuestion으로 순서대로 결정, decisions.md §2.9 신설 | #52~#65 | #31 |
+| PII 3차 | blind index 키를 `PII_KEK`에서 `BLIND_INDEX_KEY`로 정식 분리, `scripts/backfill_blind_index.py` | #60 | #32 |
+| 동의 UX | 가족 대리 동의 관리 화면(`apps/web` `/consent`) — 백엔드는 이미 `granted_by` 지원 중이었음을 재발견 | #53 | #33 |
+| 인가 확장 | 복지사(social_worker) `third_party_access` 동의 게이트 — `auth_deps.authorize_elder_data_read()` 신규, 10개 엔드포인트 전환, 실 인프라 e2e 11/11 | #54 | #34 |
+| 동의 UX | 국외이전(FCM) 고지·동의 UI — 모바일 온보딩에 별도 체크박스(기본 미동의) | #57 | #35 |
+| 관측성 | self-hosted GlitchTip+Prometheus+Grafana+Loki, `glitchtip-bootstrap` 자동화. 부수 발견: `handle_unexpected`가 예외를 완전히 삼키던 버그 수정 | #61 | #36 |
+| 테넌시 | B2G 시설(`organizations`) 안전망 — `ElderAccessContext`로 `auth_deps.py` 리팩터링, apps/admin 시설 관리 화면 | #59 | #37 |
+| **보유기간·계정삭제** | crypto-shredding + `UserErasureService`(Qdrant/Neo4j/MinIO) + `RetentionPurgeService` + admin UI — **14건 중 마지막 항목**. 부수 발견: `VECTORDB_API_KEY=""` https 오판정 버그 수정 | #56 | #39 |
+| 문서 동기화 | design.md §3/§4.2/§5.1/§7/§9/§11 드리프트 정정(실행 중 OpenAPI와 전수 대조), 신규 `data-classification-policy.md`(I1 후속), glossary.md 용어 8건 추가, 양쪽 `_INDEX.md`·CLAUDE.md 정정 | #58 | #40 |
+| 사업비 산정 | IFPUG FP 기반 SW개발비 산정 내역서(정통법·간이법 2종) — 서버 API 46종+저장소 23종, 모바일 기능 13종+저장소 6종 전수 산정 | — | #41, #42 |
+
+**§1 지표 재갱신(2026-09-13 기준)**: 머지된 PR **41건**(#1~#42, #38 결번) · 마이그레이션 0002~**0012** · 백엔드 단위 테스트 **212** · Design 문서 v0.6 → **v0.52** · decisions.md → **v0.25** · schema.md → **v1.17**(도메인 19+부속 4) · workflow-diagrams.md → **v0.6**(21종, §21 신규) · glossary.md → **v1.2**. import-linter 4 contract는 계속 4 kept·0 broken.
+
+---
+
 ## 4. 검증
 
 ### 실 인프라 e2e (Docker: postgres·redis·qdrant·neo4j·minio·keycloak, 마이그레이션 0006)
@@ -92,20 +119,28 @@ Check #1 이후 이 사이클을 종료하지 않고 이어서 §2.11 서버측 
 
 ## 5. 미해결 / 다음 사이클 이월
 
-> §1~4는 PR #1~11 시점 기준, §3-2는 #12~24까지 갱신했다. 상세·회신 관리는
-> **[`docs/03-check/blocked-decisions-tracker.md`](../../03-check/blocked-decisions-tracker.md)** (살아있는 트래커) — 아래 "외부 결정 대기" 표는 그 문서의 요약이다.
+> §1~4는 PR #1~11 시점 기준, §3-2는 #12~24, §3-3은 #25~42까지 갱신했다. 상세·회신 관리는
+> **[`docs/03-check/blocked-decisions-tracker.md`](../../03-check/blocked-decisions-tracker.md)** (살아있는 트래커).
 
-### 외부 결정 대기 (착수 불가)
+### 외부 결정 대기 — 2026-09-13 기준 전부 해소됨
 
-| 항목 | 블로커 | 대기 대상 |
-|---|---|---|
-| 보유기간 수치 + 5개 저장소 통합 파기 오케스트레이션 | B3 | ⚖️ 법무 — 보유기간·crypto-shredding 인정 여부 |
-| 정서 모니터링 알림 법적/윤리 기준 | B1 | ⚖️ 법무·윤리 (Phase 2) |
-| 대리동의 `legal_guardian` enum + `data_subject` RBAC | B2 | ⚖️ 법무 — 성년후견 대리동의 근거 (decisions #12) |
-| social_worker 어르신 데이터 재포함 | B5 | ⚖️ 법무 — 제3자제공 여부 + 전용 consent 유형 (decisions #48) |
-| `organizations` B2G 시설 테넌시 | B5 | 📋 B2G 운영모델 |
-| Zero Egress 범위 정의 + 네트워크 통제 | B6 | 🏗️ infra-architect |
-| `PII_KEK` Vault transit 이전 + blind index 키 분리 | B4 3차 | 🏗️ 시크릿 매니저 인프라 |
+> 아래는 §3-2 시점(2026-09-11)까지 "외부 회신 대기"였던 항목의 **당시 스냅샷**이다. 이 사이클(§3-3,
+> PR #31~#39)에서 **7건 전부 사용자 결정으로 확정되고 코드까지 구현 완료**됐다 — 더 이상 유효한
+> "대기 목록"이 아니라 이력으로 남긴다. 각 행의 현재 상태는 §2 표(B1~B6) 갱신분 참조.
+
+| 항목(당시 표현) | 블로커 | 당시 대기 대상 | 현재 상태 |
+|---|---|---|---|
+| 보유기간 수치 + 5개 저장소 통합 파기 오케스트레이션 | B3 | ⚖️ 법무 — 보유기간·crypto-shredding 인정 여부 | ✅ 완료(decisions #56, PR #39) |
+| 정서 모니터링 알림 법적/윤리 기준 | B1 | ⚖️ 법무·윤리 (Phase 2) | ✅ 법적 분류 확정(decisions #52/#55) — 발송 임계치 세부만 잔존(#19) |
+| 대리동의 `legal_guardian` enum + `data_subject` RBAC | B2 | ⚖️ 법무 — 성년후견 대리동의 근거 (decisions #12) | ✅ 완료(decisions #53, PR #33) — enum 자체는 YAGNI로 미도입 |
+| social_worker 어르신 데이터 재포함 | B5 | ⚖️ 법무 — 제3자제공 여부 + 전용 consent 유형 (decisions #48) | ✅ 완료(decisions #54, PR #34) |
+| `organizations` B2G 시설 테넌시 | B5 | 📋 B2G 운영모델 | ✅ 완료(decisions #59, PR #37, 안전망 스코프) |
+| Zero Egress 범위 정의 + 네트워크 통제 | B6 | 🏗️ infra-architect | ✅ 완료(decisions #58, `data-classification-policy.md`, PR #40) |
+| `PII_KEK` Vault transit 이전 + blind index 키 분리 | B4 3차 | 🏗️ 시크릿 매니저 인프라 | 🟡 blind index 분리만 완료(decisions #60, PR #32) — Vault 이전 자체는 시크릿 매니저 인프라 선결 필요로 계속 보류 |
+
+**남은 후속(외부 회신 대기 아님, 별도 실측 트랙)**: 온디바이스 SLM 모델 선정·"최근 5일" 캐시 기준·실시간
+파이프라인 수치(decisions #27/#9/#31) — 프로토콜+하니스 준비 완료(PR #30), 물리 안드로이드 기기 확보가
+유일한 선결조건.
 
 ### 코드 후속 (착수 가능, 우선순위 낮음)
 
@@ -138,10 +173,13 @@ Check #1 이후 이 사이클을 종료하지 않고 이어서 §2.11 서버측 
 
 ## 7. 다음 사이클 권고
 
-1. **법무 회신 취합** — B1(정서)·B2(대리동의)·B3(보유기간)·B5(제3자제공)가 한 묶음. 회신이 오면 retention 정책 + 파기 오케스트레이션이 가장 큰 단일 작업. (2026-09-11 현재 전부 미회신)
-2. **infra-architect 착수** — B6(egress), `organizations` 테넌시, `PII_KEK` Vault, GPU 토폴로지, 관측 스택(self-hosted). 온프레미스 배포 설계가 다음 병목.
-3. **온디바이스 SLM 모델 선정 벤치마크**(decisions #27, 실기기) — 착수하면 §19 의도 라우터(현재 모바일 홈 셸에서 말벗돌봄 모드 고정, PR #23)와 §2.10 페르소나 JSON 룰셋(Compaction Engine 잔여, PR #15)이 같이 풀린다. 남은 코드 후속 중 **유일하게 외부 회신이 아니라 실기기 확보가 선결조건**인 항목.
-4. (완료) ~~`core/auth.py` 포트 리팩터링~~ → PR #13. ~~apps/web·admin 공유 코드 추출~~ → PR #21. ~~§4.2 endpoint 표 정비~~ → PR #26.
+> 2026-09-13 갱신: 아래 1·2번 권고는 **이 사이클(§3-3, PR #31~#40)에서 전부 실행되고 완료됐다**. 원문은
+> 이력으로 남기고, 완료 표시만 추가한다.
+
+1. ~~**법무 회신 취합** — B1(정서)·B2(대리동의)·B3(보유기간)·B5(제3자제공)가 한 묶음. 회신이 오면 retention 정책 + 파기 오케스트레이션이 가장 큰 단일 작업.~~ — **완료**. 사용자가 직접 결정 대화를 요청해 14건 일괄 확정(decisions #52~#65, PR #31) 후 전부 구현(PR #32~#39).
+2. ~~**infra-architect 착수** — B6(egress), `organizations` 테넌시, `PII_KEK` Vault, GPU 토폴로지, 관측 스택(self-hosted).~~ — **대부분 완료**: egress 경계 문서화(PR #40), organizations 테넌시(PR #37), 관측 스택(PR #36). `PII_KEK` Vault 이전과 GPU 토폴로지(VRAM 예산표)만 계속 보류(각각 시크릿 매니저 인프라, 실기기 벤치마크 선결).
+3. **온디바이스 SLM 모델 선정 벤치마크**(decisions #27, 실기기) — 착수하면 §19 의도 라우터(현재 모바일 홈 셸에서 말벗돌봄 모드 고정, PR #23)와 §2.10 페르소나 JSON 룰셋(서버측 생성은 PR #27로 완료, 온디바이스 소비만 잔여)이 같이 풀린다. **이 사이클 종료 시점 기준 유일하게 남은, 외부 회신이 아니라 실기기 확보가 선결조건**인 항목 — 다음 사이클 최우선 권고.
+4. (완료) ~~`core/auth.py` 포트 리팩터링~~ → PR #13. ~~apps/web·admin 공유 코드 추출~~ → PR #21. ~~§4.2 endpoint 표 정비~~ → PR #26. ~~법무·인프라·경영 14건~~ → PR #31~#39.
 
 ---
 
@@ -177,3 +215,18 @@ Check #1 이후 이 사이클을 종료하지 않고 이어서 §2.11 서버측 
 | #26 | §4.2 Endpoint List를 실제 구현과 1:1로 정비 (gap-analysis G11, OpenAPI 스키마 전수 대조) | — |
 | #27 | 단기 압축 기억(Persona) JSON 룰셋 서버측 생성 (§2.11 4단계, CareAgent 전용 스코프) | 0008 |
 | #28 | 첫 가족 구성원 연결 — admin 중개 초대 경로 (decisions #51) | — |
+| #29 | 결정 대기 트래커 완료 항목 갱신 (첫 가족 연결·페르소나 룰셋) | — |
+| #30 | 온디바이스 SLM 벤치마크 프로토콜 + 측정 하니스 (실측은 미실행) | — |
+| #31 | 법무·인프라·경영 미결 14건 일괄 확정 (decisions #52~#65, 순수 문서) | — |
+| #32 | blind index 키를 `PII_KEK`에서 정식 분리 (decisions #60) | — |
+| #33 | 가족 대리 동의 관리 화면 신규 (decisions #53) | — |
+| #34 | 복지사 제3자제공 동의 게이트 구현 (decisions #54) | 0009 |
+| #35 | 국외이전(FCM) 고지·동의 UI 추가 (decisions #57) | 0010 |
+| #36 | self-hosted 관측 스택 구축 (decisions #61) | — |
+| #37 | B2G 시설 테넌시 안전망 구축 (decisions #59) | 0011 |
+| #39 | 보유기간·계정 삭제(erasure) 오케스트레이션 (decisions #56, Q5) — **법무·인프라·경영 14건 중 마지막 항목** | 0012 |
+| #40 | 설계문서 최신화 — 코드 대비 드리프트 정정 + `data-classification-policy.md` 신규 | — |
+| #41 | FP(기능점수) 기반 SW개발비 산정 내역서 신규 작성 (정통법) | — |
+| #42 | FP 산정 내역서 간이법(Simplified Method) 버전 신규 작성 | — |
+
+> #38은 결번(머지되지 않음).
