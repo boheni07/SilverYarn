@@ -4,7 +4,7 @@
 >
 > **Project**: 은빛실타래 (SilverYarn)
 > **Date**: 2026-09-07
-> **Version**: 1.3 (Do 단계 — §11 `organizations`/`family_members.org_id` 반영 완료로 갱신, decisions.md #59)
+> **Version**: 1.4 (Do 단계 — §11 `*.retention_until`/`*.purged_at` 반영 완료로 갱신, decisions.md #56)
 > **Status**: Draft
 > **DDL 원본(SoR)**: [`schema.md`](./schema.md) — 본 문서와 실제 컬럼 타입·길이가 다르면 schema.md가 우선한다.
 
@@ -461,7 +461,7 @@ CTO 보안·백엔드 리뷰([cto-review-2026-09-05.md](../02-design/cto-review-
 | `device_credentials` (신규 테이블) | Device Token 발급·회전·폐기 이력 (분실단말 접근 차단) | B5(b) | ✅ 반영 (v1.8) — SHA-256 해시 저장 |
 | `access_logs` (신규 테이블) | 접속기록(누가·언제·무엇을 열람) 감사로그 | 제8조, B5(e) | ✅ 반영 (v1.8) — HTTP 미들웨어 적재 |
 | `organizations` + `family_members.org_id` | B2G 시설 단위 멀티테넌시(시설간 열람 차단) | B5(c), decisions.md #1 | ✅ 반영 (v1.16, decisions.md #59, 2026-09-13) — 정식 B2G 대량 권한 부여 모델(조직원이 소속 어르신 전체 자동조회)은 아니고, 기존 1:1 연결 위에 얹는 **안전망**(시설이 다르면 개별 연결이 있어도 차단)으로 스코프를 좁혀 착수 |
-| `*.retention_until` / `*.purged_at` | 보유기간·파기 시점 관리 (crypto-shredding 등) | B3, decisions.md 미결 항목 | ⏸️ 보류 — 법무 회신 대기 |
+| `*.retention_until` / `*.purged_at` | 보유기간·파기 시점 관리 (crypto-shredding 등) | B3, decisions.md #56 | ✅ 반영 (v1.17, decisions.md #56, Q5, 2026-09-13) — 계정 전체 삭제는 crypto-shredding(Postgres cascade + `UserErasureService`가 Qdrant/Neo4j/MinIO 정리) 채택, 시간 기반 보유기간은 `conversation_chunks.retention_until`/`purged_at` 두 컬럼으로 스코프를 좁혀 착수(원본음성·챕터·사진은 만료 대상 아님, §3.21 `retention_policies` 참조) |
 
 ---
 
@@ -480,6 +480,7 @@ CTO 보안·백엔드 리뷰([cto-review-2026-09-05.md](../02-design/cto-review-
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 1.4 | 2026-09-13 | Do 단계 — §11 `*.retention_until`/`*.purged_at` 반영 완료로 갱신(decisions.md #56, Q5). 법무·인프라·경영 미결 14건의 마지막 항목 — 계정 전체 삭제는 crypto-shredding, 시간 기반 보유기간은 conversation_chunks 스코프로 좁혀 완료 | NUBiz AX Initiative |
 | 1.3 | 2026-09-13 | Do 단계 — §11 `organizations` + `users`/`family_members`.`org_id` 반영 완료로 갱신(decisions.md #59, 2026-09-13 사용자 결정, I2). 스코프는 B2G 대량 권한 부여가 아니라 기존 1:1 연결 위 안전망(시설 불일치 시 차단) | NUBiz AX Initiative |
 | 1.0 | 2026-09-07 | schema.md v1.2 + mobile-schema.md 기반 ERD 신규 작성 (흑백 고대비, 도메인별 3분할 + 온디바이스 매핑 + 비관계형 저장소 연계 다이어그램) | NUBiz AX Initiative |
 | 1.1 | 2026-09-07 | 2차 design-validator 검증 반영 — schema.md v1.3 동기화(L-1~L-6) | NUBiz AX Initiative |

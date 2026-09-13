@@ -4,3 +4,4 @@ export * from "./sync-session";
 export * from "./family-member";
 export * from "./invitation";
 export * from "./organization";
+export * from "./retention-policy";

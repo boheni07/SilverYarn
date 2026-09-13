@@ -45,6 +45,13 @@ from core_service.modules.care.infrastructure.conversation_chunk_repository impo
 )
 from core_service.modules.photos.application.photo_service import PhotoService
 from core_service.modules.photos.infrastructure.photo_repository import PhotoRepository
+from core_service.modules.retention.application.retention_policy_service import (
+    RetentionPolicyService,
+)
+from core_service.modules.retention.deps import build_retention_purge_service
+from core_service.modules.retention.infrastructure.retention_policy_repository import (
+    RetentionPolicyRepository,
+)
 from core_service.modules.sync.application.upload_pipeline_service import (
     UploadPipelineInput,
     UploadPipelineService,
@@ -93,7 +100,10 @@ async def process_upload(
     async with session_factory() as db_session:
         try:
             pipeline = UploadPipelineService(
-                chunk_service=ConversationChunkService(ConversationChunkRepository(db_session)),
+                chunk_service=ConversationChunkService(
+                    ConversationChunkRepository(db_session),
+                    RetentionPolicyService(RetentionPolicyRepository(db_session)),
+                ),
                 chapter_service=ChapterService(
                     ChapterRepository(db_session), ChapterRevisionRepository(db_session)
                 ),
@@ -148,7 +158,29 @@ async def cleanup_orphan_photos(ctx: dict[str, Any]) -> None:
             raise
 
 
+async def purge_expired_conversation_chunks(ctx: dict[str, Any]) -> None:
+    """decisions.md #56(Q5) — 보유기간 만료 대화 청크 파기. 매시 30분 실행
+    (cleanup_orphan_photos와 겹치지 않게 분산 — WorkerSettings.cron_jobs).
+    """
+    _ = ctx
+    session_factory = get_session_factory()
+    async with session_factory() as db_session:
+        try:
+            service = build_retention_purge_service(db_session)
+            purged = await service.purge_expired_chunks()
+            await db_session.commit()
+            if purged:
+                logger.info("retention purge — %d건 파기", purged)
+        except Exception:
+            logger.exception("retention purge 잡 실패")
+            await db_session.rollback()
+            raise
+
+
 class WorkerSettings:
     functions = [process_upload]
-    cron_jobs = [cron(cleanup_orphan_photos, hour=set(range(24)), minute=0)]
+    cron_jobs = [
+        cron(cleanup_orphan_photos, hour=set(range(24)), minute=0),
+        cron(purge_expired_conversation_chunks, hour=set(range(24)), minute=30),
+    ]
     redis_settings = RedisSettings(host=settings.redis_host, port=settings.redis_port)

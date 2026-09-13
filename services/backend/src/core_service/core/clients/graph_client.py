@@ -50,5 +50,22 @@ class GraphClient:
             record = await result.single()
             return record["node_ref"] if record else str(chunk_id)
 
+    async def delete_chunk_node(self, chunk_id: UUID) -> None:
+        """decisions.md #56(Q5) — 보유기간 만료된 대화 청크 1건의 노드 삭제.
+        MENTIONED_IN 관계도 DETACH DELETE로 함께 지운다. 이 청크만 언급했던
+        Person 노드는 고아로 남을 수 있으나(다른 청크가 같은 인물을 또 언급할
+        가능성이 있어 함부로 못 지움) design.md 후속 과제로 남긴다."""
+        async with self._driver.session() as session:
+            await session.run(
+                "MATCH (c:ConversationChunk {id: $chunk_id}) DETACH DELETE c", chunk_id=str(chunk_id)
+            )
+
+    async def delete_user_nodes(self, user_id: UUID) -> None:
+        """decisions.md #56(Q5) — 어르신 계정 전체 삭제(erasure) 시, 이 사용자의
+        ConversationChunk·Person 노드를 전부 지운다(둘 다 user_id 프로퍼티로 스코프됨,
+        upsert_chunk_node 참조)."""
+        async with self._driver.session() as session:
+            await session.run("MATCH (n) WHERE n.user_id = $user_id DETACH DELETE n", user_id=str(user_id))
+
     async def close(self) -> None:
         await self._driver.close()

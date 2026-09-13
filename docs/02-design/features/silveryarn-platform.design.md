@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.50 (B2G 시설 테넌시 안전망 — decisions.md #59 구현)
+> **Version**: 0.51 (보유기간·계정 삭제 오케스트레이션 — decisions.md #56 구현, Q5)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -758,6 +758,35 @@ services/backend(호스트 프로세스, 포트 9677, decisions.md #44로 아직
 - **부수 발견·수정**: 구축 중 두 가지 버그를 발견했다. ① `core/logging.py`가 "구조화 로그(JSON)"라고 docstring에 써놓고 실제로는 일반 텍스트 포맷을 쓰고 있던 코드·문서 드리프트(SoR 위반) — 실제 JSON으로 정정. ② `core/errors.py`의 `handle_unexpected`(전역 예외 핸들러)가 예외를 로깅도 GlitchTip 캡처도 없이 완전히 삼키고 있었다 — FastAPI가 여기서 처리를 끝내버려 Starlette `ServerErrorMiddleware`까지 안 내려가 sentry-sdk 자동계측이 못 걸리는 구조라, 이제 명시적으로 `logger.exception` + `sentry_sdk.capture_exception`을 호출한다.
 - **실 인프라 검증(2026-09-13)**: `up{job="silveryarn-backend"}=1`(Prometheus), 백엔드가 남긴 JSON 로그 1건이 Loki 쿼리에 그대로 도착 확인, 수동 발생시킨 테스트 예외가 GlitchTip Issue로 정확히 저장됨(한글 메시지 포함) — 3개 파이프라인 전부 왕복 검증.
 
+### 7.6 보유기간·계정 삭제(erasure) 오케스트레이션 (신규 v0.51, Do 단계 — [decisions.md #56](../../01-plan/decisions/silveryarn-platform.decisions.md), 2026-09-13, Q5)
+
+CTO가 "5개 저장소 통합 삭제, 최대 단일 작업(2~3주)"으로 지목했던 항목. 착수 전 schema.md 전 테이블의 FK `ON DELETE` 절을 다시 조사해 실제 스코프를 좁혔다 — 두 가지 성격이 전혀 다른 문제였다.
+
+**① 어르신 계정 전체 삭제(erasure)**: `users` 하위 거의 모든 테이블이 이미 `user_id ... ON DELETE CASCADE`로 걸려 있다(devices·chapters·photos·conversation_chunks·questions·schedule_items·emotion_*·consent_logs·invitations, **`user_encryption_keys` 포함**) — `DELETE FROM users` 한 줄로 Postgres 쪽은 이미 완전히 정리되며, crypto-shredding용 DEK 삭제도 자동 포함된다. 실제 오케스트레이션이 필요한 건 **Postgres 밖 3곳**(Qdrant·Neo4j·MinIO)뿐이다.
+
+```
+UserErasureService.erase_user(user_id)
+  1. users.get_by_id()로 존재 확인, photos 목록을 먼저 읽어둠(cascade가 지우기 전에)
+  2. VectorDBClient.delete_user_vectors(user_id)   ── Qdrant, payload.user_id 필터 삭제
+  3. GraphClient.delete_user_nodes(user_id)         ── Neo4j, DETACH DELETE
+  4. photos마다 StorageClient.remove_object(ref)    ── MinIO
+  5. deletion_records에 감사 로그 기록(users 삭제와 같은 트랜잭션)
+  6. users.delete(user_id)                          ── Postgres, 여기서 cascade 발동
+```
+
+외부 저장소(2~4단계)를 **먼저**, Postgres(6단계)를 **마지막**에 지우는 이유는 재시도 안전성이다 — 외부 삭제는 전부 멱등이라 중간 실패 후 `erase_user()`를 통째로 재호출하면 이어서 끝낼 수 있지만, Postgres를 먼저 지우면 사용자 행이 사라져 "이 사용자가 어떤 사진을 가졌는지" 같은 정보를 잃어 외부 정리가 불가능해진다.
+
+**② 시간 기반 보유기간(retention)**: 원본음성은 이미 업로드 성공 시 즉시삭제(decisions #30)이고 챕터·사진은 자서전 결과물이라 계정 존속기간 보관이 맞다(만료 대상 아님). 실제로 "보유기간"이 의미 있는 건 `conversation_chunks`의 원문 대화 텍스트뿐이다.
+
+- `retention_policies`(마이그레이션 0012) — 카테고리별 보유일수를 admin이 조정하는 설정 테이블. `conversation_transcript` = 365일(1차 잠정값). `apps/admin` `/retention-policies` 화면에서 변경.
+- `conversation_chunks.retention_until`(생성 시점 정책으로 계산해 채움) / `purged_at` — 만료+미파기 청크만 걸리는 부분 인덱스로 배치 조회.
+- `RetentionPurgeService`(worker.py 신규 cron, 매시 30분) — 만료 청크마다 Qdrant/Neo4j 삭제 후 `transcript_on_device`/`transcript_server`/`assistant_response`만 redaction(NULL/빈 문자열)하고 `purged_at` 기록. `meta_*`(시기·인물·장소 등 구조화 메타데이터)는 자서전 집필 참고용으로 남긴다 — Append-Only 원칙(모듈 docstring)의 두 번째 예외.
+
+**의도적으로 채택하지 않은 것**: "N일 비활성 시 계정 자동삭제" 같은 자율 파괴적 동작. Q5는 대화 원문 보유기간만 다루며, 계정 전체 삭제는 항상 admin의 명시적 `POST /users/{id}/erase` 호출(2단계 확인 UI, 어르신 이름 재입력 요구)로만 실행된다.
+
+- **부수 발견·수정**: 실 인프라 검증 중 `VECTORDB_API_KEY=""`(빈 문자열)가 qdrant-client의 `https = https if https is not None else api_key is not None` 판정에 걸려, "키는 있는데 빈 값"으로 인식되어 로컬 평문 HTTP Qdrant에 https로 접속을 시도하다 SSL 에러로 실패하는 잠재 버그를 발견 — `VectorDBClient`가 빈 문자열을 `None`으로 정규화하도록 수정.
+- **실 인프라 검증(2026-09-13)**: 실 Docker(Postgres+Qdrant+Neo4j+MinIO)로 (1) 청크 생성 시 정책 기준 `retention_until` 계산 정확성, (2) 만료 청크 강제 설정 후 배치 파기 → Postgres 원문 redaction 확인, (3) 신규 계정 생성 → erasure 실행 → `users`/`conversation_chunks`/`user_encryption_keys` 전부 소거 + `deletion_records` 감사 로그 확인까지 왕복 검증. 이 항목의 완료로 `blocked-decisions-tracker.md`의 법무·인프라·경영 미결 14건 전체가 구현 완료됐다.
+
 ---
 
 ## 8. Test Plan
@@ -893,7 +922,11 @@ silveryarn/
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
-| 0.50 | 2026-09-13 | Do 단계 — decisions.md #59(2026-09-13 사용자 결정, I2) 구현. §7.4에 B2G 시설 테넌시 안전망 bullet 추가, §4.2에 `/organizations`(GET/POST/GET{id})·`PUT /users/{id}/organization` 4개 엔드포인트 추가. 신규 `organizations` 모듈(domain/infra/application/api/deps, import-linter 컨테이너 등록). `users`/`family_members`/`invitations`에 `org_id` 추가(마이그레이션 0011, schema.md v1.16). `core/auth.py` `Membership.org_id` + `auth_deps.py`에 `UserDirectory`/`ElderAccessContext`(기존 `ConsentDirectory`를 흡수해 하나로 통합) 추가, `authorize_elder_data_read()`가 테넌시 불일치를 403으로 차단. **스코프는 안전망뿐**(정식 B2G 대량 열람 모델 아님) — 기존 1:1 초대 연결(decisions #51)은 그대로 1차 권한 경로. apps/admin `/organizations`(신규, 시설 등록·목록) + family-members 화면에 시설 배정 폼·초대 시 시설 선택 추가. 유닛테스트 19건 신규(197개), 실 인프라(Postgres)로 같은 시설/다른 시설 재배정 시나리오 직접 검증. erd.md v1.3(§11 반영 완료로 갱신) | NUBiz AX Initiative | Do 단계 — decisions.md #61(2026-09-12 사용자 결정, I4) 구현. §7.5 신설(관측 스택). `infra/docker-compose.yml`에 GlitchTip(db+redis+web all_in_one+bootstrap 자동화)·Prometheus·Loki·Grafana Alloy(Promtail EOL 대체)·Grafana 추가, 호스트 포트 9679·9680으로 9670-9680 전 슬롯 소진. `core/observability.py`(신규, sentry-sdk+prometheus-fastapi-instrumentator) + `core/logging.py`(JSON 실제 포맷 정정 — 이전 문서·코드 드리프트 발견) + `core/errors.py`(예외를 완전히 삼키던 버그 발견·수정: 로깅+GlitchTip 캡처 추가). 실 인프라로 메트릭·로그·에러 3파이프라인 전부 왕복 검증 | NUBiz AX Initiative | Do 단계 — decisions.md #57(2026-09-12 사용자 결정, Q6) 부분 구현. §2.9 갱신: 온보딩 동의 단계에 국외이전(FCM) 고지·동의 체크박스 추가(선택, 기본 미동의). `consent_type` enum에 `international_transfer` 추가(마이그레이션 0010, schema.md v1.15). `OnboardingApi.kt`(`ConsentTypes.INTERNATIONAL_TRANSFER`)·`OnboardingScreen.kt`(체크박스+고지문구)·`OnboardingCoordinator.kt`(`run()`에 `internationalTransferConsent` 파라미터 추가, 동의/미동의 둘 다 기록) 수정. 알림 발송 채널(FCM 어댑터) 자체는 여전히 미구현 — 동의 이력만 선행 확보 | NUBiz AX Initiative | Do 단계 — decisions.md #54(2026-09-12 사용자 결정) 구현. §7.1 RBAC 매트릭스·§7.4 인가 절 갱신: social_worker의 "동의 시" 열람이 실제로 동작한다. `consent_type` enum에 `third_party_access` 추가(마이그레이션 0009, schema.md v1.14). `auth_deps.authorize_elder_data_read()`(신규) — `core/auth.py`(순수)는 그대로 두고 composition root에서 consent 조회를 게이트로 얹음, `ConsentDirectory` Protocol(+ `_ConsentDirectory`/`get_consent_directory`)로 Fake 단위테스트 가능하게 분리. 챕터(3)·대화(4)·일정(2)·사진(1) 10개 조회 엔드포인트 전환. 유닛테스트 7건 신규(175개). **실 인프라 e2e로 왕복 검증**(`e2e_keycloak_check.py`, 11/11 PASS) — social_worker 동의 전 403, family 동의 기록 후 재시도 200 | NUBiz AX Initiative |
+| 0.51 | 2026-09-13 | Do 단계 — decisions.md #56(2026-09-13 사용자 결정, Q5) 구현. §7.6 신설(보유기간·계정 삭제 오케스트레이션). 착수 전 schema.md 전 테이블 FK `ON DELETE` 절 재조사로 CTO의 "5-store 통합삭제" 프레이밍을 좁힘 — Postgres는 이미 cascade로 완결(`user_encryption_keys` 포함), 실제 필요한 건 Qdrant·Neo4j·MinIO 3곳뿐. 마이그레이션 0012(`retention_policies`+`deletion_records`, `conversation_chunks.retention_until`/`purged_at`, schema.md v1.17). 신규 `retention` 모듈(정책 CRUD) + `RetentionPurgeService`(worker.py 신규 cron, 매시 30분) + `UserErasureService`(외부 저장소 먼저→Postgres 마지막 순서) + `POST /users/{id}/erase` admin 전용. apps/admin `/retention-policies`(보유일수 조정) + 사용자 목록 "계정 삭제" 2단계 확인 danger-zone. 유닛테스트 13건 신규(212개). 실 인프라(Postgres+Qdrant+Neo4j+MinIO)로 보유기간 계산→만료→파기, 계정 삭제→cascade+외부저장소 정리→감사로그 전 과정 왕복 검증. **부수 발견·수정**: `VECTORDB_API_KEY=""`가 qdrant-client의 https 자동판정에 걸려 로컬 Qdrant 접속이 SSL 에러로 실패하던 버그 발견·수정. erd.md v1.4(§11 반영 완료로 갱신). 이 항목으로 법무·인프라·경영 미결 14건 전체 구현 완료 | NUBiz AX Initiative |
+| 0.50 | 2026-09-13 | Do 단계 — decisions.md #59(2026-09-13 사용자 결정, I2) 구현. §7.4에 B2G 시설 테넌시 안전망 bullet 추가, §4.2에 `/organizations`(GET/POST/GET{id})·`PUT /users/{id}/organization` 4개 엔드포인트 추가. 신규 `organizations` 모듈(domain/infra/application/api/deps, import-linter 컨테이너 등록). `users`/`family_members`/`invitations`에 `org_id` 추가(마이그레이션 0011, schema.md v1.16). `core/auth.py` `Membership.org_id` + `auth_deps.py`에 `UserDirectory`/`ElderAccessContext`(기존 `ConsentDirectory`를 흡수해 하나로 통합) 추가, `authorize_elder_data_read()`가 테넌시 불일치를 403으로 차단. **스코프는 안전망뿐**(정식 B2G 대량 열람 모델 아님) — 기존 1:1 초대 연결(decisions #51)은 그대로 1차 권한 경로. apps/admin `/organizations`(신규, 시설 등록·목록) + family-members 화면에 시설 배정 폼·초대 시 시설 선택 추가. 유닛테스트 19건 신규(197개), 실 인프라(Postgres)로 같은 시설/다른 시설 재배정 시나리오 직접 검증. erd.md v1.3(§11 반영 완료로 갱신) | NUBiz AX Initiative |
+| 0.49 | 2026-09-13 | Do 단계 — decisions.md #61(2026-09-12 사용자 결정, I4) 구현. §7.5 신설(관측 스택). `infra/docker-compose.yml`에 GlitchTip(db+redis+web all_in_one+bootstrap 자동화)·Prometheus·Loki·Grafana Alloy(Promtail EOL 대체)·Grafana 추가, 호스트 포트 9679·9680으로 9670-9680 전 슬롯 소진. `core/observability.py`(신규, sentry-sdk+prometheus-fastapi-instrumentator) + `core/logging.py`(JSON 실제 포맷 정정 — 이전 문서·코드 드리프트 발견) + `core/errors.py`(예외를 완전히 삼키던 버그 발견·수정: 로깅+GlitchTip 캡처 추가). 실 인프라로 메트릭·로그·에러 3파이프라인 전부 왕복 검증 | NUBiz AX Initiative |
+| 0.48 | 2026-09-13 | Do 단계 — decisions.md #57(2026-09-12 사용자 결정, Q6) 부분 구현. §2.9 갱신: 온보딩 동의 단계에 국외이전(FCM) 고지·동의 체크박스 추가(선택, 기본 미동의). `consent_type` enum에 `international_transfer` 추가(마이그레이션 0010, schema.md v1.15). `OnboardingApi.kt`(`ConsentTypes.INTERNATIONAL_TRANSFER`)·`OnboardingScreen.kt`(체크박스+고지문구)·`OnboardingCoordinator.kt`(`run()`에 `internationalTransferConsent` 파라미터 추가, 동의/미동의 둘 다 기록) 수정. 알림 발송 채널(FCM 어댑터) 자체는 여전히 미구현 — 동의 이력만 선행 확보 | NUBiz AX Initiative |
+| 0.47 | 2026-09-13 | Do 단계 — decisions.md #54(2026-09-12 사용자 결정) 구현. §7.1 RBAC 매트릭스·§7.4 인가 절 갱신: social_worker의 "동의 시" 열람이 실제로 동작한다. `consent_type` enum에 `third_party_access` 추가(마이그레이션 0009, schema.md v1.14). `auth_deps.authorize_elder_data_read()`(신규) — `core/auth.py`(순수)는 그대로 두고 composition root에서 consent 조회를 게이트로 얹음, `ConsentDirectory` Protocol(+ `_ConsentDirectory`/`get_consent_directory`)로 Fake 단위테스트 가능하게 분리. 챕터(3)·대화(4)·일정(2)·사진(1) 10개 조회 엔드포인트 전환. 유닛테스트 7건 신규(175개). **실 인프라 e2e로 왕복 검증**(`e2e_keycloak_check.py`, 11/11 PASS) — social_worker 동의 전 403, family 동의 기록 후 재시도 200 | NUBiz AX Initiative |
 | 0.46 | 2026-09-12 | Do 단계 — decisions.md #53(2026-09-12 사용자 결정) 구현. 조사 결과 백엔드 `POST /users/{id}/consent-logs`는 이미 `granted_by`로 가족 대리동의를 지원하고 있었음(PR #6) — 빠진 건 화면뿐이었다. apps/web `/consent`(신규): notification-settings와 동일한 "구성원 먼저 선택" 패턴, 유형별(개인정보 수집·외부TTS·외부LLM) 동의 토글이 `grantedBy`로 대리 동의를 기록. `consent_logs.actor` 전용 enum 컬럼은 추가하지 않음(파생값으로 충분, YAGNI) | NUBiz AX Initiative |
 | 0.45 | 2026-09-12 | Do 단계 — decisions.md #60(2026-09-12 사용자 결정) 구현. §7.3 PII 암호화 3차: blind index 키를 `PII_KEK`에서 유도하던 방식(하나 유출 시 둘 다 노출)을 신규 `BLIND_INDEX_KEY` 환경변수로 정식 분리. `core/crypto.py` `PiiCrypto.__init__`이 `bidx_key` 인자를 받고, 미설정 시 하위호환 폴백(경고 로그). `scripts/backfill_blind_index.py`(신규) — 기존 `family_members`/`invitations`의 `contact_bidx`를 새 키로 재계산. 유닛테스트 3건 추가(168개) | NUBiz AX Initiative |
 | 0.44 | 2026-09-12 | 순수 결정 기록 — `blocked-decisions-tracker.md`의 법무 6건(Q1~Q6)·인프라 5건(I1~I5)·경영 3건 전부를 사용자와의 대화로 일괄 확정(decisions.md §2.9 #52~#65). 설계 변경 자체는 없음 — 각 결정의 실제 구현(retention_policies·organizations 테넌시·third_party_access consent·관측스택 등)은 후속 PR에서 따로 진행하며, 그때 이 문서의 해당 절(§7.1 RBAC·§7.2 백업정책 등)을 갱신한다 | NUBiz AX Initiative |

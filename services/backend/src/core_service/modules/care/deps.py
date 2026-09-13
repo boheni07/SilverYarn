@@ -14,9 +14,14 @@ from core_service.modules.care.application.conversation_chunk_service import (
 from core_service.modules.care.infrastructure.conversation_chunk_repository import (
     ConversationChunkRepository,
 )
+from core_service.modules.retention.application.retention_policy_service import (
+    RetentionPolicyService,
+)
+from core_service.modules.retention.deps import get_retention_policy_service
 
 
 def get_conversation_chunk_service(
     session: AsyncSession = Depends(get_db),
+    retention: RetentionPolicyService = Depends(get_retention_policy_service),
 ) -> ConversationChunkService:
-    return ConversationChunkService(ConversationChunkRepository(session))
+    return ConversationChunkService(ConversationChunkRepository(session), retention)

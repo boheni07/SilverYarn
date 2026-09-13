@@ -9,6 +9,11 @@
 > **잠정 회사 정책**임을 유의 — 자문 결과가 다르면 재작업 가능성이 있다. 남은 것은 각 항목의
 > "후속 작업"란에 적힌 코드 구현뿐이다.
 >
+> **2026-09-13 갱신**: 마지막 미착수 구현이었던 **Q5(#56, 보유기간·파기)까지 완료** — 이 문서가
+> 추적하던 법무·인프라·경영 미결 14건(Q1~Q6·I1~I5·경영 3건)이 **전부 구현 완료**됐다. 남은
+> 항목은 §"선행조건 대기"의 실측·벤치마크 성격 항목(온디바이스 SLM 벤치마크 등)뿐이며, 이들은
+> 외부 회신 대기가 아니라 실기기 측정이 먼저 필요한 별도 트랙이다.
+>
 > **작성일**: 2026-09-10 · **갱신 규칙**: 회신이 오면 "회신/결정" 열에 날짜와 요지를 적고, 그에 따라
 > 파생되는 구현 작업을 "후속 작업"에 티켓으로 쪼갠다. 상태를 `⚖️ 대기` → `✅ 확정` → `🔨 구현중` → `✔️ 완료`로.
 >
@@ -56,15 +61,16 @@
 | 현재 코드 | 해당 기능 OFF (Q1과 동일) |
 | 후속 작업 (미착수) | 정서 기능 구현 시 카피·알림 문구 가이드라인에 반영(진단적 표현 금지어 목록 등) |
 
-### Q5. 원본음성/전사/벡터/사진/백업 각각의 보유기간·파기방법? crypto-shredding이 적법한 파기로 인정? — ✅ 확정
+### Q5. 원본음성/전사/벡터/사진/백업 각각의 보유기간·파기방법? crypto-shredding이 적법한 파기로 인정? — ✅ 확정, ✔️ 구현 완료
 
 | | |
 |---|---|
-| 관련 결정 | [decisions #56](../01-plan/decisions/silveryarn-platform.decisions.md)(신규), #45 (파기 수단), CTO B3 |
+| 관련 결정 | [decisions #56](../01-plan/decisions/silveryarn-platform.decisions.md), #45 (파기 수단), CTO B3 |
 | 회신/결정 | **2026-09-12, 사용자**: crypto-shredding을 적법한 파기 수단으로 채택. 보유기간은 하드코딩하지 않고 **DB 설정 테이블(`retention_policies`) + admin 콘솔 UI**로 운영자가 직접 조정 |
-| 현재 코드 | crypto-shredding **수단만 확보**(`user_encryption_keys` 삭제). `*.retention_until`/`*.purged_at` 컬럼·5-store 통합 삭제 오케스트레이션 **미착수** |
-| 상태 | 🔨 구현 대기 — **가장 큰 단일 작업** (CTO 추정 2~3주) |
-| 후속 작업 (미착수) | `retention_policies` 테이블(데이터종류별 보유일수) 마이그레이션 · `retention_until`/`purged_at` 컬럼 · apps/admin 보유기간 설정 화면 · 5-store(PostgreSQL·MinIO·Qdrant·Neo4j·모바일 Room) crypto-shredding 오케스트레이터(arq cron) · design §7.2 백업 정책 갱신 |
+| 구현 (2026-09-13) | 착수 전 schema.md 전 테이블 FK `ON DELETE` 절을 재조사해 스코프를 좁혔다 — `users` 하위 거의 모든 테이블이 이미 `ON DELETE CASCADE`(`user_encryption_keys` 포함)라 `DELETE FROM users` 한 줄로 Postgres 쪽은 crypto-shredding까지 이미 완결. 실제 오케스트레이션이 필요했던 건 Postgres 밖 **Qdrant·Neo4j·MinIO 3곳**뿐. 마이그레이션 0012(`retention_policies`+`deletion_records` 신설, `conversation_chunks.retention_until`/`purged_at`), 신규 `retention` 모듈(정책 CRUD API), `RetentionPurgeService`(만료 대화 원문 배치 파기 — Qdrant/Neo4j 삭제 후 Postgres redaction, worker.py 매시 30분 cron), `UserErasureService`(계정 전체 삭제 — 외부 저장소 먼저→Postgres 마지막 순서로 재시도 안전성 확보) + `POST /users/{id}/erase` admin 전용, apps/admin `/retention-policies`(보유일수 조정) + 사용자 목록 "계정 삭제" 2단계 확인 danger-zone |
+| 스코프 결정 | 시간 기반 보유기간은 **의도적으로 conversation_chunks 원문 하나로만 좁힘**(원본음성은 이미 업로드 성공 시 즉시삭제 #30, 챕터·사진은 자서전 결과물이라 계정 존속기간 보관 대상 아님) — "N일 비활성 시 계정 자동삭제" 같은 자율 파괴적 동작은 채택하지 않음(안전 설계 판단) |
+| 검증 | 실 Docker 인프라(Postgres+Qdrant+Neo4j+MinIO)로 보유기간 계산→만료→파기(redaction)→외부저장소 정리, 계정 삭제→cascade+외부저장소 정리→`deletion_records` 감사로그 전 과정 왕복 검증. 부수 발견: `VECTORDB_API_KEY=""`가 qdrant-client의 https 자동판정 로직에 걸려 로컬 평문 Qdrant 접속이 SSL 에러로 실패하던 버그 발견·수정 |
+| 상태 | ✅ 완료 — 이 항목이 트래커의 마지막 미착수 구현이었음(법무·인프라·경영 미결 14건 전체 완료) |
 
 ### Q6. FCM/SMS/이메일 알림, Google Fonts CDN이 국외이전 고지·동의 대상? — ✅ 확정, 🔨 부분 구현
 
@@ -165,7 +171,7 @@
 Q1(정서 민감정보, ✅#52) ─┐
 Q3(제3자제공, ✅#54)      ├─→ 한 묶음: 정서·동의·열람 정책 → 구현: third_party_access consent, emotion write 경로
 Q2(대리동의, ✅#53)       ┘
-Q5(보유기간·파기, ✅#56) ─────→ retention_policies 테이블+admin UI+5-store 오케스트레이터 (최대 단일작업, 미착수)
+Q5(보유기간·파기, ✔️#56 구현완료) ─→ retention_policies 테이블+admin UI+Qdrant/Neo4j/MinIO 오케스트레이터 (완료)
 Q6(국외이전, ✅#57)      ─────→ 알림 발송 어댑터 구현 전제
 
 I1(Zero Egress 범위, ✅#58) ─→ I2(테넌시 안전망, ✔️#59 구현완료)·I3(blind index만 분리, ✔️#60 구현완료)·I4(관측, ✔️#61 구현완료)
