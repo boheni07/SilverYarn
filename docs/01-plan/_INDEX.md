@@ -10,7 +10,7 @@
 | Document | Status | Last Modified | Owner | Description |
 |----------|--------|---------------|-------|-------------|
 | [features/silveryarn-platform.plan.md](./features/silveryarn-platform.plan.md) | ✅ Approved | 2026-09-13 (v0.5) | NUBiz AX Initiative | 은빛실타래 플랫폼 전체 기획 (Plan/ 폴더 원본 문서 편입) |
-| [decisions/silveryarn-platform.decisions.md](./decisions/silveryarn-platform.decisions.md) | 🔄 In Progress | 2026-09-13 (v0.26) | NUBiz AX Initiative | 기획서 9장 미결 사항 확정/보류 로그 — 법무·인프라·경영 미결 14건(#52~#65) 전부 확정+구현 완료, 모바일 UI 패러다임 전환(#66~#68) |
+| [decisions/silveryarn-platform.decisions.md](./decisions/silveryarn-platform.decisions.md) | 🔄 In Progress | 2026-09-13 (v0.27) | NUBiz AX Initiative | 기획서 9장 미결 사항 확정/보류 로그 — 법무·인프라·경영 미결 14건(#52~#65) 전부 확정+구현 완료, 모바일 UI 패러다임 전환(#66~#68), 웹 실 인증 세션 연결(#69) |
 | [glossary.md](./glossary.md) | ✅ Approved | 2026-09-13 (v1.3) | NUBiz AX Initiative | 프로젝트 용어집 |
 | [schema.md](./schema.md) | ✅ Approved | 2026-09-13 (v1.18) | NUBiz AX Initiative | 데이터 스키마 (도메인 19개 + 부속 4개 테이블, PostgreSQL DDL) |
 | [mobile-schema.md](./mobile-schema.md) | ✅ Approved | 2026-09-13 (v0.11) | NUBiz AX Initiative | 온디바이스 SQLite 로컬 스키마 (FTS5 등) |
@@ -87,3 +87,4 @@ Plan 단계 산출물(schema/erd/glossary/naming/structure)은 확정 기준선�
 | 2026-09-07 | 3차 design-validator 검증 M-4 반영 — 문서 목록에 mobile-schema/erd/naming/structure/CONVENTIONS 누락분 등록, 전 문서 Last Modified·버전 최신화, Folder Structure 블록에 실제 파일 목록 반영 |
 | 2026-09-13 | **문서 최신화 점검** — PDCA 현재 단계를 "Design"에서 "Do"로 정정. 전 문서 버전·최종수정일 실제 값으로 갱신(schema v1.4→v1.17, erd v1.2→v1.4, glossary v1.1→v1.2, decisions v0.7→v0.25, structure v1.3→v1.27, mobile-schema v0.3→v0.11) — 이 표가 오랫동안 2026-09-07 시점 값에 멈춰 있던 드리프트 정정 | NUBiz AX Initiative |
 | 2026-09-13 | **문서 정합성 전수점검 2회차(사용자 요청)** — 이 표가 다시 스테일 상태였던 걸 발견해 재정정(decisions v0.25→v0.26, glossary v1.2→v1.3, schema v1.17→v1.18, structure v1.27→v1.41, plan.md v0.4→v0.5 — structure.md는 특히 6버전 차이가 벌어져 있었음). `structure.md` §3/§5의 모바일 폴더 트리·화면 매핑이 PR #47(하단 4탭 제거, `presentation/{author,care,assistant}`→`presentation/companion/` 통합)을 반영 못 하고 있던 걸 발견해 정정(v1.41) | NUBiz AX Initiative |
+| 2026-09-13 | **웹 실 인증 세션 연결(사용자 결정)** — decisions v0.26→v0.27(§2.11 #69 신설) | NUBiz AX Initiative |

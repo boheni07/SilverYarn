@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
 /**
- * ⚠️ 임시 진입점 — apps/web/src/app/page.tsx와 동일한 이유: Keycloak 인증이 실제로
- * 붙기 전까지 로그인 화면 대신 이 페이지가 그 자리를 채운다.
+ * 관리자 콘솔 홈(대시보드 허브) — 실 Keycloak 로그인(`/login`, decisions #49)을 거친
+ * 뒤 도착하는 화면이다. apps/web과 달리 관리자는 "어느 어르신(들)에 연결됐는지"를
+ * 세션에서 자동 해석할 필요가 없다 — 관리자는 애초에 전체 사용자를 role 기반으로
+ * 열람하므로("/users"가 정식 진입점), `GET /me`(family_member 멤버십 조회) 같은
+ * 자기참조 식별 엔드포인트가 필요한 대상이 아니다.
  *
- * GET /users(2026-09-08 신규)가 생기기 전까지는 관리자가 사용자 ID를 직접 입력해야만
- * 기기 관리 화면에 들어갈 수 있었다 — 이제는 "/users"가 정식 진입점이고, ID를 이미
- * 아는 경우를 위한 직접 이동 입력은 보조 수단으로만 남겨 뒀다.
+ * ID를 이미 아는 경우를 위한 아래 직접 이동 입력은 "/devices" 전용 보조 수단으로만
+ * 남겨 뒀다.
  */
 export default function HomePage() {
   const router = useRouter();

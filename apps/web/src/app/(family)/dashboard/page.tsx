@@ -3,11 +3,12 @@ import { Card } from "@/components/ui/Card";
 import { getUser } from "@/services/users";
 import { listChapters } from "@/services/chapters";
 import { countConversationChunksSince } from "@/services/conversation-chunks";
+import { resolveCurrentUserId } from "@/services/me";
 import { ApiError } from "@/services/errors";
 import type { Chapter } from "@/types";
 
 interface DashboardPageProps {
-  searchParams: Promise<{ userId?: string }>;
+  searchParams: Promise<{ elder?: string }>;
 }
 
 /** KST(UTC+9) 기준 "오늘" 자정의 UTC 시각 — 이 플랫폼은 국내 서비스라 서버 로케일
@@ -37,20 +38,8 @@ function pickHighlightChapter(chapters: Chapter[]): Chapter | null {
  * 있지도 않은 정서 점수를 보여주는 대신 그 사실을 그대로 안내한다.
  */
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  const { userId } = await searchParams;
-
-  if (!userId) {
-    return (
-      <main className="mx-auto max-w-2xl px-4 py-12">
-        <p className="text-ink-muted">
-          어르신 계정 ID가 필요합니다.{" "}
-          <Link href="/" className="text-teal-deep underline">
-            처음으로
-          </Link>
-        </p>
-      </main>
-    );
-  }
+  const { elder } = await searchParams;
+  const userId = await resolveCurrentUserId(elder);
 
   const since = startOfTodayKst();
   let elderName = "어르신";
@@ -128,7 +117,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </div>
               )}
               <Link
-                href={`/chapters/${highlight.id}?userId=${encodeURIComponent(userId)}`}
+                href={`/chapters/${highlight.id}?elder=${encodeURIComponent(userId)}`}
                 className="mt-4 inline-block text-caption text-teal-deep underline"
               >
                 전체 내용 보기
@@ -149,7 +138,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
           <p className="mt-10">
             <Link
-              href={`/review?userId=${encodeURIComponent(userId)}`}
+              href={`/review?elder=${encodeURIComponent(userId)}`}
               className="text-body-compact text-teal-deep underline"
             >
               원고 감수 화면으로 이동

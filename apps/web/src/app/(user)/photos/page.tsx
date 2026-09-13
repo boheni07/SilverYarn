@@ -1,30 +1,21 @@
-import Link from "next/link";
 import Image from "next/image";
 import { listPhotos } from "@/services/photos";
 import { listPhotoRequests } from "@/services/photo-requests";
 import { PhotoUploadForm } from "@/features/photo-upload/PhotoUploadForm";
 import { PendingPhotoRequestBanner } from "@/features/photo-request/PendingPhotoRequestBanner";
 import type { Photo, PhotoRequest } from "@/types";
+import { resolveCurrentUserId } from "@/services/me";
 import { ApiError } from "@/services/errors";
 
 interface PhotosPageProps {
-  searchParams: Promise<{ userId?: string }>;
+  searchParams: Promise<{ elder?: string }>;
 }
 
 /** design.md §5.1 "사진·타임라인 갤러리" 화면 — sync-contract.md §4 Presigned URL
  * 흐름을 실제로 소비하는 첫 화면(그동안 backend curl/모바일 스캐폴딩으로만 검증됐다). */
 export default async function PhotosPage({ searchParams }: PhotosPageProps) {
-  const { userId } = await searchParams;
-
-  if (!userId) {
-    return (
-      <main className="mx-auto max-w-2xl px-4 py-12">
-        <p className="text-ink-muted">
-          어르신 계정 ID가 필요합니다. <Link href="/" className="text-teal-deep underline">처음으로</Link>
-        </p>
-      </main>
-    );
-  }
+  const { elder } = await searchParams;
+  const userId = await resolveCurrentUserId(elder);
 
   let photos: Photo[];
   let photoRequests: PhotoRequest[];

@@ -1,12 +1,12 @@
-import Link from "next/link";
-import { listFamilyMembers } from "@/services/family-members";
 import { getConsentState } from "@/services/consent";
 import { ConsentForm } from "@/features/consent/ConsentForm";
+import { resolveCurrentMembership } from "@/services/me";
 import { ApiError } from "@/services/errors";
-import type { ConsentState, FamilyMember } from "@/types";
+import { FAMILY_ROLE_LABEL } from "@/types";
+import type { ConsentState } from "@/types";
 
 interface PageProps {
-  searchParams: Promise<{ userId?: string; familyMemberId?: string }>;
+  searchParams: Promise<{ elder?: string }>;
 }
 
 /**
@@ -16,43 +16,20 @@ interface PageProps {
  * `POST /users/{userId}/consent-logs`의 `granted_by`로 이 경로를 지원하고 있었음 —
  * PR #6, 다만 이를 쓰는 화면이 지금까지 없었다).
  *
- * ⚠️ notification-settings와 동일한 임시 상태 — 실 인증(Keycloak) 세션이 아직
- * "로그인한 나 = 어느 family_member"를 자동 해석하지 않아 구성원을 먼저 선택하게 한다.
+ * `resolveCurrentMembership`이 로그인 세션에서 "나 = 어느 family_member"를 바로
+ * 알려주므로(`GET /me`), 예전처럼 어르신의 가족 목록에서 본인을 직접 골라야 했던
+ * 단계가 없어졌다.
  */
 export default async function ConsentPage({ searchParams }: PageProps) {
-  const { userId, familyMemberId } = await searchParams;
-
-  if (!userId) {
-    return (
-      <main className="mx-auto max-w-2xl px-4 py-12">
-        <p className="text-ink-muted">
-          어르신 계정 ID가 필요합니다.{" "}
-          <Link href="/" className="text-teal-deep underline">
-            처음으로
-          </Link>
-        </p>
-      </main>
-    );
-  }
-
-  let members: FamilyMember[];
-  let error: string | null = null;
-  try {
-    members = await listFamilyMembers(userId);
-  } catch (e) {
-    error = e instanceof ApiError ? e.message : "가족 구성원을 불러오지 못했습니다.";
-    members = [];
-  }
-
-  const selected = members.find((m) => m.id === familyMemberId) ?? null;
+  const { elder } = await searchParams;
+  const { userId, familyMemberId, role } = await resolveCurrentMembership(elder);
 
   let consentState: ConsentState | null = null;
-  if (selected) {
-    try {
-      consentState = await getConsentState(userId);
-    } catch (e) {
-      error = e instanceof ApiError ? e.message : "동의 상태를 불러오지 못했습니다.";
-    }
+  let error: string | null = null;
+  try {
+    consentState = await getConsentState(userId);
+  } catch (e) {
+    error = e instanceof ApiError ? e.message : "동의 상태를 불러오지 못했습니다.";
   }
 
   return (
@@ -67,48 +44,14 @@ export default async function ConsentPage({ searchParams }: PageProps) {
         <p className="mt-6 rounded-lg border border-border bg-subtle-2 px-4 py-3 text-ink-muted">{error}</p>
       )}
 
-      {!error && members.length === 0 && (
-        <p className="mt-6 rounded-lg border border-border bg-subtle-2 px-4 py-3 text-ink-muted">
-          이 어르신 계정에 등록된 가족/복지사가 없습니다. 초대(invitations) 흐름으로 먼저 등록해 주세요.
-        </p>
-      )}
-
-      {!error && members.length > 0 && !selected && (
-        <>
-          <h2 className="mt-8 font-editorial text-h2 font-semibold text-ink">
-            대리 동의를 남길 구성원 선택
-          </h2>
-          <ul className="mt-4 flex flex-col gap-2">
-            {members.map((m) => (
-              <li key={m.id}>
-                <Link
-                  href={`/consent?userId=${encodeURIComponent(userId)}&familyMemberId=${m.id}`}
-                  className="flex min-h-11 items-center justify-between rounded-lg border border-border-soft bg-surface px-4 hover:bg-subtle-2"
-                >
-                  <span className="text-ink">{m.name}</span>
-                  <span className="text-caption text-ink-muted">{m.role}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {!error && selected && consentState && (
+      {!error && consentState && (
         <>
           <p className="mt-8 text-body-compact text-ink">
-            <span className="font-medium">{selected.name}</span>
-            <span className="text-ink-muted"> ({selected.role})</span> 님 명의로 대리 동의
-            {" · "}
-            <Link
-              href={`/consent?userId=${encodeURIComponent(userId)}`}
-              className="text-teal-deep underline"
-            >
-              구성원 바꾸기
-            </Link>
+            <span className="font-medium">{FAMILY_ROLE_LABEL[role]}</span> 자격으로
+            로그인한 본인 명의의 대리 동의입니다.
           </p>
           <div className="mt-4">
-            <ConsentForm userId={userId} actingFamilyMemberId={selected.id} initial={consentState} />
+            <ConsentForm userId={userId} actingFamilyMemberId={familyMemberId} initial={consentState} />
           </div>
         </>
       )}

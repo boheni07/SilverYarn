@@ -1,12 +1,12 @@
-import Link from "next/link";
 import { listPublications } from "@/services/publications";
 import { PublicationRequestForm } from "@/features/publication/PublicationRequestForm";
+import { resolveCurrentUserId } from "@/services/me";
 import { ApiError } from "@/services/errors";
 import { PUBLICATION_FORMAT_LABEL, PUBLICATION_STATUS_LABEL } from "@/types";
 import type { Publication } from "@/types";
 
 interface PublicationsPageProps {
-  searchParams: Promise<{ userId?: string }>;
+  searchParams: Promise<{ elder?: string }>;
 }
 
 /**
@@ -15,17 +15,8 @@ interface PublicationsPageProps {
  * 모듈 docstring 참조)이라 이 화면은 요청·상태확인·다운로드까지만 다룬다.
  */
 export default async function PublicationsPage({ searchParams }: PublicationsPageProps) {
-  const { userId } = await searchParams;
-
-  if (!userId) {
-    return (
-      <main className="mx-auto max-w-2xl px-4 py-12">
-        <p className="text-ink-muted">
-          어르신 계정 ID가 필요합니다. <Link href="/" className="text-teal-deep underline">처음으로</Link>
-        </p>
-      </main>
-    );
-  }
+  const { elder } = await searchParams;
+  const userId = await resolveCurrentUserId(elder);
 
   let publications: Publication[] = [];
   let error: string | null = null;
