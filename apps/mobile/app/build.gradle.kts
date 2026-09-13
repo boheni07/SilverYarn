@@ -70,9 +70,8 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     // 은실이 아바타 펄스 애니메이션(presentation/companion/CompanionScreen.kt) — material3가
-    // 전이 의존성으로 물고 오긴 하지만 API를 직접 쓰므로 명시. `InfiniteTransition.animateFloat`는
-    // animation-core가 아니라 animation 모듈 소속이라(CI에서 "Unresolved reference" 발견) 이걸 써야 한다.
-    implementation("androidx.compose.animation:animation")
+    // 전이 의존성으로 물고 오긴 하지만 API를 직접 쓰므로 명시.
+    implementation("androidx.compose.animation:animation-core")
     implementation("androidx.activity:activity-compose:1.9.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
