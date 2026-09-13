@@ -41,7 +41,7 @@ Claude automatically applies PDCA methodology. Commands are shortcuts for power 
 | 의사결정 로그 | `docs/01-plan/decisions/silveryarn-platform.decisions.md`(v0.27) (기획서 9장 + design-validator 반영 항목 + §2.9 법무·인프라·경영 14건 #52~#65 + §2.10 모바일 UI 전환 #66~#68 + §2.11 웹 실 인증 세션 연결 #69) |
 | 디자인 토큰 | `docs/02-design/design-tokens.md`(v1.2) (BI 가이드 컬러/타이포 → Tailwind 토큰, WCAG AA 대비 규칙, 접근성 최소기준) |
 | 데이터 분류 정책 | `docs/02-design/data-classification-policy.md`(v0.1, 신규) — PII/메타데이터 4단계 분류 + 외부 통신 경계(decisions.md #58/I1) |
-| 발표자료 | `docs/presentations/은빛실타래_개발착수회의_kickoff.pptx` (66슬라이드), `docs/presentations/은빛실타래_설계발표_슬라이드.html` (72슬라이드 HTML, 방향키 네비게이션) — [게시 링크](https://claude.ai/code/artifact/8c0fdb75-5c19-4916-b406-eb38275f2146). 두 산출물 모두 2026-09-05 착수 시점 스냅샷 — 페르소나명("은빛이") 등 이후 변경분(#66) 미반영, 의도적으로 보존 |
+| 발표자료 | `docs/presentations/은빛실타래_개발착수회의_kickoff.pptx` (66슬라이드), `docs/presentations/은빛실타래_설계발표_슬라이드.html` (72슬라이드 HTML, 방향키 네비게이션) — [게시 링크](https://claude.ai/code/artifact/8c0fdb75-5c19-4916-b406-eb38275f2146). 두 산출물 모두 2026-09-05 착수 시점 스냅샷 — 페르소나명("은빛이") 등 이후 변경분(#66) 미반영, 의도적으로 보존. `docs/presentations/은빛실타래_설계발표_슬라이드.pptx`(신규, 2026-09-14, 44슬라이드, `generate_design_review_deck.py`로 생성) — "시스템 흐름 이해" 중심 재구성판. 전체 컴포넌트 다이어그램·Closed-Loop·마스터 업무흐름도(Swimlane)·ERD·UI/UX 실 구현 화면 미리보기를 전부 네이티브 PPT 도형(박스+화살표+커넥터)으로 시각화, 단위 시스템별 상세 업무흐름도 13종 포함. governance 상세(CTO 7관점·의사결정 47건 개별 이력)는 요약만 담고 위 두 기존 산출물로 위임 |
 | 워크플로우 다이어그램 | `docs/02-design/workflow-diagrams.md`(v0.7) — Mermaid 21종 (마스터 Closed-Loop, 분야별 프로세스, 스윔레인, 상태전이, 계정삭제·보유기간 파기 흐름 등) |
 | CTO팀 검토 | `docs/02-design/cto-review-2026-09-05.md` — 7개 관점(아키텍처/인프라/보안/FE/백엔드·API/QA/PM) 착수 심사, 판정: **전원 Go with Conditions** (Blocker 28건, 전부 정책 확정 또는 구현 완료 — 실측 대기 항목만 잔존) |
 
