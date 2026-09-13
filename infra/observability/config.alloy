@@ -1,0 +1,27 @@
+// Grafana Alloy — 백엔드가 로컬 파일(OBS_LOG_FILE, 기본 services/backend/logs/app.jsonl)에
+// 남긴 구조화 JSON 로그를 tail해 Loki로 보낸다. decisions.md #61(2026-09-12 사용자
+// 결정, I4).
+//
+// Promtail이 아니라 Alloy를 쓰는 이유: Promtail은 2026-03-02부로 EOL(공식 후속은
+// Alloy) — 신규 구축이라 처음부터 Alloy로 시작한다.
+//
+// 백엔드는 컨테이너 밖 호스트 프로세스(decisions.md #44, 모듈러 모놀리스 단일
+// 배포 단위)라 이 컨테이너는 docker-compose.yml의 바인드마운트
+// (../services/backend/logs:/var/log/silveryarn:ro)로 그 파일을 읽는다.
+
+local.file_match "backend_logs" {
+	path_targets = [{"__path__" = "/var/log/silveryarn/*.jsonl", "job" = "silveryarn-backend"}]
+	sync_period  = "5s"
+}
+
+loki.source.file "backend" {
+	targets       = local.file_match.backend_logs.targets
+	forward_to    = [loki.write.local.receiver]
+	tail_from_end = true
+}
+
+loki.write "local" {
+	endpoint {
+		url = "http://loki:3100/loki/api/v1/push"
+	}
+}

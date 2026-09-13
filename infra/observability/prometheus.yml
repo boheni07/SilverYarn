@@ -1,0 +1,18 @@
+# Prometheus 스크레이프 설정 — decisions.md #61(2026-09-12 사용자 결정, I4).
+#
+# services/backend는 모듈러 모놀리스 단일 배포 단위(decisions.md #44)라 아직
+# 컨테이너화되지 않고 이 개발 머신에서 호스트 프로세스(uvicorn, 기본 포트 9677,
+# services/backend/README.md 참조)로 돈다 — 그래서 Docker 서비스명이 아니라
+# host.docker.internal로 스크레이프한다(docker-compose.yml의 extra_hosts 참조).
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: silveryarn-backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:9677"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

@@ -107,6 +107,17 @@ class Settings(BaseSettings):
     redis_host: str = Field(default="localhost", alias="REDIS_HOST")
     redis_port: int = Field(default=9671, alias="REDIS_PORT")
 
+    # --- OBS_ (관측 스택 — decisions.md #61, 2026-09-12 사용자 결정, I4) ---
+    # GlitchTip(self-hosted, Sentry 프로토콜 호환) DSN — 에러 리포팅. Sentry SaaS는
+    # I1(PII 외부유출 금지) 원칙상 사용 불가. **비어 있으면 꺼짐**(PII_KEK와 동일
+    # 원칙) — GlitchTip 컨테이너가 없거나 DSN을 아직 발급받지 않아도 앱은 그대로 뜬다.
+    obs_glitchtip_dsn: str = Field(default="", alias="OBS_GLITCHTIP_DSN")
+    # 구조화(JSON) 로그를 남길 파일 경로 — Grafana Alloy(컨테이너)가 이 파일을
+    # 바인드마운트로 tail해 Loki로 보낸다. 백엔드가 컨테이너 밖 호스트 프로세스라
+    # (decisions.md #44) push 방식 대신 파일 공유 방식을 쓴다. 기본값이 있어도
+    # 파일 로깅은 harmless(그냥 로컬 파일 하나 생김) — 완전히 끄려면 빈 문자열로.
+    obs_log_file: str = Field(default="logs/app.jsonl", alias="OBS_LOG_FILE")
+
     # --- CORS (apps/web 브라우저 요청 허용) ---
     # ⚠️ Server Component의 fetch는 Node 프로세스에서 실행돼 CORS 대상이 아니지만,
     # "use client" 컴포넌트의 fetch는 브라우저에서 직접 나간다 — CORSMiddleware가
