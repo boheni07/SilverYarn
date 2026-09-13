@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.51 (보유기간·계정 삭제 오케스트레이션 — decisions.md #56 구현, Q5)
+> **Version**: 0.52 (문서 최신화 — §3/§4.2/§5.1/§7.1/§9/§11 드리프트 정정, PR #37/#39 반영 누락분 보강)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -18,7 +18,7 @@ version: 1.3
 
 | Phase | Document | Status |
 |-------|----------|--------|
-| Phase 1 | [Schema Definition](../../01-plan/schema.md) | ✅ 완료 (17개 엔티티, v1.4) — 시각 ERD: [erd.md](../../01-plan/erd.md) |
+| Phase 1 | [Schema Definition](../../01-plan/schema.md) | ✅ 완료 (19개 도메인 엔티티 + 부속 4개, v1.17) — 시각 ERD: [erd.md](../../01-plan/erd.md)(v1.4) |
 | Phase 2 | [Coding Conventions](../../../CONVENTIONS.md) | ✅ 완료 |
 | Phase 3 | Mockup — [BI 가이드](../../../Plan/은빛실타래_BI가이드_v2.html), [UI/UX 화면설계서](../../../Plan/은빛실타래_UIUX_화면설계서.html), [design-tokens.md](../design-tokens.md) | ✅ (원본 산출물 + 토큰 문서화 + 접근성 최소기준 완료) |
 | Phase 4 | API Spec — [sync-contract.md](../sync-contract.md) | ✅ 완료 (§4 + 동기화 계약 확정, 상세 OpenAPI 스펙은 Do 단계) |
@@ -289,7 +289,7 @@ Idle → Listening(웨이크워드 또는 마이크 버튼 탭 — M2 화면과 
 
 ## 3. Data Model
 
-> **정식 스키마는 [`docs/01-plan/schema.md`](../../01-plan/schema.md)(v1.3, 17개 엔티티)가 SoR이다.** 아래 TypeScript는 서버·웹 개발자를 위한 요약 참고용이며, 신규 컬럼 추가 시 schema.md를 먼저 갱신한 뒤 이 절을 동기화한다. (design-validator D-1~D-3 반영: `meta_people`을 배열로, enum을 영문으로 통일)
+> **정식 스키마는 [`docs/01-plan/schema.md`](../../01-plan/schema.md)(v1.17, 도메인 19개 엔티티 + 부속 4개)가 SoR이다.** 아래 TypeScript는 서버·웹 개발자를 위한 요약 참고용이며, 신규 컬럼 추가 시 schema.md를 먼저 갱신한 뒤 이 절을 동기화한다. (design-validator D-1~D-3 반영: `meta_people`을 배열로, enum을 영문으로 통일)
 
 ### 3.1 Entity Definition (요약 — 상세는 schema.md)
 
@@ -301,6 +301,7 @@ interface User {
   primaryDeviceId?: string;
   createdAt: string;            // v0.9 신규 — 실제 UserResponse에 이미 있던 필드 보강(SoR 원칙 2), apps/admin 사용자 목록 화면의 정렬 기준
   updatedAt: string;            // v0.9 신규
+  orgId?: string;                // v0.50 신규 — B2G 시설 소속(decisions.md #59). NULL = B2C 개인(대부분)
 }
 
 interface FamilyMember {
@@ -310,6 +311,7 @@ interface FamilyMember {
   name: string;
   contact: string;
   twoFactorEnabled: boolean;
+  orgId?: string;                // v0.50 신규 — 시설 소속 caregiver/social_worker만 채운다(decisions.md #59)
 }
 
 interface Device {
@@ -395,6 +397,9 @@ interface ConversationChunk {
   turnId?: number;              // v1.3 신규
   mode?: "author" | "care" | "assist";  // v1.3 신규
   assistantResponse?: string;   // v1.3 신규 — 2차 검증 H-2, PII·암호화대상
+  createdAt: string;             // v0.51 신규 — 실 응답엔 있었으나 이 인터페이스엔 누락돼 있던 것을 보강
+  retentionUntil?: string;       // v0.51 신규 — 보유기간 만료 시각(decisions.md #56, Q5)
+  purgedAt?: string;             // v0.51 신규 — 실제 파기(redaction) 시각, NULL이면 미파기
 }
 
 interface Question {
@@ -452,7 +457,9 @@ interface SyncSession {
 interface ConsentLog {
   id: string;
   userId: string;
-  consentType: "data_collection" | "external_tts_optin" | "external_llm_optin";
+  consentType: "data_collection" | "external_tts_optin" | "external_llm_optin" | "third_party_access" | "international_transfer";
+  // third_party_access: v0.47 신규(decisions.md #54) — 복지사 열람 전 필요한 동의.
+  // international_transfer: v0.48 신규(decisions.md #57) — FCM(구글, 미국) 국외이전 고지·동의.
   granted: boolean;              // false = 철회 (동의/철회 모두 새 행으로 append)
   grantedBy?: string;            // 없으면 어르신 본인(self), 있으면 가족 대리(proxy)
   actor: "self" | "proxy";      // v0.18 신규 — grantedBy 유무에서 서버가 파생(CTO B2). 저장 컬럼 아님
@@ -477,6 +484,7 @@ interface Invitation {          // v1.1 신규
   token: string;
   status: "pending" | "accepted" | "expired";
   expiresAt: string;            // 2차 검증 L-12 반영
+  orgId?: string;                // v0.50 신규 — 시설 소속 직원 초대 시 채움, 수락 시 FamilyMember.orgId로 그대로 이전(decisions.md #59)
 }
 
 interface Publication {         // v1.1 신규
@@ -485,6 +493,19 @@ interface Publication {         // v1.1 신규
   format: "hardcover_pdf" | "epub";
   status: "requested" | "processing" | "ready" | "delivered";
   storageRef?: string;
+}
+
+interface Organization {        // v0.50 신규 — B2G 시설(요양원·복지관) 테넌시 안전망 기준 엔티티(decisions.md #59)
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+interface RetentionPolicy {     // v0.51 신규 — 보유기간 admin 설정(decisions.md #56, Q5)
+  id: string;
+  category: string;             // 지금은 "conversation_transcript" 하나뿐 — 자유문자열(YAGNI 대비 확장 여지)
+  retentionDays: number;
+  updatedAt: string;
 }
 ```
 
@@ -501,11 +522,16 @@ interface Publication {         // v1.1 신규
    ├─N [ScheduleItem]           ├─N [PhotoRequest]      ├─N [EmotionAlert]
    ├─N [EmotionScore]           ├─N [ConsentLog]        ├─N [Invitation]
    └─N [Publication]
+
+[Organization] 1─N [User]              (v0.50, decisions.md #59 — 안전망뿐, org_id 불일치 시 차단)
+[Organization] 1─N [FamilyMember]
+[Organization] 1─N [Invitation]
+[RetentionPolicy]                       (v0.51, decisions.md #56 — 독립 설정 테이블, FK 없음)
 ```
 
 ### 3.3 Database Schema
 
-온프레미스 PostgreSQL 채택 확정(기획서 3.3). 정식 DDL은 [`docs/01-plan/schema.md`](../../01-plan/schema.md) §5 참조 (17개 테이블, 인덱스 포함).
+온프레미스 PostgreSQL 채택 확정(기획서 3.3). 정식 DDL은 [`docs/01-plan/schema.md`](../../01-plan/schema.md) §5 참조 (도메인 19개 + 부속 4개 테이블, 인덱스 포함).
 
 ---
 
@@ -582,6 +608,9 @@ interface Publication {         // v1.1 신규
 | POST | /api/v1/organizations | B2G 시설 신규 등록(신규 v0.49) — apps/admin "시설 관리" 화면의 첫 쓰기 | Admin |
 | GET | /api/v1/organizations/{id} | 시설 단건 조회(신규 v0.49) | Admin |
 | PUT | /api/v1/users/{userId}/organization | 어르신을 시설에 배정(`orgId`)하거나 해제(`null`)(신규 v0.49, I2) — 존재하는 시설인지 서버가 먼저 확인 | Admin |
+| GET | /api/v1/retention-policies | 카테고리별 보유기간 설정 목록 조회(신규 v0.51, decisions.md #56, Q5) | Admin |
+| PUT | /api/v1/retention-policies/{category} | 보유일수 조정(신규 v0.51) — 하드코딩 대신 admin 콘솔에서 직접 변경 | Admin |
+| POST | /api/v1/users/{userId}/erase | 어르신 계정 전체 삭제(erasure, 신규 v0.51, decisions.md #56) — crypto-shredding(Postgres cascade) + Qdrant/Neo4j/MinIO 정리 + `deletion_records` 감사 로그. 되돌릴 수 없음 | Admin |
 
 > 구독/결제 엔드포인트는 스코프 아웃([decisions.md #18](../../01-plan/decisions/silveryarn-platform.decisions.md)) — 포함하지 않음.
 > 동기화·업로드 관련 상세 계약(비동기 처리, 충돌정책, Presigned URL, 증분 다운로드)의 SoR은 [sync-contract.md](../sync-contract.md)이며, 이 표는 요약만 담는다.
@@ -636,7 +665,7 @@ interface Publication {         // v1.1 신규
 | 모바일앱(당사자) | 온보딩·동의 ✅, 홈·음성대화 ✅(M2 셸 + 하단 탭 4개, v0.38 — 마이크 세션 라우팅은 온디바이스 SLM 라우터 붙기 전까지 말벗돌봄 모드 고정), 자서전 작가모드 인터뷰(스텁), 말벗돌봄 대화(스텁), 비서모드 일정·복약(스텁), 설정·동기화 상태(최초 동기화 ✅), 사진 추가하기 |
 | 웹·자서전 사용자 | **로그인 ✅**(`/login` — Keycloak SSO, v0.34), 자서전 뷰어 ✅, 사진·타임라인 갤러리 ✅, ~~구독·결제 관리~~(스코프 아웃, decisions.md #18), 계정 설정 |
 | 웹·가족 | 가족 대시보드(오늘의 기억 리포트) ✅(`(family)/dashboard`, v0.37 — 정서 항목은 안내문구로 대체), 원고 감수·대조편집 ✅, 사진 업로드·타임라인 배치(사진 요청 ✅), 정서 모니터링 상세(⚖️ 정서 파이프라인 OFF), 알림·가족구성원 설정 ✅(`(family)/notification-settings`), **초대 수락 ✅**(`/invitations/[token]`, v0.42) |
-| 웹·관리자 | 관리자 대시보드, 사용자 관리 ✅, Wi-Fi 동기화 모니터링 ✅, 정서 알림 이력 관리(⚖️ OFF), 시스템 설정·리소스 모니터링, 기기 관리 ✅, **가족 구성원 관리(초대) ✅**(`(admin)/family-members`, v0.42 — admin의 첫 쓰기 화면) |
+| 웹·관리자 | 관리자 대시보드, 사용자 관리 ✅, Wi-Fi 동기화 모니터링 ✅, 정서 알림 이력 관리(⚖️ OFF), 시스템 설정·리소스 모니터링, 기기 관리 ✅, **가족 구성원 관리(초대) ✅**(`(admin)/family-members`, v0.42 — admin의 첫 쓰기 화면), **시설 관리(B2G) ✅**(`(admin)/organizations`, v0.50 — 시설 등록·목록 + family-members 화면 시설 배정), **보유기간 설정 ✅**(`(admin)/retention-policies`, v0.51) + **계정 삭제(danger-zone) ✅**(사용자 목록, 어르신 이름 재입력 2단계 확인) |
 
 > **인증 상태**: **apps/web·apps/admin 모두 Keycloak 로그인 연동 완료**(Auth.js, decisions #49) — 모든 웹 화면이 실 백엔드(§7.4)에 실 Bearer 토큰으로 동작한다. 두 앱이 같은 `silveryarn-web` 클라이언트(web 3000 / admin 3001).
 
@@ -689,6 +718,9 @@ interface Publication {         // v1.1 신규
 | 기기 관리(조회) | ❌ | ❌ | ❌ | ✅ |
 | 사용자 관리 | ❌ | ❌ | ❌ | ✅ |
 | 동기화 모니터링 | ❌ | ❌ | ❌ | ✅ |
+| 시설(organizations) 관리 | ❌ | ❌ | ❌ | ✅ (v0.50) |
+| 보유기간 설정 | ❌ | ❌ | ❌ | ✅ (v0.51) |
+| 계정 전체 삭제(erasure) | ❌ | ❌ | ❌ | ✅ (v0.51, 되돌릴 수 없음) |
 
 ### 7.2 백업 정책 (신규 v0.2, design-validator E-9)
 
@@ -876,13 +908,13 @@ silveryarn/
 │       │   ├── shared/            # 공유 커널 — 2+ 모듈이 쓰는 enum 등 (domain_enums.py)
 │       │   └── modules/{users,devices,author,care,schedule,sync,
 │       │       consent,family_members,invitations,notifications,
-│       │       photos,photo_requests}/
+│       │       photos,photo_requests,organizations,retention}/
 │       │       ├── api/v1/        # FastAPI 라우터
 │       │       ├── application/   # 유스케이스 (서비스 클래스)
 │       │       ├── domain/        # 엔티티·값 객체·규칙 (순수)
 │       │       ├── infrastructure/# ORM 모델·리포지토리·외부 연동
 │       │       └── deps.py        # 이 모듈의 DI 조립 (타 모듈은 이것만 import)
-│       ├── migrations/versions/   # Alembic 0001~0007
+│       ├── migrations/versions/   # Alembic 0001~0012
 │       ├── scripts/e2e_*.py       # 실 인프라 e2e (pii/http/keycloak)
 │       └── tests/                 # Fake*Repository 기반 Application 계층 단위 테스트
 ├── infra/
@@ -896,15 +928,15 @@ silveryarn/
 
 ### 11.2 Implementation Order
 
-1. [x] Phase 1 스키마 확정 (`/phase-1-schema`) — schema.md v1.12, 서버 21개 테이블(도메인 17 + 부속 4), 마이그레이션 0001~0007
+1. [x] Phase 1 스키마 확정 (`/phase-1-schema`) — schema.md v1.17, 서버 23개 테이블(도메인 19 + 부속 4), 마이그레이션 0001~0012
 2. [x] Phase 2 컨벤션 확정 (`/phase-2-convention`)
 3. [~] 온디바이스 오프라인 코어(STT/SLM/TTS) + 로컬 캐시 — 앱 셸·온보딩·앱시작게이트·sync 클라이언트·Room 스키마 구현, STT/SLM/TTS 런타임은 모델 선정(decisions.md #27) 대기
 4. [x] Wi-Fi 배치 동기화 기본 흐름 (업/다운로드, 재시도, 체크섬, Diff 멱등성) — sync-contract.md v0.6, 업로드 멱등성 3계층
-5. [x] 자서전 작가 엔진 + 웹 콘솔 감수 흐름 (Phase 1 MVP) — author 모듈(chapters/questions), `POST /chapters/{id}/review`, apps/web 감수 화면. **§2.11 서버측 클로즈드 루프**: Compaction Engine(4단계, 요약·키워드 — PR #15)·Critic Agent(3단계, `questions` 생성 — PR #16) 구현. Compaction Engine의 페르소나 JSON 룰셋(§2.10 연동)은 미구현
+5. [x] 자서전 작가 엔진 + 웹 콘솔 감수 흐름 (Phase 1 MVP) — author 모듈(chapters/questions), `POST /chapters/{id}/review`, apps/web 감수 화면. **§2.11 서버측 클로즈드 루프**: Compaction Engine(4단계, 요약·키워드 — PR #15)·Critic Agent(3단계, `questions` 생성 — PR #16)·페르소나 JSON 룰셋(§2.10 연동, CareAgent 전용 — PR #27) 전부 구현. 온디바이스 소비(SLM 프롬프트 주입)만 SlmEngine 스텁이라 미구현
 6. [ ] 말벗돌봄 엔진 + 정서 모니터링(emotion_scores/emotion_alerts) (Phase 2) — 테이블만 존재, 엔드포인트·피처플래그 OFF
 7. [ ] 비서 엔진 + 출판 파이프라인 + 외부 연계 옵션 파일럿 (Phase 3) — schedule 모듈은 조회·응답만 구현, `publications` 테이블만 존재
 
-> Do 단계 진행(PR #1~19): PII 1·2차 필드 암호화(§7.3), Keycloak JWKS 실 인증·RBAC/IDOR(§7.4), consent·notifications 모듈, social_worker fail-closed, 모바일 온보딩+앱시작게이트, 로컬 Keycloak realm, import-linter, `core/auth.py` 순수화, Compaction Engine·Critic Agent(§2.11 3·4단계), apps/web·apps/admin Keycloak 로그인. 실 인프라 e2e 17/17·13/13·9/9. PDCA Check 2회(`docs/03-check/`).
+> Do 단계 진행(PR #1~39, 전부 main 머지): PII 1·2차 필드 암호화(§7.3), Keycloak JWKS 실 인증·RBAC/IDOR(§7.4), consent·notifications 모듈, 모바일 온보딩+앱시작게이트, import-linter, `core/auth.py` 순수화, Compaction Engine·Critic Agent·페르소나 룰셋(§2.11 3·4단계), apps/web·apps/admin Keycloak 로그인 + npm 워크스페이스 공유코드(`packages/web-shared`), 웹 가족 대시보드·모바일 홈 셸, 온디바이스 SLM 벤치마크 하니스, **법무·인프라·경영 미결 14건 일괄 확정(decisions.md #52~#65) + 전체 구현 완료**(blind index 분리·가족 대리동의 화면·복지사 third_party_access 게이트·국외이전 고지 UI·self-hosted 관측 스택(GlitchTip+Prometheus/Grafana/Loki)·B2G 시설 테넌시 안전망·보유기간/계정삭제 오케스트레이션 — §7.6). 실 인프라 e2e 다수(PII/HTTP/Keycloak/관측/테넌시/보유기간). PDCA Check 2회(`docs/03-check/`). 이 트랙(법무·인프라·경영 미결)은 PR #39로 종결 — 상세 PR별 변경 이력은 하단 Version History 참조.
 
 ### 11.3 Session Guide
 
@@ -922,6 +954,7 @@ silveryarn/
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.52 | 2026-09-13 | **문서 최신화 점검**(코드 대비 드리프트 정정, 신규 문서 추가 요청) — PR #37(organizations)·#39(retention/erasure)가 구현했지만 이 문서엔 반영이 누락돼 있던 부분을 정정. §1 파이프라인 참조 표(schema.md v1.4→v1.17, 엔티티 수 갱신). §3.1 TS 요약에 `User.orgId`·`FamilyMember.orgId`·`Invitation.orgId`·`ConversationChunk.retentionUntil`/`purgedAt`/`createdAt`·`ConsentLog.consentType`의 `third_party_access`/`international_transfer`(PR #34/#35 반영 누락분) 필드 보강 + `Organization`·`RetentionPolicy` 인터페이스 신규. §3.2 관계도에 Organization/RetentionPolicy 추가. §4.2 엔드포인트 표에 실제로는 이미 있었던 `GET/PUT /retention-policies`·`POST /users/{id}/erase` 3건 누락 추가(실행 중인 백엔드 `openapi.json`과 전수 대조해 이 3건 외엔 갭 없음을 확인). §5.1 화면 인벤토리에 시설 관리·보유기간 설정·계정 삭제 화면 반영. §7.1 RBAC 매트릭스에 3개 admin 전용 리소스 행 추가. §9.1/§11.1 모듈 트리에 `organizations`/`retention` 추가, 마이그레이션 범위 0001~0007→0001~0012. §11.2 item 1 테이블 수·버전 정정, item 5 페르소나 룰셋 "미구현"→구현됨 정정. 자매 문서도 동시 정비: `glossary.md`(organizations/retention/erasure 등 누락 용어 8건 추가), `workflow-diagrams.md`(§20 미결항목 다이어그램을 해결 상태로 갱신 + §21 계정 삭제·보유기간 파기 흐름 신규), `docs/01-plan/_INDEX.md`·`docs/02-design/_INDEX.md`(PDCA 현재 단계 Do로 정정, 전 문서 버전·상태 최신화). 신규 문서: `docs/02-design/data-classification-policy.md`(I1 후속 작업이던 "PII 수준" 경계 명문화) | NUBiz AX Initiative |
 | 0.51 | 2026-09-13 | Do 단계 — decisions.md #56(2026-09-13 사용자 결정, Q5) 구현. §7.6 신설(보유기간·계정 삭제 오케스트레이션). 착수 전 schema.md 전 테이블 FK `ON DELETE` 절 재조사로 CTO의 "5-store 통합삭제" 프레이밍을 좁힘 — Postgres는 이미 cascade로 완결(`user_encryption_keys` 포함), 실제 필요한 건 Qdrant·Neo4j·MinIO 3곳뿐. 마이그레이션 0012(`retention_policies`+`deletion_records`, `conversation_chunks.retention_until`/`purged_at`, schema.md v1.17). 신규 `retention` 모듈(정책 CRUD) + `RetentionPurgeService`(worker.py 신규 cron, 매시 30분) + `UserErasureService`(외부 저장소 먼저→Postgres 마지막 순서) + `POST /users/{id}/erase` admin 전용. apps/admin `/retention-policies`(보유일수 조정) + 사용자 목록 "계정 삭제" 2단계 확인 danger-zone. 유닛테스트 13건 신규(212개). 실 인프라(Postgres+Qdrant+Neo4j+MinIO)로 보유기간 계산→만료→파기, 계정 삭제→cascade+외부저장소 정리→감사로그 전 과정 왕복 검증. **부수 발견·수정**: `VECTORDB_API_KEY=""`가 qdrant-client의 https 자동판정에 걸려 로컬 Qdrant 접속이 SSL 에러로 실패하던 버그 발견·수정. erd.md v1.4(§11 반영 완료로 갱신). 이 항목으로 법무·인프라·경영 미결 14건 전체 구현 완료 | NUBiz AX Initiative |
 | 0.50 | 2026-09-13 | Do 단계 — decisions.md #59(2026-09-13 사용자 결정, I2) 구현. §7.4에 B2G 시설 테넌시 안전망 bullet 추가, §4.2에 `/organizations`(GET/POST/GET{id})·`PUT /users/{id}/organization` 4개 엔드포인트 추가. 신규 `organizations` 모듈(domain/infra/application/api/deps, import-linter 컨테이너 등록). `users`/`family_members`/`invitations`에 `org_id` 추가(마이그레이션 0011, schema.md v1.16). `core/auth.py` `Membership.org_id` + `auth_deps.py`에 `UserDirectory`/`ElderAccessContext`(기존 `ConsentDirectory`를 흡수해 하나로 통합) 추가, `authorize_elder_data_read()`가 테넌시 불일치를 403으로 차단. **스코프는 안전망뿐**(정식 B2G 대량 열람 모델 아님) — 기존 1:1 초대 연결(decisions #51)은 그대로 1차 권한 경로. apps/admin `/organizations`(신규, 시설 등록·목록) + family-members 화면에 시설 배정 폼·초대 시 시설 선택 추가. 유닛테스트 19건 신규(197개), 실 인프라(Postgres)로 같은 시설/다른 시설 재배정 시나리오 직접 검증. erd.md v1.3(§11 반영 완료로 갱신) | NUBiz AX Initiative |
 | 0.49 | 2026-09-13 | Do 단계 — decisions.md #61(2026-09-12 사용자 결정, I4) 구현. §7.5 신설(관측 스택). `infra/docker-compose.yml`에 GlitchTip(db+redis+web all_in_one+bootstrap 자동화)·Prometheus·Loki·Grafana Alloy(Promtail EOL 대체)·Grafana 추가, 호스트 포트 9679·9680으로 9670-9680 전 슬롯 소진. `core/observability.py`(신규, sentry-sdk+prometheus-fastapi-instrumentator) + `core/logging.py`(JSON 실제 포맷 정정 — 이전 문서·코드 드리프트 발견) + `core/errors.py`(예외를 완전히 삼키던 버그 발견·수정: 로깅+GlitchTip 캡처 추가). 실 인프라로 메트릭·로그·에러 3파이프라인 전부 왕복 검증 | NUBiz AX Initiative |

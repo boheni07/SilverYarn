@@ -31,24 +31,28 @@ Claude automatically applies PDCA methodology. Commands are shortcuts for power 
 | Item | Value |
 |------|-------|
 | Level | **Enterprise** (온디바이스 AI + 온프레미스 GPU 서버 + 다중 마이크로서비스 + 엄격한 데이터 주권 요구) |
-| PDCA Phase | **Do 진행 중** (design v0.36). 보안 블로커 B1~B6 코드분 완료(PR #1~#13), Check 2회(`docs/03-check/gap-analysis-2026-09-10.md` + `gap-analysis-2026-09-11.md`) + Do 사이클 보고서(`docs/04-report/features/silveryarn-platform.report.md`) + Compaction Engine(#15)·Critic Agent(#16). 이월: retention·egress·B2G 테넌시·정서 모니터링 — 전부 `docs/03-check/blocked-decisions-tracker.md`의 법무/인프라 회신 대기 |
+| PDCA Phase | **Do 진행 중** (design v0.52). PR #1~#39 전부 main 머지 — 보안 블로커 B1~B6, Check 2회(`docs/03-check/gap-analysis-2026-09-10.md` + `gap-analysis-2026-09-11.md`) + Do 사이클 보고서(`docs/04-report/features/silveryarn-platform.report.md`) + Compaction Engine(PR #15)·Critic Agent(PR #16)·페르소나 룰셋(PR #27). **`docs/03-check/blocked-decisions-tracker.md`의 법무 6건·인프라 5건·경영 3건(Q1~Q6·I1~I5) 전부 확정+구현 완료**(2026-09-13, decisions.md #52~#65). 남은 후속은 이 트랙과 무관한 실측 작업(온디바이스 SLM 벤치마크, #27/#9/#31 — 프로토콜+하니스 준비완료, 실기기 대기)뿐 |
 | 9-Phase Pipeline | Phase 1(Schema) ✅ · Phase 2(Convention) ✅ · Phase 3(Mockup, BI가이드+UI/UX설계서+design-tokens.md) ✅ · Phase 4(API 설계, sync-contract.md 포함) ✅ 완료 |
 | Primary Feature | `silveryarn-platform` |
 | 원본 기획 자료 | `Plan/` 폴더 (기획서 v0.5, 프로세스흐름도, BI가이드 v2.0, UI/UX설계서 v1.2) |
-| PDCA 문서 | `docs/01-plan/features/silveryarn-platform.plan.md`(v0.4), `docs/02-design/features/silveryarn-platform.design.md`(v0.42), `docs/03-check/gap-analysis-2026-09-10.md`, `docs/03-check/gap-analysis-2026-09-11.md`, `docs/03-check/blocked-decisions-tracker.md`(법무·인프라 회신 대기 트래커), `docs/04-report/features/silveryarn-platform.report.md` |
-| 동기화 계약 | `docs/02-design/sync-contract.md` — 비동기 업로드(202+job_id), 엔티티별 충돌정책, Presigned URL, 증분 다운로드 |
-| 의사결정 로그 | `docs/01-plan/decisions/silveryarn-platform.decisions.md`(v0.20) (기획서 9장 + design-validator 반영 항목) |
+| PDCA 문서 | `docs/01-plan/features/silveryarn-platform.plan.md`(v0.4), `docs/02-design/features/silveryarn-platform.design.md`(v0.52), `docs/03-check/gap-analysis-2026-09-10.md`, `docs/03-check/gap-analysis-2026-09-11.md`, `docs/03-check/blocked-decisions-tracker.md`(법무·인프라·경영 14건 완료 트래커), `docs/04-report/features/silveryarn-platform.report.md` |
+| 동기화 계약 | `docs/02-design/sync-contract.md`(v0.7) — 비동기 업로드(202+job_id), 엔티티별 충돌정책, Presigned URL, 증분 다운로드 |
+| 의사결정 로그 | `docs/01-plan/decisions/silveryarn-platform.decisions.md`(v0.25) (기획서 9장 + design-validator 반영 항목 + §2.9 법무·인프라·경영 14건 #52~#65) |
 | 디자인 토큰 | `docs/02-design/design-tokens.md`(v1.2) (BI 가이드 컬러/타이포 → Tailwind 토큰, WCAG AA 대비 규칙, 접근성 최소기준) |
+| 데이터 분류 정책 | `docs/02-design/data-classification-policy.md`(v0.1, 신규) — PII/메타데이터 4단계 분류 + 외부 통신 경계(decisions.md #58/I1) |
 | 발표자료 | `docs/presentations/은빛실타래_개발착수회의_kickoff.pptx` (66슬라이드), `docs/presentations/은빛실타래_설계발표_슬라이드.html` (72슬라이드 HTML, 방향키 네비게이션) — [게시 링크](https://claude.ai/code/artifact/8c0fdb75-5c19-4916-b406-eb38275f2146) |
-| 워크플로우 다이어그램 | `docs/02-design/workflow-diagrams.md`(v0.4) — Mermaid 20종 (마스터 Closed-Loop, 분야별 프로세스, 스윔레인, 상태전이 등) |
-| CTO팀 검토 | `docs/02-design/cto-review-2026-09-05.md` — 7개 관점(아키텍처/인프라/보안/FE/백엔드·API/QA/PM) 착수 심사, 판정: **전원 Go with Conditions** |
+| 워크플로우 다이어그램 | `docs/02-design/workflow-diagrams.md`(v0.5) — Mermaid 21종 (마스터 Closed-Loop, 분야별 프로세스, 스윔레인, 상태전이, 계정삭제·보유기간 파기 흐름 등) |
+| CTO팀 검토 | `docs/02-design/cto-review-2026-09-05.md` — 7개 관점(아키텍처/인프라/보안/FE/백엔드·API/QA/PM) 착수 심사, 판정: **전원 Go with Conditions** (Blocker 28건, 전부 정책 확정 또는 구현 완료 — 실측 대기 항목만 잔존) |
 
-> **⚠️ Do 단계 착수 전 필수 확인**: CTO팀 검토에서 Blocker 28건 발견. 특히 보안 관점에서 **동의·보유기간·PII암호화·인가모델 5대 법적 리스크**가 발견되었으므로, `docs/02-design/cto-review-2026-09-05.md`를 반드시 먼저 읽을 것. 착수 전 요약:
-> - 정서 모니터링 파이프라인은 Phase 1에서 **피처플래그로 OFF** ([decisions.md #25](./docs/01-plan/decisions/silveryarn-platform.decisions.md))
-> - 온디바이스 SLM 모델 벤치마크(2주)는 예산 승인과 무관하게 즉시 착수 가능. 동기화 계약([sync-contract.md](./docs/02-design/sync-contract.md))은 3차 검증에서 작성 완료
-> - 6개 마이크로서비스로 첫 커밋을 찍지 말 것 — 모듈러 모놀리스(api/worker 2프로세스) 권고
-> - PII 암호화: 자유텍스트 5개 컬럼(`body_text`·`body_text_snapshot`·`transcript_*`·`assistant_response`)은 **1차 구현 완료** — 애플리케이션 레벨 필드 암호화 + 사용자별 DEK([decisions.md #45](./docs/01-plan/decisions/silveryarn-platform.decisions.md), `services/backend/src/core_service/core/crypto.py`, 마이그레이션 `0002`). `name`·`contact`·`birth_date`는 2차 라운드(부분검색 재설계·blind index·타입변경 선행). KEK는 `PII_KEK` 환경변수(Vault 이전 전까지 임시)
-> - 인증/PII 암호화: **실 구현 + 실 인프라 e2e 완료** (PR #1~#8, 마이그레이션 `0002`~`0006`). Keycloak JWKS RS256 + `keycloak_sub` 매핑 + Device Token(`device_credentials` SHA-256) + `access_logs` + `authorize_user_access` RBAC/IDOR + social_worker fail-closed(#48) + PII 1·2차 암호화(`chapters.body_text` 등 + `contact` blind index + `birth_date`, name은 평문). 로컬 Keycloak realm은 `infra/keycloak/`, e2e는 `services/backend/scripts/e2e_*.py`. **남은 것**: `organizations` B2G 테넌시·retention 정책(법무 대기), `PII_KEK` Vault 이전
+> **⚠️ CTO팀 착수 심사 이력**: 초기 검토에서 Blocker 28건 발견, 그중 보안 관점 **동의·보유기간·PII암호화·인가모델 5대 법적 리스크**는 이제 전부 해소됐다(아래 요약). 상세 원본은 `docs/02-design/cto-review-2026-09-05.md` 참조(착수 시점 스냅샷 — 이후 진행 상황은 이 파일과 decisions.md가 최신).
+> - 정서 모니터링 파이프라인은 **여전히 피처플래그 OFF**(제품 판단 — 법적 전제는 [decisions.md #52/#55](./docs/01-plan/decisions/silveryarn-platform.decisions.md)로 정리됐으나 기능 자체는 별도 착수 필요)
+> - 6개 마이크로서비스로 첫 커밋을 찍지 말라는 권고대로 모듈러 모놀리스(`services/backend/` 단일 배포, api/worker 2프로세스)로 확정·유지 중
+> - PII 암호화: 자유텍스트 5개 컬럼(1차, decisions.md #45) + `contact`/`birth_date`(2차) + blind index 키 정식 분리(3차, decisions.md #60) **전부 구현 완료**. `name`은 부분검색 UX상 의도적으로 평문 유지. KEK는 여전히 `PII_KEK` 환경변수(Vault/OpenBao 이전은 계속 보류)
+> - 인증/인가: Keycloak JWKS RS256 + Device Token + RBAC/IDOR + social_worker 조건부 허용(third_party_access 동의, decisions.md #54) + B2G 시설 테넌시 안전망(decisions.md #59) **전부 구현 완료**. apps/web·apps/admin 둘 다 Keycloak 실 로그인(Auth.js)
+> - 보유기간·계정 삭제(erasure): crypto-shredding + Qdrant/Neo4j/MinIO 오케스트레이션 **구현 완료**(decisions.md #56, Q5, PR #39) — 법무·인프라·경영 미결 14건의 마지막 항목이었음
+> - self-hosted 관측 스택(GlitchTip+Prometheus/Grafana/Loki) **구현 완료**(decisions.md #61)
+> - "PII 수준" 외부 통신 경계는 [`data-classification-policy.md`](./docs/02-design/data-classification-policy.md)로 명문화 완료(decisions.md #58)
+> - **남은 것**: 온디바이스 SLM 모델 최종 선정·실시간 파이프라인 수치 검증은 실기기 벤치마크 대기(decisions.md #27/#9/#31 — 프로토콜+하니스 준비완료, 물리 기기 확보 필요)
 > - 접근성 최소기준(BODY 20px 등)은 문서화 완료, 구체 구현 방식은 Do 단계 확정
 
 > **⚠️ 중요**: bkit Enterprise 스킬의 기본 인프라 템플릿(AWS EKS/RDS/Terraform, Turborepo Next.js/FastAPI 표준 스택)은 **참고용일 뿐 그대로 적용하지 않는다.** 본 프로젝트는 Zero External Data Egress 원칙(기획서 3.1절)에 따라 **온프레미스 자체 GPU 서버(vLLM·A100)** 기반이며, 모바일은 온디바이스 STT/SLM/TTS가 필수인 네이티브(또는 이에 준하는) 앱이다. 실제 스택 확정 전까지 아래 Tech Stack 표를 우선한다.
@@ -63,7 +67,7 @@ Claude automatically applies PDCA methodology. Commands are shortcuts for power 
 | 온디바이스 SLM | Kanana-2, Qwen2.5-0.5B 등 경량(0.5~3B, 4bit 양자화) 후보 | **미정** (벤치마크 후보 2종 확보, 최종선정은 실기기 벤치마크 후 — decisions.md #27) |
 | 온디바이스 음성 파이프라인 | WebRTC VAD(800ms 묵음판정) + 경량 STT(Sherpa-ONNX 등 후보) + **SQLite FTS5 단독 RAG(Phase 1 확정, decisions #32)** + 문장단위 스트리밍 TTS + 네이티브 TTS, 원본음성 Opus(16kbps) 압축·업로드성공시 즉시삭제(#30) | 🔄 구조·기법 확정, 라이브러리·수치는 Do 단계 벤치마크 |
 | 온디바이스 로컬 스키마 | Room/SQLite 6개 테이블 (`conversations`, `autobiography_fts` 등) | ✅ 초안 확정 — [mobile-schema.md](./docs/01-plan/mobile-schema.md) |
-| 데이터 모델링 & ERD | 서버 17개 엔티티 + 온디바이스 6개 테이블 관계도 (흑백 Mermaid, 도메인별 3분할) | ✅ [erd.md](./docs/01-plan/erd.md) |
+| 데이터 모델링 & ERD | 서버 도메인 19개 엔티티(+부속 4개) + 온디바이스 6개 테이블 관계도 (흑백 Mermaid, 도메인별 3분할) | ✅ [erd.md](./docs/01-plan/erd.md) |
 | 서버 백엔드 | 자체 호스팅 Python 3.11+ / **FastAPI** | ✅ 확정 (decisions.md #15) |
 | LLM 추론 | 자체 호스팅 vLLM · A100 GPU 서버 | ✅ 확정 |
 | Vector DB | Qdrant self-hosted (하이브리드 서치 BM25+Dense) | ✅ 확정 (Milvus 제안 검토했으나 미채택, decisions.md #28) |
@@ -186,13 +190,14 @@ silveryarn/
 - 구독·결제 도메인: Phase 1 스코프 아웃 (PG사·요금제는 경영 결정 대기)
 - API 응답 케이싱은 snake_case, DB enum 값은 영문 통일(표시명은 schema.md §7 매핑)
 - Wi-Fi 등록정보(SSID 등)는 온디바이스 로컬 전용, 서버 미저장
+- **법무·인프라·경영 미결 14건**(2026-09-12 사용자 결정, decisions.md #52~#65, 전부 구현 완료 2026-09-13): 정서점수는 일반개인정보로 별도동의 불필요(#52)·가족 대리동의 유효(#53)·가족=위탁이용/복지사=제3자제공(#54)·정서기능 "진단" 표현 회피(#55)·crypto-shredding 파기채택+보유기간 admin 설정(#56)·FCM 유지+국외이전고지(#57)·PII만 egress 차단(#58)·B2G 시설 테넌시는 안전망 스코프로 착수(#59)·blind index 키만 우선 분리(#60)·self-hosted 관측스택 구축(#61)·서버LLM 비실시간전용(#62)·3개월 파일럿 목표(#63)·결제도메인 스코프아웃 유지(#64)·외부TTS Phase3 유예(#65). 법무 6건(Q1~Q6)은 정식 외부 법률자문을 대체하지 않는 잠정 회사 정책임에 유의
 
-**여전히 미결 — 반드시 임의 결정 금지**:
-- 정서 모니터링 알림의 법적/윤리적 기준 ⚖️ 법무·윤리 검토 필요
-- 외부 TTS 구체 벤더·비용·DPA ⚖️ Phase 3 시점 법무 검토
-- Phase 1~3 착수 일정/예산/인력 ⚖️ 경영진 승인 대기
-- 온디바이스 SLM 모델 자체 선정 (Kanana-2 등)
-- 로컬 "최근 5일" 캐시 기준 — 기본값 유지, 실기기 벤치마크 후 재확정
+**여전히 미결 — 반드시 임의 결정 금지** (위 14건과 무관한 별도 트랙, 실측·경영 후속 성격):
+- 정서 모니터링 알림의 **구체 임계치 로직**(언제 발송할지) ⚖️ 여전히 법무·윤리 검토 필요(decisions.md #19) — 법적 분류(#52/#55)와는 별개 질문
+- 외부 TTS 구체 벤더·비용·DPA ⚖️ Phase 3 유예 재확인(#65)됐을 뿐 벤더 자체는 미정
+- Phase 1~3 정식 예산·인력 ⚖️ "3개월 파일럿" 목표(#63)만 확정, 경영진의 정식 승인은 여전히 대기
+- 온디바이스 SLM 모델 자체 선정 (Kanana-2 등) — 실기기 벤치마크 대기(#27, 프로토콜+하니스 준비완료)
+- 로컬 "최근 5일" 캐시 기준 — 기본값 유지, 실기기 벤치마크 후 재확정(#9)
 
 ---
 
