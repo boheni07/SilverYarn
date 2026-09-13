@@ -1,12 +1,12 @@
 # 은빛실타래 — 비즈니스/업무/프로세스 흐름도 (Workflow Diagrams)
 
-> **Summary**: 현재(v0.6) 설계 상태를 반영한 전체 업무·프로세스 흐름도 모음 — Mermaid 다이어그램 20종 (흑백 고대비판)
+> **Summary**: 현재(v0.52) 설계 상태를 반영한 전체 업무·프로세스 흐름도 모음 — Mermaid 다이어그램 21종 (흑백 고대비판)
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.4 *(v0.4 신규 — 헤더에 Version 필드 없던 것을 3차 검증 L-3로 정정, 상세 이력은 하단 Version History)*
-> **Date**: 2026-09-07
+> **Version**: 0.5 *(§20 갱신 + §21 신규 — 법무·인프라·경영 미결 14건 구현 완료 반영, 상세 이력은 하단 Version History)*
+> **Date**: 2026-09-13
 > **Status**: Draft
-> **Source of truth**: [`silveryarn-platform.design.md`](./features/silveryarn-platform.design.md)(v0.6), [`sync-contract.md`](./sync-contract.md)(v0.1), [`schema.md`](../01-plan/schema.md)(v1.4), [`mobile-schema.md`](../01-plan/mobile-schema.md)(v0.3), [`decisions.md`](../01-plan/decisions/silveryarn-platform.decisions.md)(v0.7)
+> **Source of truth**: [`silveryarn-platform.design.md`](./features/silveryarn-platform.design.md)(v0.52), [`sync-contract.md`](./sync-contract.md)(v0.7), [`schema.md`](../01-plan/schema.md)(v1.17), [`mobile-schema.md`](../01-plan/mobile-schema.md)(v0.11), [`decisions.md`](../01-plan/decisions/silveryarn-platform.decisions.md)(v0.24)
 
 > 원본 `Plan/자서전_말벗돌봄_프로세스_흐름도.md`(기획서 v0.5 기준)를 대체하지 않고, **그 이후 확정된 아키텍처 변경분**(Closed-Loop, 실시간 대화 파이프라인, Zero-Neural RAG, Neo4j 지식그래프, 온프레미스 vLLM 확정)까지 반영해 전체를 다시 정리한 현재판이다. 원본은 기획 의도 이해용으로 계속 보존한다(CLAUDE.md SoR 원칙).
 >
@@ -587,19 +587,70 @@ flowchart TD
 
 ---
 
-## 20. 미결 의사결정이 프로세스에 미치는 영향 (한눈에 보기)
+## 20. 의사결정 이력이 프로세스에 미친 영향 (해결 현황 — 2026-09-13 갱신)
+
+> **이력**: 최초 작성 시(v0.3) 이 다이어그램은 법무·인프라·경영 미결 항목이 프로세스를 어디서 차단하는지 보여주는 "경고판"이었다. `decisions.md #52~#65`(2026-09-12 일괄 확정) + 그 구현(PR #32~#39, 2026-09-13 완료)으로 **D1·D2·D6는 해결**됐고, 실선 강조(`strong`)로 표시한다. **D3·D4는 여전히 남아 있으나 성격이 바뀌었다** — 더 이상 "법무·경영 결정 대기"가 아니라 "실기기 벤치마크 실행 대기"(프로토콜·하니스는 준비 완료)이므로 계속 점선(`off`)으로 표시하되 라벨을 정정한다.
 
 ```mermaid
 %%{init: {'theme':'base', 'themeVariables': {'primaryColor':'#ffffff','primaryTextColor':'#111111','primaryBorderColor':'#111111','lineColor':'#111111','background':'#ffffff','mainBkg':'#ffffff','textColor':'#111111','edgeLabelBackground':'#ffffff'}}}%%
 flowchart LR
-    D1["#12 정서모니터링<br/>법적기준"]:::off -.->|"임계치 로직 차단"| P8["§8 정서모니터링<br/>알림발송 단계"]:::off
-    D2["#14 예산·인력"]:::off -.->|"착수 자체 차단"| ALL["전체 Do 단계"]:::off
-    D3["#27 SLM 모델선정"]:::off -.->|"부분 차단"| P2["§2 실시간대화<br/>SLM 추론 단계"]:::off
-    D4["#9 최근5일 캐시"]:::off -.->|"기본값 유지, 재조정 가능"| P18["§18 로컬 스키마<br/>conversations 보존정책"]:::off
-    D6["보유·파기 정책 미확정<br/>(CTO Security B3)"]:::off -.->|"ON DELETE CASCADE 전면적용 위험"| PALL["전 엔티티 삭제 정책"]:::off
+    D1["#52/#55 정서모니터링<br/>법적기준 — 확정"]:::strong -.->|"법적 전제만 정리,<br/>기능 자체는 제품판단으로 계속 OFF"| P8["§8 정서모니터링<br/>알림발송 단계"]:::off
+    D2["#63 예산·인력 —<br/>3개월 파일럿 목표 확정"]:::strong ==>|"착수 근거 확보"| ALL["전체 Do 단계"]:::strong
+    D3["#27 SLM 모델선정 —<br/>실측 대기(법무 아님)"]:::off -.->|"부분 차단, 하니스 준비완료"| P2["§2 실시간대화<br/>SLM 추론 단계"]:::off
+    D4["#9 최근5일 캐시 —<br/>실측 대기(법무 아님)"]:::off -.->|"기본값 유지, 재조정 가능"| P18["§18 로컬 스키마<br/>conversations 보존정책"]:::off
+    D6["#56 보유·파기 정책 —<br/>확정+구현 완료(PR #39)"]:::strong ==>|"crypto-shredding +<br/>Qdrant/Neo4j/MinIO 오케스트레이션 완료"| PALL["§21 계정 삭제·<br/>보유기간 파기 흐름"]:::strong
 
     classDef off fill:#f4f4f4,color:#777777,stroke:#999999,stroke-width:1px,stroke-dasharray: 3 3;
+    classDef strong fill:#ffffff,color:#111111,stroke:#111111,stroke-width:3px;
 ```
+
+> **남은 것**: D3·D4(§03-check/ondevice-slm-benchmark-protocol.md 참조)뿐이며, 둘 다 법무·인프라·경영 미결 트랙과 무관한 별도 실측 작업이다. 이 트랙(법무·인프라·경영 14건) 자체는 더 이상 프로세스를 차단하지 않는다.
+
+---
+
+## 21. 계정 삭제(Erasure)·보유기간 파기 흐름 — 신규 (decisions.md #56, Q5, 2026-09-13)
+
+> `silveryarn-platform.design.md` §7.6의 `UserErasureService`/`RetentionPurgeService` 두 흐름을 시퀀스로 시각화한다. 둘 다 admin 콘솔에서만 트리거되며, 어르신 본인이나 가족이 직접 실행할 수 없다(정보주체 삭제요청권 행사는 admin 접수 후 대행).
+
+**① 계정 전체 삭제(erasure) — 외부 저장소 먼저, Postgres 마지막(재시도 안전성)**
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': {'primaryColor':'#ffffff','primaryTextColor':'#111111','primaryBorderColor':'#111111','lineColor':'#111111','background':'#ffffff','mainBkg':'#ffffff','textColor':'#111111','edgeLabelBackground':'#ffffff'}}}%%
+sequenceDiagram
+    participant A as 🖊️ admin 콘솔
+    participant S as 🖥️ UserErasureService
+    participant Q as Qdrant
+    participant N as Neo4j
+    participant M as MinIO
+    participant P as PostgreSQL
+
+    A->>S: POST /users/{id}/erase<br/>(어르신 이름 재입력 확인 + 사유)
+    S->>P: 사용자·사진 목록 조회(cascade 전에 먼저 읽음)
+    S->>Q: delete_user_vectors(user_id)
+    S->>N: delete_user_nodes(user_id) — DETACH DELETE
+    S->>M: photos마다 remove_object(storage_ref)
+    S->>P: deletion_records 기록 + DELETE FROM users<br/>(같은 트랜잭션, cascade로 전 하위테이블 정리)
+    P-->>S: 커밋 완료(crypto-shredding 자동 포함)
+    S-->>A: 204 No Content
+```
+
+**② 보유기간 만료 파기 (worker.py cron, 매시 30분)**
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': {'primaryColor':'#ffffff','primaryTextColor':'#111111','primaryBorderColor':'#111111','lineColor':'#111111','background':'#ffffff','mainBkg':'#ffffff','textColor':'#111111','edgeLabelBackground':'#ffffff'}}}%%
+flowchart TD
+    T["arq cron 매시 30분"] --> L["conversation_chunks 조회<br/>retention_until ≤ now() AND purged_at IS NULL"]
+    L --> E{"만료 청크<br/>존재?"}
+    E -->|"없음"| DONE["종료"]
+    E -->|"있음(최대 100건/회)"| V["Qdrant embedding 삭제<br/>(embedding_id 있을 때만)"]
+    V --> G["Neo4j 노드 삭제<br/>(graph_node_ref 있을 때만)"]
+    G --> R["Postgres redaction:<br/>transcript_*·assistant_response만 NULL/빈문자열,<br/>meta_*는 보존 + purged_at 기록"]:::strong
+    R --> E
+
+    classDef strong fill:#ffffff,color:#111111,stroke:#111111,stroke-width:3px;
+```
+
+> `retention_policies.conversation_transcript`(admin이 `apps/admin` `/retention-policies`에서 조정, 기본 365일)가 청크 생성 시점의 `retention_until` 계산 기준이다. 원본음성은 이미 업로드 성공 즉시 삭제(#30)이고 챕터·사진은 만료 대상이 아니라, 이 흐름은 `conversation_chunks` 원문 텍스트에만 적용된다.
 
 ---
 
@@ -617,6 +668,7 @@ flowchart LR
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.5 | 2026-09-13 | 문서 최신화 점검. §20을 "미결 의사결정" 경고판에서 "해결 현황"으로 전면 갱신 — D1(#52/#55)·D2(#63)·D6(#56)는 확정+구현 완료(strong 스타일)로 정정, D3(#27)·D4(#9)는 여전히 실측 대기지만 "법무 아님, 벤치마크 하니스 준비 완료"로 라벨 정정. §21 신규 — 계정 삭제(erasure) 시퀀스 + 보유기간 만료 파기 배치 플로우차트(decisions.md #56, Q5). 헤더 Source of truth 버전 전체 최신화 | NUBiz AX Initiative |
 | 0.1 | 2026-09-06 | Closed-Loop/실시간파이프라인/Neo4j/FTS5 반영한 현재판 워크플로우 20종 신규 작성 | NUBiz AX Initiative |
 | 0.2 | 2026-09-06 | 색상(남색/보라/청록/골드) 기반 구분을 전면 폐지하고 흑백 고대비 스타일로 재작성 — 모든 다이어그램에 흑백 강제 테마 지시자 추가, 역할 구분은 노드 도형·subgraph 레이블·선 스타일로 대체 | NUBiz AX Initiative (사용자 피드백 반영) |
 | 0.3 | 2026-09-07 | 2차 design-validator 검증 반영 — H-3: sync-contract 미작성(§17)·보유정책 미확정(§13,§20) 경고 각주 추가 및 §20에 D5/D6 미결항목 반영. M-5: §4에서 감수 전 `chapter_revisions` 생성 오류 정정(draft 상태 `chapters` 저장으로 변경, 실제 이력 생성은 §7). M-6: §18에 누락된 `conversation_chunks` 노드 추가 및 `conversations`→`chapters` 오표기 화살표를 `conversation_chunks` 경유로 정정 | NUBiz AX Initiative |

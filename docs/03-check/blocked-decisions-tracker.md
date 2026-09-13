@@ -87,14 +87,15 @@
 
 `docs/02-design/cto-review-2026-09-05.md` §2 (Infrastructure), §1 Concern.
 
-### I1. "Zero External Data Egress" 사정거리 정의 — ✅ 확정
+### I1. "Zero External Data Egress" 사정거리 정의 — ✅ 확정, ✔️ 구현 완료
 
 | | |
 |---|---|
 | 관련 | [decisions #58](../01-plan/decisions/silveryarn-platform.decisions.md)(신규), CTO Infra B2, Security B6 |
 | 결정 | **2026-09-12, 사용자**: PII·원본 데이터(대화 원문·음성·사진 등)만 외부 유출 절대 금지, 빌드툴·오픈소스 패키지·웹폰트·상용 알림 SDK(FCM) 같은 메타데이터 수준 통신은 허용. 완전 에어갭 미채택 — Q6(FCM 유지)와 정합 |
 | 현재 | 벡터 payload에 원문 미저장 원칙은 `upload_pipeline_service`에서 준수(payload=`user_id`만) |
-| 후속 작업 (미착수) | "PII 수준" 경계를 CONVENTIONS.md 또는 별도 보안정책 문서에 명문화 |
+| 구현 (2026-09-13) | "PII 수준" 경계를 4단계(Tier 1~4)로 명문화한 [`data-classification-policy.md`](../02-design/data-classification-policy.md) 신규 작성 — schema.md 실제 컬럼 단위로 분류하고, 신규 컬럼/외부연동 추가 시 판단 체크리스트 포함 |
+| 남은 것 | 없음 |
 
 ### I2. `organizations` B2G 시설 테넌시 — ✅ 확정, ✔️ 구현 완료
 
@@ -174,6 +175,6 @@ Q2(대리동의, ✅#53)       ┘
 Q5(보유기간·파기, ✔️#56 구현완료) ─→ retention_policies 테이블+admin UI+Qdrant/Neo4j/MinIO 오케스트레이터 (완료)
 Q6(국외이전, ✅#57)      ─────→ 알림 발송 어댑터 구현 전제
 
-I1(Zero Egress 범위, ✅#58) ─→ I2(테넌시 안전망, ✔️#59 구현완료)·I3(blind index만 분리, ✔️#60 구현완료)·I4(관측, ✔️#61 구현완료)
+I1(Zero Egress 범위, ✔️#58 구현완료) ─→ I2(테넌시 안전망, ✔️#59 구현완료)·I3(blind index만 분리, ✔️#60 구현완료)·I4(관측, ✔️#61 구현완료)
 I5(GPU, 🔄#62 부분확정) ←── #27(SLM 벤치마크, 프로토콜+하니스 준비 완료 — 실기기 실행만 남음, VRAM 예산표는 여전히 보류)
 ```

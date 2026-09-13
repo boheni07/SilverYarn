@@ -4,7 +4,7 @@
 >
 > **Project**: 은빛실타래 (SilverYarn)
 > **Date**: 2026-09-07
-> **Version**: 1.1
+> **Version**: 1.2
 > **Source**: `Plan/어르신_자서전_말벗돌봄_기획서.md`, `Plan/자서전_말벗돌봄_프로세스_흐름도.md`, [decisions.md](./decisions/silveryarn-platform.decisions.md)
 
 ---
@@ -42,6 +42,14 @@
 | 갭 분석 에이전트 | Critic Agent | 서사 완성도를 Fact/Emotion/Relation/Reflection 4축으로 채점해 심층질문을 생성하는 서버 평가 에이전트 | Critic/Evaluator Agent |
 | 경량화 패키징 엔진 | Compaction Engine | 서버의 정제 지식을 온디바이스 규격(SQLite FTS5, 압축 프롬프트)으로 변환하는 서버 모듈 | - |
 | 무신경망 검색 | Zero-Neural RAG | 임베딩 모델 없이 SQLite FTS5(BM25) 키워드 검색만으로 수행하는 온디바이스 회상 검색 방식 (Phase 1 기본값) | - |
+| 시설 | Organization | B2G 채널의 요양원·복지관 등 기관 단위(v1.16 신규, decisions.md #59) — 어르신·직원의 소속을 나타내는 테넌시 안전망 기준 | `Organization` |
+| 시설 테넌시 안전망 | Tenancy Safety Net | 시설이 다르면 기존 1:1 연결이 있어도 열람을 차단하는 2차 안전장치. 조직 소속 어르신 전체를 자동 조회하는 정식 B2G 대량 권한 모델과는 다름(스코프 밖) | Defense-in-Depth Tenancy |
+| 보유기간 정책 | Retention Policy | 카테고리별 데이터 보유일수를 정의하는 admin 조정 설정(v1.17 신규, decisions.md #56) — 하드코딩 대신 DB 설정 테이블로 관리 | `RetentionPolicy` |
+| 파기(redaction) | Purge / Redaction | 보유기간이 지난 대화 원문(`conversation_chunks`)을 NULL/빈 문자열로 지우는 것 — 구조화 메타데이터(시기·인물 등)는 자서전 집필 참고용으로 남긴다는 점에서 계정 전체 삭제와 다름 | Data Redaction |
+| 계정 전체 삭제 | Erasure | 정보주체 삭제요청권(PIPA) 행사 시 어르신 계정과 관련 데이터 전체를 지우는 되돌릴 수 없는 작업 — Postgres cascade + Qdrant/Neo4j/MinIO 정리 + `deletion_records` 감사 로그(v1.17 신규, decisions.md #56) | Right to Erasure |
+| 크립토 슈레딩 | Crypto-Shredding | 사용자별 DEK(`user_encryption_keys`)를 삭제해 그 사용자의 PII 자유텍스트 전량을 복호화 불가능하게 만드는 파기 수단. 계정 전체 삭제 시 Postgres cascade로 자동 발동 | Crypto-Shredding |
+| 제3자제공 동의 | Third-Party Access Consent | 복지사(social_worker)가 어르신 데이터를 열람하기 전 필요한 전용 동의 유형(v1.14 신규, decisions.md #54) — 가족·요양보호사의 위탁범위 내 이용과 구분 | `third_party_access` (ConsentType) |
+| 국외이전 동의 | International Transfer Consent | FCM(구글, 미국) 등 해외 서버로 데이터가 이전되는 것에 대한 별도 동의(v1.15 신규, decisions.md #57) — 개인정보 수집 동의와 별개 | `international_transfer` (ConsentType) |
 
 ---
 
@@ -85,6 +93,9 @@
 | 알림 수신 설정 | `notification_settings` |
 | 가족 초대 | `invitations` |
 | 출판 요청 | `publications` |
+| 시설 | `organizations` |
+| 보유기간 정책 | `retention_policies` |
+| 계정 삭제 감사로그 | `deletion_records` |
 
 ---
 
@@ -115,3 +126,4 @@
 |---------|------|---------|--------|
 | 1.0 | 2026-09-05 | Phase 1 — 원본 기획서·프로세스흐름도 기반 용어집 초안 작성 | NUBiz AX Initiative |
 | 1.1 | 2026-09-06 → 2026-09-07 문서화 | Closed-Loop/실시간파이프라인 반영 신규 용어 추가(지식 그래프, 갭 분석 에이전트/Critic Agent, 경량화 패키징 엔진/Compaction Engine, 무신경망 검색/Zero-Neural RAG) — 이력 갱신 누락분 정정(L-15). SLM 정의 "1~3B급"→"0.5~3B급"로 정정(Qwen2.5-0.5B 후보 포함) | NUBiz AX Initiative |
+| 1.2 | 2026-09-13 | 문서 최신화 점검 — decisions.md #52~#65 구현(PR #32~#39)으로 신설된 용어 8건 누락 발견·추가: 시설/시설 테넌시 안전망(#59), 보유기간 정책/파기(redaction)/계정 전체 삭제/크립토 슈레딩(#56), 제3자제공 동의(#54), 국외이전 동의(#57). Mapping Table에 `organizations`/`retention_policies`/`deletion_records` 3행 추가 | NUBiz AX Initiative |
