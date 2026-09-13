@@ -50,6 +50,9 @@ captures/
 
 # ==== Logs ====
 *.log
+# services/backend가 OBS_LOG_FILE(기본 logs/app.jsonl, decisions.md #61)에 남기는
+# 구조화 로그 — Grafana Alloy가 이 디렉터리를 바인드마운트로 읽어 Loki로 보낸다.
+/services/backend/logs/
 
 # ==== 온디바이스 SLM 벤치마크 오디오 픽스처 (실 구술 샘플, PII 소지 가능) ====
 # docs/03-check/ondevice-slm-benchmark-protocol.md §2 — README는 커밋하되 오디오 자체는 제외.

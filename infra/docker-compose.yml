@@ -83,8 +83,141 @@ services:
     volumes:
       - ./keycloak/import:/opt/keycloak/data/import:ro
 
+  # --- 관측 스택 (decisions.md #61, 2026-09-12 사용자 결정 — I4) ---
+  # Sentry SaaS는 I1(PII 외부유출 금지) 원칙상 사용 불가해 전부 self-hosted.
+  # 호스트 포트는 9679(glitchtip-web)·9680(grafana) 둘만 쓴다 — 9670-9680
+  # 범위에서 남은 마지막 두 슬롯(docker-port-range-constraint). 나머지
+  # (glitchtip-db/redis, prometheus, loki, alloy)는 컨테이너 간 통신만 하므로
+  # 호스트 포트가 필요 없다.
+  glitchtip-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: glitchtip
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: silveryarn_local_dev
+    volumes:
+      - glitchtip_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glitchtip"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  glitchtip-redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  glitchtip-web:
+    # SERVER_ROLE=all_in_one — GlitchTip 6 공식 compose.sample.yml 패턴대로 web·
+    # worker·migrate를 한 컨테이너로 돌린다(별도 worker/migrate 컨테이너 불필요).
+    image: glitchtip/glitchtip:6
+    depends_on:
+      glitchtip-db:
+        condition: service_healthy
+      glitchtip-redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://glitchtip:silveryarn_local_dev@glitchtip-db:5432/glitchtip
+      VALKEY_URL: redis://glitchtip-redis:6379
+      SECRET_KEY: silveryarn_local_dev_glitchtip_secret_key_change_in_prod
+      EMAIL_URL: consolemail://
+      GLITCHTIP_DOMAIN: http://localhost:9679
+      DEFAULT_FROM_EMAIL: noreply@silveryarn.local
+      SERVER_ROLE: all_in_one
+    ports:
+      - "9679:8000"
+    volumes:
+      - glitchtip_uploads:/code/uploads
+    healthcheck:
+      # curl/wget이 이미지에 없어(alpine 아님) python 표준 라이브러리로 대체.
+      # all_in_one이 마이그레이션까지 끝내고 웹 서버가 응답할 때만 healthy —
+      # glitchtip-bootstrap이 이 신호를 기다린다(테이블 없는 상태에서 ORM 호출 방지).
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/_health/')"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  glitchtip-bootstrap:
+    # 최초 실행 시 계정·조직·프로젝트·DSN을 자동 생성한다(Keycloak realm 자동
+    # 임포트와 동일한 취지 — GlitchTip은 realm 같은 가져오기 기능이 없어 Django
+    # shell 스크립트로 동등한 효과를 낸다). `docker compose logs glitchtip-bootstrap`
+    # 로 찍힌 DSN을 .env.local의 OBS_GLITCHTIP_DSN에 붙여넣으면 끝 — get_or_create라
+    # 재실행해도 안전하고, 한 번 만든 키는 볼륨에 남아 재부팅해도 그대로다.
+    image: glitchtip/glitchtip:6
+    depends_on:
+      glitchtip-web:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://glitchtip:silveryarn_local_dev@glitchtip-db:5432/glitchtip
+      VALKEY_URL: redis://glitchtip-redis:6379
+      SECRET_KEY: silveryarn_local_dev_glitchtip_secret_key_change_in_prod
+      # get_dsn()이 settings.GLITCHTIP_URL(=이 값)로 DSN의 host:port를 정하므로
+      # glitchtip-web과 반드시 동일해야 한다 — 안 그러면 컨테이너 내부 포트(8000)로
+      # DSN이 찍혀 호스트에서 못 쓴다(직접 겪은 함정).
+      GLITCHTIP_DOMAIN: http://localhost:9679
+    entrypoint: ["sh", "-c", "python manage.py shell < /bootstrap.py"]
+    volumes:
+      - ./observability/glitchtip-bootstrap.py:/bootstrap.py:ro
+    restart: "no"
+
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    # 백엔드가 아직 컨테이너화되지 않아(decisions.md #44) 호스트에서 도는 uvicorn을
+    # 스크레이프해야 한다 — Docker Desktop(Win/Mac)은 기본 제공하지만 Linux는
+    # 이 매핑이 있어야 host.docker.internal이 해석된다(이식성).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  loki:
+    image: grafana/loki:3.7.7
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./observability/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki_data:/loki
+
+  alloy:
+    # Promtail은 2026-03-02부로 EOL(공식 후속: Alloy) — 신규 구축이라 처음부터
+    # Alloy 사용. 백엔드가 OBS_LOG_FILE(기본 services/backend/logs/app.jsonl)에
+    # 남긴 JSON 로그를 바인드마운트로 읽어 Loki로 전송한다.
+    image: grafana/alloy:v1.19.2
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    depends_on:
+      - loki
+    volumes:
+      - ./observability/config.alloy:/etc/alloy/config.alloy:ro
+      - ../services/backend/logs:/var/log/silveryarn:ro
+      - alloy_data:/var/lib/alloy/data
+
+  grafana:
+    image: grafana/grafana:13.2.1
+    depends_on:
+      - prometheus
+      - loki
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: silveryarn_local_dev
+    ports:
+      - "9680:3000"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+
 volumes:
   postgres_data:
   qdrant_data:
   neo4j_data:
   minio_data:
+  glitchtip_db_data:
+  glitchtip_uploads:
+  prometheus_data:
+  loki_data:
+  alloy_data:
+  grafana_data:

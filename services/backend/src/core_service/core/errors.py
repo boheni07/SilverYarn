@@ -5,10 +5,14 @@
 에러: {"error": {"code": ..., "message": ..., "details": {...}}}
 """
 
+import logging
 from typing import Any
 
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
 
 # design.md §4.1 표준 에러 코드 + sync-contract.md §6 (429/413)
 # ⚠️ fastapi.status의 이름 있는 상수 대신 정수를 직접 쓴다 — starlette 버전에 따라
@@ -60,6 +64,14 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def handle_unexpected(_: Request, exc: Exception) -> JSONResponse:
+        # ⚠️ decisions.md #61(I4) 도입 전에는 이 핸들러가 예외를 그냥 삼켰다 — 로그도
+        # 안 남고 GlitchTip에도 안 보였다(FastAPI가 여기서 완전히 처리해 버려
+        # Starlette의 ServerErrorMiddleware까지 안 내려가고, sentry-sdk의 자동
+        # 계측은 그 미들웨어에서 걸리기 때문). 명시적으로 로깅 + 캡처한다.
+        # `sentry_sdk.capture_exception`은 `init_error_tracking`이 DSN 없어서
+        # 호출 안 됐어도(core/observability.py) 안전한 no-op이다.
+        logger.exception("처리되지 않은 예외 — path=%s", _.url.path)
+        sentry_sdk.capture_exception(exc)
         return JSONResponse(
             status_code=500,
             content={

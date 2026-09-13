@@ -14,6 +14,7 @@ from core_service.core.config import get_settings
 from core_service.core.db import get_session_factory
 from core_service.core.errors import register_error_handlers
 from core_service.core.logging import configure_logging
+from core_service.core.observability import init_error_tracking, instrument_metrics
 from core_service.modules.author.api.v1.chapters import router as chapters_router
 from core_service.modules.author.api.v1.questions import router as questions_router
 from core_service.modules.care.api.v1.conversation_chunks import (
@@ -37,10 +38,14 @@ from core_service.modules.sync.api.v1.sync import router as sync_router
 from core_service.modules.users.api.v1.users import router as users_router
 
 settings = get_settings()
-configure_logging(settings.debug)
+configure_logging(settings.debug, settings.obs_log_file)
+# FastAPI 인스턴스 생성 전에 호출해야 sentry-sdk의 Starlette/FastAPI 계측이
+# 자동으로 걸린다(decisions.md #61, I4).
+init_error_tracking(settings)
 
 app = FastAPI(title=settings.app_name, version="0.1.0")
 register_error_handlers(app)
+instrument_metrics(app)
 
 # apps/web의 "use client" 컴포넌트가 브라우저에서 직접 보내는 요청을 허용한다 —
 # Server Component의 fetch(Node 프로세스 실행)는 CORS 대상이 아니라 이 미들웨어

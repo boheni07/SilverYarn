@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.48 (국외이전(FCM) 고지·동의 UI — decisions.md #57 부분 구현)
+> **Version**: 0.49 (관측 스택 — decisions.md #61 구현: GlitchTip·Prometheus·Loki·Grafana)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -728,6 +728,31 @@ CTO 보안 검토 B4가 "스키마 결정, Do 단계 이연 불가"로 지목한
 - **웹 콘솔 로그인(v0.34~v0.35, decisions #49)**: apps/web·apps/admin **둘 다 Auth.js(NextAuth v5) + Keycloak provider**. `silveryarn-web`(public client) auth code flow + PKCE, realm `redirectUris`에 `localhost:3000/*`(web)·`localhost:3001/*`(admin). `lib/api/client.ts`가 `import "server-only"` — 서버에서만 실행되며 `auth()` 세션의 액세스 토큰을 백엔드 `Authorization: Bearer`로 전달(브라우저 노출 없음). web의 클라이언트 폼 제출은 Server Action(`features/*/actions.ts`) 경유; admin은 v0.42(가족 구성원 초대)까지 GET 전용이라 불필요했으나 이제 같은 패턴을 쓴다. admin 화면은 백엔드 `require_roles(admin)`이 다시 검사(프론트는 유효 세션만). Next.js 16 `proxy.ts`(구 middleware)가 미로그인 요청을 `/login`으로. 양쪽 앱 로컬 실 flow 브라우저 검증(로그인→세션→실 Bearer로 조회·PUT→반영).
 - **감수 서명자**: `POST /chapters/{id}/review`의 `reviewer_id`는 이제 토큰에서 파생(하위호환용 요청 필드는 유지하되 호출자 본인 구성원 id만 허용).
 
+### 7.5 관측 스택 (신규 v0.49, Do 단계 — [decisions.md #61](../../01-plan/decisions/silveryarn-platform.decisions.md), 2026-09-13, I4)
+
+Sentry 등 SaaS APM은 I1(§1 Zero External Data Egress) 원칙상 사용 불가 — 전부 self-hosted.
+
+```
+services/backend(호스트 프로세스, 포트 9677, decisions.md #44로 아직 미컨테이너화)
+  ├─ GET /metrics ────────► prometheus (host.docker.internal:9677 스크레이프)
+  ├─ logs/app.jsonl ──────► alloy(파일 tail) ──► loki
+  └─ sentry-sdk(에러) ────► glitchtip-web
+                                            prometheus·loki ──► grafana(:9680, 데이터소스 자동 프로비저닝)
+```
+
+| 구성요소 | 역할 | 비고 |
+|---|---|---|
+| GlitchTip(`glitchtip-db`+`glitchtip-redis`+`glitchtip-web` SERVER_ROLE=all_in_one) | 에러 추적(Sentry 프로토콜 호환) | `core/observability.py`의 `init_error_tracking`이 `OBS_GLITCHTIP_DSN` 있을 때만 `sentry_sdk.init` — PII_KEK와 동일한 "없으면 꺼짐" 원칙 |
+| `glitchtip-bootstrap`(신규) | 계정·조직·프로젝트·DSN **자동 생성** | GlitchTip엔 Keycloak 같은 realm 가져오기가 없어 Django ORM 스크립트(`infra/observability/glitchtip-bootstrap.py`)로 동등 효과. `glitchtip-web`의 헬스체크(`/_health/`, 마이그레이션 완료 후에만 healthy) 대기 후 실행, get_or_create라 재실행 안전 |
+| Prometheus | 메트릭 스크레이프 | 백엔드가 컨테이너 밖이라 `host.docker.internal:9677/metrics` 스크레이프. `prometheus-fastapi-instrumentator`가 노출(요청 수·지연시간 히스토그램) |
+| Grafana Alloy | 로그 수집·전달 | **Promtail 아님** — Promtail은 2026-03-02부로 EOL(공식 후속: Alloy), 신규 구축이라 처음부터 Alloy. 백엔드가 `OBS_LOG_FILE`(기본 `logs/app.jsonl`)에 남긴 JSON을 바인드마운트로 tail해 Loki로 전송(백엔드가 컨테이너 밖이라 push 대신 파일 공유) |
+| Loki | 로그 저장 | 컨테이너 내부 전용, Grafana가 프록시 |
+| Grafana | 대시보드 | 유일하게 사람이 보는 통합 UI. Prometheus·Loki 둘 다 프로비저닝된 데이터소스로 이미 연결됨 |
+
+- **호스트 포트**: 9679(GlitchTip)·9680(Grafana)뿐 — 9670-9680 전 슬롯 소진. Prometheus·Loki는 호스트 포트 없이 컨테이너 간 통신만.
+- **부수 발견·수정**: 구축 중 두 가지 버그를 발견했다. ① `core/logging.py`가 "구조화 로그(JSON)"라고 docstring에 써놓고 실제로는 일반 텍스트 포맷을 쓰고 있던 코드·문서 드리프트(SoR 위반) — 실제 JSON으로 정정. ② `core/errors.py`의 `handle_unexpected`(전역 예외 핸들러)가 예외를 로깅도 GlitchTip 캡처도 없이 완전히 삼키고 있었다 — FastAPI가 여기서 처리를 끝내버려 Starlette `ServerErrorMiddleware`까지 안 내려가 sentry-sdk 자동계측이 못 걸리는 구조라, 이제 명시적으로 `logger.exception` + `sentry_sdk.capture_exception`을 호출한다.
+- **실 인프라 검증(2026-09-13)**: `up{job="silveryarn-backend"}=1`(Prometheus), 백엔드가 남긴 JSON 로그 1건이 Loki 쿼리에 그대로 도착 확인, 수동 발생시킨 테스트 예외가 GlitchTip Issue로 정확히 저장됨(한글 메시지 포함) — 3개 파이프라인 전부 왕복 검증.
+
 ---
 
 ## 8. Test Plan
@@ -863,7 +888,7 @@ silveryarn/
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
-| 0.48 | 2026-09-13 | Do 단계 — decisions.md #57(2026-09-12 사용자 결정, Q6) 부분 구현. §2.9 갱신: 온보딩 동의 단계에 국외이전(FCM) 고지·동의 체크박스 추가(선택, 기본 미동의). `consent_type` enum에 `international_transfer` 추가(마이그레이션 0010, schema.md v1.15). `OnboardingApi.kt`(`ConsentTypes.INTERNATIONAL_TRANSFER`)·`OnboardingScreen.kt`(체크박스+고지문구)·`OnboardingCoordinator.kt`(`run()`에 `internationalTransferConsent` 파라미터 추가, 동의/미동의 둘 다 기록) 수정. 알림 발송 채널(FCM 어댑터) 자체는 여전히 미구현 — 동의 이력만 선행 확보 | NUBiz AX Initiative | Do 단계 — decisions.md #54(2026-09-12 사용자 결정) 구현. §7.1 RBAC 매트릭스·§7.4 인가 절 갱신: social_worker의 "동의 시" 열람이 실제로 동작한다. `consent_type` enum에 `third_party_access` 추가(마이그레이션 0009, schema.md v1.14). `auth_deps.authorize_elder_data_read()`(신규) — `core/auth.py`(순수)는 그대로 두고 composition root에서 consent 조회를 게이트로 얹음, `ConsentDirectory` Protocol(+ `_ConsentDirectory`/`get_consent_directory`)로 Fake 단위테스트 가능하게 분리. 챕터(3)·대화(4)·일정(2)·사진(1) 10개 조회 엔드포인트 전환. 유닛테스트 7건 신규(175개). **실 인프라 e2e로 왕복 검증**(`e2e_keycloak_check.py`, 11/11 PASS) — social_worker 동의 전 403, family 동의 기록 후 재시도 200 | NUBiz AX Initiative |
+| 0.49 | 2026-09-13 | Do 단계 — decisions.md #61(2026-09-12 사용자 결정, I4) 구현. §7.5 신설(관측 스택). `infra/docker-compose.yml`에 GlitchTip(db+redis+web all_in_one+bootstrap 자동화)·Prometheus·Loki·Grafana Alloy(Promtail EOL 대체)·Grafana 추가, 호스트 포트 9679·9680으로 9670-9680 전 슬롯 소진. `core/observability.py`(신규, sentry-sdk+prometheus-fastapi-instrumentator) + `core/logging.py`(JSON 실제 포맷 정정 — 이전 문서·코드 드리프트 발견) + `core/errors.py`(예외를 완전히 삼키던 버그 발견·수정: 로깅+GlitchTip 캡처 추가). 실 인프라로 메트릭·로그·에러 3파이프라인 전부 왕복 검증 | NUBiz AX Initiative | Do 단계 — decisions.md #57(2026-09-12 사용자 결정, Q6) 부분 구현. §2.9 갱신: 온보딩 동의 단계에 국외이전(FCM) 고지·동의 체크박스 추가(선택, 기본 미동의). `consent_type` enum에 `international_transfer` 추가(마이그레이션 0010, schema.md v1.15). `OnboardingApi.kt`(`ConsentTypes.INTERNATIONAL_TRANSFER`)·`OnboardingScreen.kt`(체크박스+고지문구)·`OnboardingCoordinator.kt`(`run()`에 `internationalTransferConsent` 파라미터 추가, 동의/미동의 둘 다 기록) 수정. 알림 발송 채널(FCM 어댑터) 자체는 여전히 미구현 — 동의 이력만 선행 확보 | NUBiz AX Initiative | Do 단계 — decisions.md #54(2026-09-12 사용자 결정) 구현. §7.1 RBAC 매트릭스·§7.4 인가 절 갱신: social_worker의 "동의 시" 열람이 실제로 동작한다. `consent_type` enum에 `third_party_access` 추가(마이그레이션 0009, schema.md v1.14). `auth_deps.authorize_elder_data_read()`(신규) — `core/auth.py`(순수)는 그대로 두고 composition root에서 consent 조회를 게이트로 얹음, `ConsentDirectory` Protocol(+ `_ConsentDirectory`/`get_consent_directory`)로 Fake 단위테스트 가능하게 분리. 챕터(3)·대화(4)·일정(2)·사진(1) 10개 조회 엔드포인트 전환. 유닛테스트 7건 신규(175개). **실 인프라 e2e로 왕복 검증**(`e2e_keycloak_check.py`, 11/11 PASS) — social_worker 동의 전 403, family 동의 기록 후 재시도 200 | NUBiz AX Initiative |
 | 0.46 | 2026-09-12 | Do 단계 — decisions.md #53(2026-09-12 사용자 결정) 구현. 조사 결과 백엔드 `POST /users/{id}/consent-logs`는 이미 `granted_by`로 가족 대리동의를 지원하고 있었음(PR #6) — 빠진 건 화면뿐이었다. apps/web `/consent`(신규): notification-settings와 동일한 "구성원 먼저 선택" 패턴, 유형별(개인정보 수집·외부TTS·외부LLM) 동의 토글이 `grantedBy`로 대리 동의를 기록. `consent_logs.actor` 전용 enum 컬럼은 추가하지 않음(파생값으로 충분, YAGNI) | NUBiz AX Initiative |
 | 0.45 | 2026-09-12 | Do 단계 — decisions.md #60(2026-09-12 사용자 결정) 구현. §7.3 PII 암호화 3차: blind index 키를 `PII_KEK`에서 유도하던 방식(하나 유출 시 둘 다 노출)을 신규 `BLIND_INDEX_KEY` 환경변수로 정식 분리. `core/crypto.py` `PiiCrypto.__init__`이 `bidx_key` 인자를 받고, 미설정 시 하위호환 폴백(경고 로그). `scripts/backfill_blind_index.py`(신규) — 기존 `family_members`/`invitations`의 `contact_bidx`를 새 키로 재계산. 유닛테스트 3건 추가(168개) | NUBiz AX Initiative |
 | 0.44 | 2026-09-12 | 순수 결정 기록 — `blocked-decisions-tracker.md`의 법무 6건(Q1~Q6)·인프라 5건(I1~I5)·경영 3건 전부를 사용자와의 대화로 일괄 확정(decisions.md §2.9 #52~#65). 설계 변경 자체는 없음 — 각 결정의 실제 구현(retention_policies·organizations 테넌시·third_party_access consent·관측스택 등)은 후속 PR에서 따로 진행하며, 그때 이 문서의 해당 절(§7.1 RBAC·§7.2 백업정책 등)을 갱신한다 | NUBiz AX Initiative |

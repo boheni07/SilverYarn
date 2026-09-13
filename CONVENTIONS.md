@@ -179,6 +179,7 @@ import './styles.css'
 | `SYNC_` | 배치 동기화 파라미터 | Server only | `SYNC_MAX_RETRY`, `SYNC_CHECKSUM_ALGO` |
 | `PII_` | PII 필드 암호화 KEK (신규, decisions.md #45) | Server only | `PII_KEK` *(Fernet 키, 콤마 구분 다중 키로 회전 대비 — Vault 이전 전까지 임시)* |
 | `BLIND_INDEX_KEY` | blind index(동등검색용 HMAC) 전용 키 (신규, decisions.md #60) | Server only | `BLIND_INDEX_KEY` *(`PII_KEK`와 별도 분리 — 하나 유출 시 둘 다 노출되는 것을 방지. 비우면 `PII_KEK`에서 유도하는 레거시 폴백, 경고 로그)* |
+| `OBS_` | 관측 스택 — GlitchTip 에러 리포팅·구조화 로그 파일 (신규, decisions.md #61) | Server only | `OBS_GLITCHTIP_DSN` *(비우면 에러 리포팅 꺼짐)*, `OBS_LOG_FILE` *(기본 `logs/app.jsonl`, Grafana Alloy가 tail해 Loki로 전송)* |
 
 ```
 ⚠️ 보안 원칙

@@ -108,14 +108,15 @@
 | 구현 (2026-09-12) | `BLIND_INDEX_KEY` 환경변수 신설, `core/crypto.py` `PiiCrypto.__init__(bidx_key=)`/`from_settings` 교체(미설정 시 하위호환 폴백+경고 로그), `scripts/backfill_blind_index.py` 신규. 유닛테스트 3건. design.md v0.45 |
 | 남은 것 | Vault/OpenBao 인프라 이전 자체는 계속 보류(시크릿 매니저 인프라 선결 필요) |
 
-### I4. 관측·에러추적 스택 — ✅ 확정 (지금 구축)
+### I4. 관측·에러추적 스택 — ✅ 확정, ✔️ 구현 완료
 
 | | |
 |---|---|
-| 관련 | [decisions #61](../01-plan/decisions/silveryarn-platform.decisions.md)(신규), CTO Enterprise Concern |
+| 관련 | [decisions #61](../01-plan/decisions/silveryarn-platform.decisions.md), CTO Enterprise Concern |
 | 결정 | **2026-09-12, 사용자**: 지금 구축 — self-hosted GlitchTip(에러) + Prometheus/Grafana/Loki(메트릭·로그). Sentry 등 SaaS는 I1 원칙상 불가 |
-| 현재 | 없음 |
-| 후속 작업 (미착수) | `infra/docker-compose.yml`에 GlitchTip·Prometheus·Grafana·Loki 추가(port 9670~9680 범위) · 백엔드 에러 리포팅 SDK 연동 · structlog→Loki 파이프라인 · DCGM(GPU)는 GPU 서버 확보 후 |
+| 구현 (2026-09-13) | `infra/observability/`에 Prometheus·Loki·Grafana Alloy(Promtail 대체, EOL) 설정 + Grafana 데이터소스 자동 프로비저닝. `infra/docker-compose.yml`에 glitchtip-db/redis/web(all_in_one)+**glitchtip-bootstrap**(계정·조직·프로젝트·DSN 전부 자동 생성, Keycloak realm 자동임포트와 동일한 취지) 추가. 백엔드: `core/observability.py`(sentry-sdk, DSN 없으면 꺼짐) + `/metrics`(prometheus-fastapi-instrumentator) + `core/logging.py` JSON 실제 포맷 정정 + **`handle_unexpected`가 예외를 완전히 삼키던 버그 발견·수정**(로깅+GlitchTip 캡처 추가). 실 인프라 3파이프라인 전부 왕복 검증(메트릭 스크레이프·로그 Loki 도착·에러 GlitchTip Issue 생성) |
+| 호스트 포트 | 9679(GlitchTip)·9680(Grafana) — 9670-9680 전 슬롯 소진(docker-port-range-constraint). Prometheus·Loki는 컨테이너 내부 전용(Grafana가 프록시) |
+| 남은 것 | DCGM(GPU)은 GPU 서버 확보 후. GlitchTip DSN을 `.env.local`에 붙여넣는 딱 1단계만 수동(`infra/observability/README.md`) |
 
 ### I5. GPU 토폴로지 / vLLM 서빙 구성 — 🔄 부분 확정
 
