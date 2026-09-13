@@ -44,6 +44,9 @@ from core_service.modules.photo_requests.infrastructure.photo_request_repository
     PhotoRequestModel,
 )
 from core_service.modules.photos.infrastructure.photo_repository import PhotoModel  # noqa: F401
+from core_service.modules.publications.infrastructure.publication_repository import (  # noqa: F401
+    PublicationModel,
+)
 from core_service.modules.retention.infrastructure.retention_policy_repository import (  # noqa: F401
     RetentionPolicyModel,
 )

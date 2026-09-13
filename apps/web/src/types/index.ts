@@ -13,3 +13,4 @@ export * from "./sync-session";
 export * from "./consent-log";
 export * from "./invitation";
 export * from "./notification-setting";
+export * from "./publication";

@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.52 (문서 최신화 — §3/§4.2/§5.1/§7.1/§9/§11 드리프트 정정, PR #37/#39 반영 누락분 보강)
+> **Version**: 0.53 (출판/인쇄 파이프라인 구현 완료 — §2.6, publications 모듈 신규)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -170,6 +170,21 @@ version: 1.3
   → (하드커버) 인쇄 발주 — 배송·주문관리 세부는 Phase 3 이후 별도 확정
   → (ePub) 전자책 다운로드 링크 제공 → status='delivered'
 ```
+
+> **구현 상태 (v0.53, 2026-09-13)**: `publications` 모듈 신규 — `requested→processing→ready`까지
+> 자동 전이한다. 조판 엔진은 reportlab(PDF, 한글은 Adobe 표준 CJK CID 폰트로 별도 폰트
+> 파일 임베딩 없이 렌더링)·EbookLib(ePub) — 둘 다 순수 로컬 라이브러리라 vLLM/STT처럼
+> 외부 서비스 계약을 추정할 필요가 없다. `POST /users/{id}/publications`가 전체 챕터
+> `confirmed` 전제조건을 검증해 위반 시 `VALIDATION_ERROR`로 거부하고, 통과하면
+> `requested` 행 생성 + arq `process_publication` 잡을 enqueue한다(비동기 처리는
+> `POST /sync/upload`와 동일 패턴). 완성본은 사진과 분리된 전용 MinIO 버킷
+> (`silveryarn-publications`)에 저장하고 presigned GET URL로만 노출한다.
+> **의도적으로 좁힌 스코프**: 여기서 만드는 PDF는 CMYK 300DPI 인쇄소 규격이 아니라
+> RGB 화면/가정용 프린터 기준 완성본이다(표지 디자인·트림/블리드는 BI 가이드·인쇄소
+> 사양 확정이 선행돼야 하는 별도 디자인 결정). `status='delivered'`(하드커버 인쇄
+> 발주·배송, 전자책 "다운로드 완료" 확정)로의 전이는 스코프 밖으로 남긴다 —
+> schema.md §3.17이 원래 "배송·주문관리는 Phase 3 이후 별도 확정"이라 명시했던 부분
+> 그대로. apps/web `(family)/publications` 화면에서 요청·이력 조회·다운로드가 가능하다.
 
 ### 2.7 온디바이스 상태 전이 & 폴백 정책 — 신규 v0.2
 
@@ -487,12 +502,16 @@ interface Invitation {          // v1.1 신규
   orgId?: string;                // v0.50 신규 — 시설 소속 직원 초대 시 채움, 수락 시 FamilyMember.orgId로 그대로 이전(decisions.md #59)
 }
 
-interface Publication {         // v1.1 신규
+interface Publication {         // v1.1 신규, 필드는 v0.53 구현 반영
   id: string;
   userId: string;
   format: "hardcover_pdf" | "epub";
   status: "requested" | "processing" | "ready" | "delivered";
-  storageRef?: string;
+  requestedAt: string;           // v0.53 신규 — 실 응답 필드
+  completedAt?: string;          // v0.53 신규
+  // storageRef(내부 MinIO 키)는 API 응답에 노출하지 않는다 — Photo.viewUrl과 동일 원칙으로
+  // downloadUrl(presigned GET, ready/delivered일 때만 존재)만 내려준다.
+  downloadUrl: string | null;    // v0.53 신규
 }
 
 interface Organization {        // v0.50 신규 — B2G 시설(요양원·복지관) 테넌시 안전망 기준 엔티티(decisions.md #59)
@@ -589,7 +608,9 @@ interface RetentionPolicy {     // v0.51 신규 — 보유기간 admin 설정(de
 | POST | /api/v1/invitations | 가족 구성원 초대 | 2FA + Role(family) |
 | GET | /api/v1/invitations/{token} | 초대 토큰 조회(신규, gap-analysis G11) — 토큰 자체가 접근 권한이라 무인증 | 없음 |
 | POST | /api/v1/invitations/{token}/accept | 초대 수락 → 계정 연결(신규, gap-analysis G11) — 수락자 토큰 `sub`를 `family_members.keycloak_sub`에 연결(구현 v0.21) | Bearer(`require_verified_subject`, membership 미확인) |
-| POST | /api/v1/users/{userId}/publications | 인쇄/출판 요청 | 2FA + Role |
+| POST | /api/v1/users/{userId}/publications | 인쇄/출판 요청 — 전체 챕터 confirmed 전제조건 검증(구현 v0.53) | 2FA + Role(family) |
+| GET | /api/v1/users/{userId}/publications | 출판 요청 이력 조회(신규 v0.53, photo_requests와 동일 이유로 조회 엔드포인트 함께 추가) | 2FA + Role |
+| GET | /api/v1/publications/{id} | 출판 요청 단건 조회 — 상태 폴링·완성 시 다운로드 URL 확인용(신규 v0.53) | 2FA + Role |
 | POST | /api/v1/users | 온보딩 시 어르신(1차 사용자) 계정 생성(F-3 예외, 부트스트랩 — 인증 없음. 신규, gap-analysis G11) | 없음(부트스트랩) |
 | GET | /api/v1/users/{userId} | 사용자 단건 조회(신규, gap-analysis G11) | 2FA + Role |
 | POST | /api/v1/devices | 설치 시점 1회 기기 등록(F-3 예외, 부트스트랩 — 인증 없음). 응답에 **Device Token 1회 발급**(v0.19, decisions.md #47 — 이후 `/sync/*`는 이 토큰을 `X-Device-Token`으로 제시) | 없음(부트스트랩) |
@@ -664,7 +685,7 @@ interface RetentionPolicy {     // v0.51 신규 — 보유기간 admin 설정(de
 |---|---|
 | 모바일앱(당사자) | 온보딩·동의 ✅, 홈·음성대화 ✅(M2 셸 + 하단 탭 4개, v0.38 — 마이크 세션 라우팅은 온디바이스 SLM 라우터 붙기 전까지 말벗돌봄 모드 고정), 자서전 작가모드 인터뷰(스텁), 말벗돌봄 대화(스텁), 비서모드 일정·복약(스텁), 설정·동기화 상태(최초 동기화 ✅), 사진 추가하기 |
 | 웹·자서전 사용자 | **로그인 ✅**(`/login` — Keycloak SSO, v0.34), 자서전 뷰어 ✅, 사진·타임라인 갤러리 ✅, ~~구독·결제 관리~~(스코프 아웃, decisions.md #18), 계정 설정 |
-| 웹·가족 | 가족 대시보드(오늘의 기억 리포트) ✅(`(family)/dashboard`, v0.37 — 정서 항목은 안내문구로 대체), 원고 감수·대조편집 ✅, 사진 업로드·타임라인 배치(사진 요청 ✅), 정서 모니터링 상세(⚖️ 정서 파이프라인 OFF), 알림·가족구성원 설정 ✅(`(family)/notification-settings`), **초대 수락 ✅**(`/invitations/[token]`, v0.42) |
+| 웹·가족 | 가족 대시보드(오늘의 기억 리포트) ✅(`(family)/dashboard`, v0.37 — 정서 항목은 안내문구로 대체), 원고 감수·대조편집 ✅, 사진 업로드·타임라인 배치(사진 요청 ✅), 정서 모니터링 상세(⚖️ 정서 파이프라인 OFF), 알림·가족구성원 설정 ✅(`(family)/notification-settings`), **초대 수락 ✅**(`/invitations/[token]`, v0.42), **출판 요청 ✅**(`(family)/publications`, v0.53 — 요청·이력·다운로드) |
 | 웹·관리자 | 관리자 대시보드, 사용자 관리 ✅, Wi-Fi 동기화 모니터링 ✅, 정서 알림 이력 관리(⚖️ OFF), 시스템 설정·리소스 모니터링, 기기 관리 ✅, **가족 구성원 관리(초대) ✅**(`(admin)/family-members`, v0.42 — admin의 첫 쓰기 화면), **시설 관리(B2G) ✅**(`(admin)/organizations`, v0.50 — 시설 등록·목록 + family-members 화면 시설 배정), **보유기간 설정 ✅**(`(admin)/retention-policies`, v0.51) + **계정 삭제(danger-zone) ✅**(사용자 목록, 어르신 이름 재입력 2단계 확인) |
 
 > **인증 상태**: **apps/web·apps/admin 모두 Keycloak 로그인 연동 완료**(Auth.js, decisions #49) — 모든 웹 화면이 실 백엔드(§7.4)에 실 Bearer 토큰으로 동작한다. 두 앱이 같은 `silveryarn-web` 클라이언트(web 3000 / admin 3001).
@@ -834,7 +855,7 @@ UserErasureService.erase_user(user_id)
 | 사진 회고 파이프라인 | 업로드→미회고 큐→회고 대화→챕터 인라인 편입(placement_status 전이 포함) | E2E 시나리오 | Do |
 | 설치모드 분기 | RAM/OS 경계값 기기에서 키오스크/일반 분기 정확도 (§7 확정 수치 기준) | 실기기 매트릭스(부록A 3.3) | Do |
 | 정서 모니터링 | emotion_scores 일별 기록, 임계치 초과 시 emotion_alerts 생성·알림 발송(§2.5) | E2E 시나리오 | Phase 2 (피처플래그 OFF — decisions.md #25, §11.2 step 6) |
-| 출판 파이프라인 | 챕터 전체 confirmed → publications 요청 → PDF/ePub 생성(§2.6) | E2E 시나리오 | Phase 3 (§11.2 step 7) |
+| 출판 파이프라인 | 챕터 전체 confirmed → publications 요청 → PDF/ePub 생성(§2.6) | 실 Postgres+MinIO E2E, 유닛테스트 9건 | 완료(v0.53) — 인쇄 발주·배송은 계속 Phase 3 유예 |
 
 ---
 
@@ -908,7 +929,7 @@ silveryarn/
 │       │   ├── shared/            # 공유 커널 — 2+ 모듈이 쓰는 enum 등 (domain_enums.py)
 │       │   └── modules/{users,devices,author,care,schedule,sync,
 │       │       consent,family_members,invitations,notifications,
-│       │       photos,photo_requests,organizations,retention}/
+│       │       photos,photo_requests,organizations,retention,publications}/
 │       │       ├── api/v1/        # FastAPI 라우터
 │       │       ├── application/   # 유스케이스 (서비스 클래스)
 │       │       ├── domain/        # 엔티티·값 객체·규칙 (순수)
@@ -934,7 +955,7 @@ silveryarn/
 4. [x] Wi-Fi 배치 동기화 기본 흐름 (업/다운로드, 재시도, 체크섬, Diff 멱등성) — sync-contract.md v0.6, 업로드 멱등성 3계층
 5. [x] 자서전 작가 엔진 + 웹 콘솔 감수 흐름 (Phase 1 MVP) — author 모듈(chapters/questions), `POST /chapters/{id}/review`, apps/web 감수 화면. **§2.11 서버측 클로즈드 루프**: Compaction Engine(4단계, 요약·키워드 — PR #15)·Critic Agent(3단계, `questions` 생성 — PR #16)·페르소나 JSON 룰셋(§2.10 연동, CareAgent 전용 — PR #27) 전부 구현. 온디바이스 소비(SLM 프롬프트 주입)만 SlmEngine 스텁이라 미구현
 6. [ ] 말벗돌봄 엔진 + 정서 모니터링(emotion_scores/emotion_alerts) (Phase 2) — 테이블만 존재, 엔드포인트·피처플래그 OFF
-7. [ ] 비서 엔진 + 출판 파이프라인 + 외부 연계 옵션 파일럿 (Phase 3) — schedule 모듈은 조회·응답만 구현, `publications` 테이블만 존재
+7. [~] 비서 엔진(schedule, 조회·응답 구현 완료) + [x] 출판 파이프라인(publications, v0.53 구현 완료) + [ ] 외부 연계 옵션 파일럿(Phase 3, 계속 유예) — 출판은 조판(PDF/ePub 생성)까지만이며 인쇄 발주·배송은 스코프 밖(§2.6 참조)
 
 > Do 단계 진행(PR #1~39, 전부 main 머지): PII 1·2차 필드 암호화(§7.3), Keycloak JWKS 실 인증·RBAC/IDOR(§7.4), consent·notifications 모듈, 모바일 온보딩+앱시작게이트, import-linter, `core/auth.py` 순수화, Compaction Engine·Critic Agent·페르소나 룰셋(§2.11 3·4단계), apps/web·apps/admin Keycloak 로그인 + npm 워크스페이스 공유코드(`packages/web-shared`), 웹 가족 대시보드·모바일 홈 셸, 온디바이스 SLM 벤치마크 하니스, **법무·인프라·경영 미결 14건 일괄 확정(decisions.md #52~#65) + 전체 구현 완료**(blind index 분리·가족 대리동의 화면·복지사 third_party_access 게이트·국외이전 고지 UI·self-hosted 관측 스택(GlitchTip+Prometheus/Grafana/Loki)·B2G 시설 테넌시 안전망·보유기간/계정삭제 오케스트레이션 — §7.6). 실 인프라 e2e 다수(PII/HTTP/Keycloak/관측/테넌시/보유기간). PDCA Check 2회(`docs/03-check/`). 이 트랙(법무·인프라·경영 미결)은 PR #39로 종결 — 상세 PR별 변경 이력은 하단 Version History 참조.
 
@@ -954,6 +975,7 @@ silveryarn/
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.53 | 2026-09-13 | **출판/인쇄 파이프라인 구현 완료**(§2.6) — 법무·인프라·경영 미결 14건 완료 이후 "다음 사이클"로 Phase 3 출판 파이프라인 착수(사용자 결정, SLM 벤치마크는 환경상 실기기 없어 보류). 신규 `publications` 모듈(4계층) — `POST/GET /users/{id}/publications`, `GET /publications/{id}` 3개 엔드포인트. 조판 엔진은 reportlab(PDF, 한글 Adobe 표준 CJK CID 폰트)·EbookLib(ePub) — 둘 다 순수 로컬 라이브러리라 외부 서비스 계약 추정 불필요. `POST /sync/upload`와 동일한 비동기 arq 잡 패턴(`process_publication`). 전체 챕터 `confirmed` 전제조건을 서버가 검증. 완성본은 사진과 분리된 전용 MinIO 버킷(`STORAGE_BUCKET_PUBLICATIONS`)에 저장, presigned GET URL로만 노출(`StorageClient`에 버킷 파라미터화 + `put_object` 신규). **의도적 스코프 축소**: CMYK 300DPI 인쇄소 규격·표지 디자인·인쇄 발주·배송(`status=delivered`)은 디자인/조달 결정이 선행돼야 해 계속 스코프 밖(schema.md §3.17 원문 그대로). apps/web `(family)/publications` 화면(요청·이력·다운로드) 신규 — 기존 `types/consent-log.ts`에 있던 미구현 시절 `Publication` placeholder 인터페이스를 실제 API 응답 형태로 교체(`publication.ts` 신규). 유닛테스트 9건 신규(221개), 실 Postgres+MinIO E2E로 미확정 챕터 거부·PDF/ePub 실제 생성·presigned 다운로드·계정삭제 cascade까지 왕복 검증 | NUBiz AX Initiative |
 | 0.52 | 2026-09-13 | **문서 최신화 점검**(코드 대비 드리프트 정정, 신규 문서 추가 요청) — PR #37(organizations)·#39(retention/erasure)가 구현했지만 이 문서엔 반영이 누락돼 있던 부분을 정정. §1 파이프라인 참조 표(schema.md v1.4→v1.17, 엔티티 수 갱신). §3.1 TS 요약에 `User.orgId`·`FamilyMember.orgId`·`Invitation.orgId`·`ConversationChunk.retentionUntil`/`purgedAt`/`createdAt`·`ConsentLog.consentType`의 `third_party_access`/`international_transfer`(PR #34/#35 반영 누락분) 필드 보강 + `Organization`·`RetentionPolicy` 인터페이스 신규. §3.2 관계도에 Organization/RetentionPolicy 추가. §4.2 엔드포인트 표에 실제로는 이미 있었던 `GET/PUT /retention-policies`·`POST /users/{id}/erase` 3건 누락 추가(실행 중인 백엔드 `openapi.json`과 전수 대조해 이 3건 외엔 갭 없음을 확인). §5.1 화면 인벤토리에 시설 관리·보유기간 설정·계정 삭제 화면 반영. §7.1 RBAC 매트릭스에 3개 admin 전용 리소스 행 추가. §9.1/§11.1 모듈 트리에 `organizations`/`retention` 추가, 마이그레이션 범위 0001~0007→0001~0012. §11.2 item 1 테이블 수·버전 정정, item 5 페르소나 룰셋 "미구현"→구현됨 정정. 자매 문서도 동시 정비: `glossary.md`(organizations/retention/erasure 등 누락 용어 8건 추가), `workflow-diagrams.md`(§20 미결항목 다이어그램을 해결 상태로 갱신 + §21 계정 삭제·보유기간 파기 흐름 신규), `docs/01-plan/_INDEX.md`·`docs/02-design/_INDEX.md`(PDCA 현재 단계 Do로 정정, 전 문서 버전·상태 최신화). 신규 문서: `docs/02-design/data-classification-policy.md`(I1 후속 작업이던 "PII 수준" 경계 명문화) | NUBiz AX Initiative |
 | 0.51 | 2026-09-13 | Do 단계 — decisions.md #56(2026-09-13 사용자 결정, Q5) 구현. §7.6 신설(보유기간·계정 삭제 오케스트레이션). 착수 전 schema.md 전 테이블 FK `ON DELETE` 절 재조사로 CTO의 "5-store 통합삭제" 프레이밍을 좁힘 — Postgres는 이미 cascade로 완결(`user_encryption_keys` 포함), 실제 필요한 건 Qdrant·Neo4j·MinIO 3곳뿐. 마이그레이션 0012(`retention_policies`+`deletion_records`, `conversation_chunks.retention_until`/`purged_at`, schema.md v1.17). 신규 `retention` 모듈(정책 CRUD) + `RetentionPurgeService`(worker.py 신규 cron, 매시 30분) + `UserErasureService`(외부 저장소 먼저→Postgres 마지막 순서) + `POST /users/{id}/erase` admin 전용. apps/admin `/retention-policies`(보유일수 조정) + 사용자 목록 "계정 삭제" 2단계 확인 danger-zone. 유닛테스트 13건 신규(212개). 실 인프라(Postgres+Qdrant+Neo4j+MinIO)로 보유기간 계산→만료→파기, 계정 삭제→cascade+외부저장소 정리→감사로그 전 과정 왕복 검증. **부수 발견·수정**: `VECTORDB_API_KEY=""`가 qdrant-client의 https 자동판정에 걸려 로컬 Qdrant 접속이 SSL 에러로 실패하던 버그 발견·수정. erd.md v1.4(§11 반영 완료로 갱신). 이 항목으로 법무·인프라·경영 미결 14건 전체 구현 완료 | NUBiz AX Initiative |
 | 0.50 | 2026-09-13 | Do 단계 — decisions.md #59(2026-09-13 사용자 결정, I2) 구현. §7.4에 B2G 시설 테넌시 안전망 bullet 추가, §4.2에 `/organizations`(GET/POST/GET{id})·`PUT /users/{id}/organization` 4개 엔드포인트 추가. 신규 `organizations` 모듈(domain/infra/application/api/deps, import-linter 컨테이너 등록). `users`/`family_members`/`invitations`에 `org_id` 추가(마이그레이션 0011, schema.md v1.16). `core/auth.py` `Membership.org_id` + `auth_deps.py`에 `UserDirectory`/`ElderAccessContext`(기존 `ConsentDirectory`를 흡수해 하나로 통합) 추가, `authorize_elder_data_read()`가 테넌시 불일치를 403으로 차단. **스코프는 안전망뿐**(정식 B2G 대량 열람 모델 아님) — 기존 1:1 초대 연결(decisions #51)은 그대로 1차 권한 경로. apps/admin `/organizations`(신규, 시설 등록·목록) + family-members 화면에 시설 배정 폼·초대 시 시설 선택 추가. 유닛테스트 19건 신규(197개), 실 인프라(Postgres)로 같은 시설/다른 시설 재배정 시나리오 직접 검증. erd.md v1.3(§11 반영 완료로 갱신) | NUBiz AX Initiative |

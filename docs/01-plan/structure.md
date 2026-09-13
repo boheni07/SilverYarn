@@ -2,7 +2,7 @@
 
 > Phase 2 Deliverable — 모노레포 전체 구조 (Design 문서 §11.1을 실행 가능한 수준으로 구체화)
 
-**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-13 · **Version**: 1.39
+**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-13 · **Version**: 1.40
 
 ---
 
@@ -27,10 +27,10 @@ silveryarn/
 │       │   ├── worker.py           # 비동기 잡 워커 진입점 (arq) — process_upload가 UploadPipelineService 실행
 │       │   ├── core/                # config·db·logging·표준 에러 포맷(design.md §4.1)·auth·queue(arq pool)
 │       │   │   └── clients/           # STT/Embedding/LLM(vLLM)/Qdrant/Neo4j 클라이언트 (횡단 관심사)
-│       │   ├── modules/             # 도메인 모듈 — 상세는 §2. 14개 논리 모듈 전부 구현
+│       │   ├── modules/             # 도메인 모듈 — 상세는 §2. 15개 논리 모듈 전부 구현
 │       │   │   └── users/ devices/ author/ care/ schedule/ sync/ consent/
 │       │   │       family_members/ invitations/ notifications/ photos/ photo_requests/
-│       │   │       organizations/ retention/
+│       │   │       organizations/ retention/ publications/
 │       │   └── shared/              # 모듈 간 공유 커널 — domain_enums.py(공유 enum), schemas.py(공통 응답 포맷)
 │       └── tests/
 ├── package.json                # ★ npm workspace 루트 (apps/web·apps/admin·packages/* — decisions #50)
@@ -81,7 +81,7 @@ services/backend/src/core_service/
 >
 > **모듈 간 재사용**: 다른 모듈의 Application 서비스가 필요하면(예: `author`가 챕터 감수자 검증에 `family_members`를 씀) 그 모듈 루트의 `deps.py`(공개 조합 지점, FastAPI `Depends` 프로바이더)만 import한다. `family_members/deps.py`가 최초 사례 — 다른 모듈도 교차 참조가 생기면 동일 패턴을 따른다.
 >
-> **Phase 1 구현 범위**: `users`·`devices`·`author`(chapters/chapter_revisions/**questions**)·`family_members`·`invitations`·`care`(conversation_chunks)·`schedule`(schedule_items)·`sync`·`photos`·`photo_requests`·`consent`(consent_logs)·`notifications`(notification_settings)·`organizations`·`retention` **14개 논리 모듈** 전부 4계층(또는 그에 준하는) 구현 완료. `author`는 §2.11 서버측 클로즈드 루프의 Compaction Engine(요약·키워드)·Critic Agent(`questions` 생성)도 포함. `care`는 `conversation_chunks`만 구현했다 — `emotion_alerts`/`emotion_scores`는 Phase 1 피처플래그 OFF(decisions.md #25)라 의도적으로 제외했고, 검색은 실제 Qdrant 하이브리드 서치(design.md §2.4) 전까지 임시 DB ILIKE로 대체돼 있다(코드에 TODO 명시). `schedule`은 chapters/conversation_chunks와 달리 POST 생성을 공개로 노출한다 — AI 파이프라인 산출물이 아니라 가족·당사자가 직접 입력하는 리소스이기 때문이다. `photos`의 orphan cleanup 배치(sync-contract.md §4, 24시간 지나도 `pending_upload`인 행 정리)는 arq cron job으로 구현됨(`worker.py` `cleanup_orphan_photos`). `organizations`(decisions #59, PR #37)는 B2G 시설 테넌시 안전망 — `family_members`/`invitations` 모듈이 이 모듈의 `deps.py`를 참조. `retention`(decisions #56, PR #39)은 보유기간 정책 CRUD — `care` 모듈이 이 모듈의 `RetentionPolicyService`를 참조해 `conversation_chunks` 생성 시점에 `retention_until`을 계산한다(교차 참조는 §2 "모듈 간 재사용" 패턴 그대로).
+> **Phase 1 구현 범위**: `users`·`devices`·`author`(chapters/chapter_revisions/**questions**)·`family_members`·`invitations`·`care`(conversation_chunks)·`schedule`(schedule_items)·`sync`·`photos`·`photo_requests`·`consent`(consent_logs)·`notifications`(notification_settings)·`organizations`·`retention`·`publications` **15개 논리 모듈** 전부 4계층(또는 그에 준하는) 구현 완료. `author`는 §2.11 서버측 클로즈드 루프의 Compaction Engine(요약·키워드)·Critic Agent(`questions` 생성)도 포함. `care`는 `conversation_chunks`만 구현했다 — `emotion_alerts`/`emotion_scores`는 Phase 1 피처플래그 OFF(decisions.md #25)라 의도적으로 제외했고, 검색은 실제 Qdrant 하이브리드 서치(design.md §2.4) 전까지 임시 DB ILIKE로 대체돼 있다(코드에 TODO 명시). `schedule`은 chapters/conversation_chunks와 달리 POST 생성을 공개로 노출한다 — AI 파이프라인 산출물이 아니라 가족·당사자가 직접 입력하는 리소스이기 때문이다. `photos`의 orphan cleanup 배치(sync-contract.md §4, 24시간 지나도 `pending_upload`인 행 정리)는 arq cron job으로 구현됨(`worker.py` `cleanup_orphan_photos`). `organizations`(decisions #59, PR #37)는 B2G 시설 테넌시 안전망 — `family_members`/`invitations` 모듈이 이 모듈의 `deps.py`를 참조. `retention`(decisions #56, PR #39)은 보유기간 정책 CRUD — `care` 모듈이 이 모듈의 `RetentionPolicyService`를 참조해 `conversation_chunks` 생성 시점에 `retention_until`을 계산한다(교차 참조는 §2 "모듈 간 재사용" 패턴 그대로). `publications`(design.md §2.6, v0.53)는 출판/인쇄 파이프라인 — `author` 모듈의 `deps.py`(`get_chapter_service`)를 참조해 전체 챕터 confirmed 여부를 검증하고 조판 원문을 읽는다. 조판 엔진(reportlab/EbookLib)은 `application/book_builder_service.py`에 위치 — `core/clients/`가 아니라 모듈 내부인 이유는 STT/LLM/Qdrant 클라이언트와 달리 외부 서비스가 아니라 이 모듈만의 비즈니스 로직(챕터→PDF/ePub 렌더링)이기 때문이다.
 >
 > **sync 모듈의 파이프라인 오케스트레이션**: `SyncService`(접수+arq enqueue)와 `UploadPipelineService`(worker.py가 실행하는 실제 파이프라인 — STT 재전사→지식추출→임베딩/그래프 적재→챕터 갱신)로 분리했다. 각 외부 시스템 호출은 `core/clients/`(STT/Embedding/LLM/Qdrant/Neo4j, 횡단 관심사라 `core/`에 위치 — `core/db.py`와 동일 원칙)를 거치며, 실제 서비스가 없는 상태에서 REST 계약을 추정해 작성했다. 파이프라인은 각 단계를 best-effort로 감싸 부분 실패해도 계속 진행하고, `conversation_chunks` 적재 자체가 실패할 때만 `sync_sessions.status=failed`로 남긴다. `author`/`care`/`devices` 모듈에도 `deps.py`(공개 조합 지점)를 추가해 sync가 이들을 교차 참조할 수 있게 했다 — `family_members/deps.py`에서 시작한 패턴의 확장.
 >
@@ -237,3 +237,4 @@ Presentation ──→ Application ──→ Domain ←── Infrastructure
 | 1.37 | 2026-09-13 | `organizations` 모듈 신규(4계층 전부) — B2G 시설 테넌시 안전망(decisions #59, PR #37). `family_members`/`invitations` 모듈이 이 모듈의 `deps.py`를 교차 참조(§2 "모듈 간 재사용" 패턴 확장) | NUBiz AX Initiative |
 | 1.38 | 2026-09-13 | `retention` 모듈 신규(4계층 전부) — 보유기간 정책 CRUD + 계정 삭제(erasure) 오케스트레이션(decisions #56 Q5, PR #39). `care` 모듈이 `RetentionPolicyService`를 교차 참조해 `conversation_chunks` 생성 시점에 `retention_until`을 계산 | NUBiz AX Initiative |
 | 1.39 | 2026-09-13 | **문서 정합성 점검** — §1/§2의 모듈 수를 "12개"에서 **14개**로 정정(`organizations`/`retention` 누락 반영, 위 1.37/1.38 갱신 누락분). 헤더 Version이 실제 최신 변경이력(1.36)보다 뒤처져 있던 걸 발견(1.27로 정지) — 정정. **버전 이력 표 자체가 1.22 이후 뒤죽박죽(날짜순 아님)으로 append돼 있던 걸 발견해 1.22→1.39 오름차순으로 재정렬**(내용은 변경 없음, 순서만 정정) | NUBiz AX Initiative |
+| 1.40 | 2026-09-13 | `publications` 모듈 신규(4계층 전부) — 출판/인쇄 파이프라인(design.md §2.6, v0.53). §1/§2 모듈 수를 14개→**15개**로 정정. `author` 모듈의 `deps.py`를 교차 참조해 전체 챕터 confirmed 여부를 검증. 조판 엔진(reportlab/EbookLib)은 외부 서비스가 아니라 이 모듈만의 로직이라 `core/clients/`가 아니라 `application/book_builder_service.py`에 위치시킨 이유를 명시 | NUBiz AX Initiative |

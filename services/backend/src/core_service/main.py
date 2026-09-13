@@ -36,6 +36,7 @@ from core_service.modules.photo_requests.api.v1.photo_requests import (
     router as photo_requests_router,
 )
 from core_service.modules.photos.api.v1.photos import router as photos_router
+from core_service.modules.publications.api.v1.publications import router as publications_router
 from core_service.modules.retention.api.v1.retention_policies import (
     router as retention_policies_router,
 )
@@ -79,6 +80,7 @@ app.include_router(photos_router, prefix=settings.api_prefix)
 app.include_router(photo_requests_router, prefix=settings.api_prefix)
 app.include_router(organizations_router, prefix=settings.api_prefix)
 app.include_router(retention_policies_router, prefix=settings.api_prefix)
+app.include_router(publications_router, prefix=settings.api_prefix)
 
 _audit_logger = logging.getLogger("core_service.access_log")
 _AUDIT_SKIP_PATHS = frozenset({"/health", "/docs", "/openapi.json", "/redoc"})

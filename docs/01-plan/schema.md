@@ -4,7 +4,7 @@
 
 **Project**: 은빛실타래 (SilverYarn)
 **Date**: 2026-09-07
-**Version**: 1.17 (Do 단계 — `retention_policies`/`deletion_records` 테이블 신설 + `conversation_chunks`.`retention_until`/`purged_at`, 마이그레이션 0012, decisions.md #56)
+**Version**: 1.18 (Do 단계 — `publications` 출판/인쇄 파이프라인 구현 완료, 스키마 변경 없음(테이블은 마이그레이션 0001부터 이미 존재), design.md v0.53)
 **Source**: Design 문서 §3 Data Model 초안 + UI/UX 화면설계서 필드 단위 대조 결과 반영
 **용어 정의**: [glossary.md](./glossary.md) 참조
 
@@ -389,9 +389,9 @@
 
 ---
 
-### 3.17 publications (인쇄/출판 요청) — 신규 v1.1
+### 3.17 publications (인쇄/출판 요청) — 신규 v1.1, 파이프라인 구현 완료 v1.18(design.md v0.53)
 
-**Description**: 기획서 3.3(MinIO "완성 PDF/ePub")·6장(자동 조판)·흐름도 2.4(Publish→Print) 요구를 위한 엔티티. 배송/주문 관리 등 물류 세부사항은 Phase 3 이후 별도 확정.
+**Description**: 기획서 3.3(MinIO "완성 PDF/ePub")·6장(자동 조판)·흐름도 2.4(Publish→Print) 요구를 위한 엔티티. `requested→processing→ready` 상태 전이는 구현 완료(reportlab/EbookLib 조판 엔진, design.md §2.6) — 배송/주문 관리 등 물류 세부사항(`status=delivered`로의 전이)은 여전히 Phase 3 이후 별도 확정.
 
 **Attributes**:
 | Attribute | Type | Required | Description |

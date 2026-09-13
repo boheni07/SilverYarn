@@ -45,6 +45,10 @@ from core_service.modules.care.infrastructure.conversation_chunk_repository impo
 )
 from core_service.modules.photos.application.photo_service import PhotoService
 from core_service.modules.photos.infrastructure.photo_repository import PhotoRepository
+from core_service.modules.publications.application.book_builder_service import BookBuilderService
+from core_service.modules.publications.infrastructure.publication_repository import (
+    PublicationRepository,
+)
 from core_service.modules.retention.application.retention_policy_service import (
     RetentionPolicyService,
 )
@@ -136,6 +140,31 @@ async def process_upload(
             await _update_sync_status(sync_session_id, SyncStatus.SUCCESS)
 
 
+async def process_publication(ctx: dict[str, Any], publication_id: str) -> None:
+    """design.md §2.6 출판/인쇄 파이프라인 — `PublicationService.request_publication()`이
+    enqueue한다. `process_upload`와 달리 실패 시 별도 상태 컬럼이 없어(publications에는
+    'failed' 상태가 없음, schema.md §3.17) `requested`/`processing`에 멈춘 채로 남는다 —
+    재요청은 새 출판 요청(신규 행)으로 이뤄진다(멱등 재시도 엔드포인트는 미제공, MVP 스코프).
+    """
+    _ = ctx
+    session_factory = get_session_factory()
+    async with session_factory() as db_session:
+        try:
+            chapter_service = ChapterService(
+                ChapterRepository(db_session), ChapterRevisionRepository(db_session)
+            )
+            book_builder = BookBuilderService(
+                PublicationRepository(db_session), chapter_service, StorageClient()
+            )
+            await book_builder.build(uuid.UUID(publication_id))
+            await db_session.commit()
+            logger.info("출판물 조판 완료 — publication_id=%s", publication_id)
+        except Exception:
+            logger.exception("process_publication 잡 실패 — publication_id=%s", publication_id)
+            await db_session.rollback()
+            raise
+
+
 async def cleanup_orphan_photos(ctx: dict[str, Any]) -> None:
     """sync-contract.md §4 orphan cleanup — 매시 정각 실행(WorkerSettings.cron_jobs).
 
@@ -178,7 +207,7 @@ async def purge_expired_conversation_chunks(ctx: dict[str, Any]) -> None:
 
 
 class WorkerSettings:
-    functions = [process_upload]
+    functions = [process_upload, process_publication]
     cron_jobs = [
         cron(cleanup_orphan_photos, hour=set(range(24)), minute=0),
         cron(purge_expired_conversation_chunks, hour=set(range(24)), minute=30),

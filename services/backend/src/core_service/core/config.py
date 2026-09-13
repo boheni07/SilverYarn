@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     storage_access_key: str = Field(default="", alias="STORAGE_ACCESS_KEY")
     storage_secret_key: str = Field(default="", alias="STORAGE_SECRET_KEY")
     storage_bucket_photos: str = Field(default="silveryarn-photos", alias="STORAGE_BUCKET_PHOTOS")
+    # design.md §2.6 출판 파이프라인 — 완성 PDF/ePub 전용 버킷(사진과 분리해
+    # 접근권한·보존정책을 독립적으로 조정할 수 있게 함).
+    storage_bucket_publications: str = Field(
+        default="silveryarn-publications", alias="STORAGE_BUCKET_PUBLICATIONS"
+    )
     storage_secure: bool = Field(default=False, alias="STORAGE_SECURE")
 
     # --- VECTORDB_ (Qdrant) ---
