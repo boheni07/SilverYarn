@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.silveryarn.mobile.presentation.companion.CompanionScreen
+import com.silveryarn.mobile.presentation.photos.PhotoUploadScreen
 import com.silveryarn.mobile.presentation.settings.SettingsScreen
 
 /**
@@ -29,6 +30,12 @@ import com.silveryarn.mobile.presentation.settings.SettingsScreen
  * 원래도 Device Owner Mode(COSU) lockTask로 설정 접근 자체가 잠겨 있었다
  * (decisions.md #6). 일반 모드조차 어르신 본인이 아니라 기기를 설정해 준 가족이
  * 쓰는 경로라고 보고, 발견하기 쉬운 위치보다는 방해되지 않는 위치를 택했다.
+ *
+ * "사진 추가"(M-05, 신규)는 설정과 반대로 **설치모드 무관하게 항상** 보인다 —
+ * 어르신 본인이 직접 쓰는 핵심 기능이라 가족/기술자 전용인 설정과 성격이 다르다
+ * (design.md §5.1, decisions.md #10). Device Owner Mode(COSU) lockTask 환경에서
+ * 시스템 카메라/갤러리 인텐트로 실제 전환되는지는 실기기 정책 검증이 필요한
+ * 별도 과제로 남긴다.
  */
 @Composable
 fun AppShell(
@@ -36,14 +43,29 @@ fun AppShell(
     installMode: String = "kiosk",
 ) {
     var showSettings by remember { mutableStateOf(false) }
+    var showPhotoUpload by remember { mutableStateOf(false) }
 
     if (showSettings) {
         SettingsScreen(modifier = modifier, onBack = { showSettings = false })
         return
     }
+    if (showPhotoUpload) {
+        PhotoUploadScreen(modifier = modifier, onBack = { showPhotoUpload = false })
+        return
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         CompanionScreen(modifier = Modifier.fillMaxSize())
+
+        Text(
+            "📷 사진 추가",
+            style = MaterialTheme.typography.labelSmall,
+            modifier =
+                Modifier
+                    .align(Alignment.TopStart)
+                    .padding(12.dp)
+                    .clickable { showPhotoUpload = true },
+        )
 
         if (installMode == "normal") {
             Text(

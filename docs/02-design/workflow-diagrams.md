@@ -6,7 +6,7 @@
 > **Version**: 0.7 *(문서 정합성 점검 — 페르소나명 "은실이" 통일 반영, 상세 이력은 하단 Version History)*
 > **Date**: 2026-09-13
 > **Status**: Draft
-> **Source of truth**: [`silveryarn-platform.design.md`](./features/silveryarn-platform.design.md)(v0.58), [`sync-contract.md`](./sync-contract.md)(v0.8), [`schema.md`](../01-plan/schema.md)(v1.18), [`mobile-schema.md`](../01-plan/mobile-schema.md)(v0.11), [`decisions.md`](../01-plan/decisions/silveryarn-platform.decisions.md)(v0.27)
+> **Source of truth**: [`silveryarn-platform.design.md`](./features/silveryarn-platform.design.md)(v0.59), [`sync-contract.md`](./sync-contract.md)(v0.8), [`schema.md`](../01-plan/schema.md)(v1.18), [`mobile-schema.md`](../01-plan/mobile-schema.md)(v0.12), [`decisions.md`](../01-plan/decisions/silveryarn-platform.decisions.md)(v0.27)
 
 > 원본 `Plan/자서전_말벗돌봄_프로세스_흐름도.md`(기획서 v0.5 기준)를 대체하지 않고, **그 이후 확정된 아키텍처 변경분**(Closed-Loop, 실시간 대화 파이프라인, Zero-Neural RAG, Neo4j 지식그래프, 온프레미스 vLLM 확정)까지 반영해 전체를 다시 정리한 현재판이다. 원본은 기획 의도 이해용으로 계속 보존한다(CLAUDE.md SoR 원칙).
 >

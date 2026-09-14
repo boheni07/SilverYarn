@@ -4,7 +4,7 @@
 >
 > **Project**: 은빛실타래 (SilverYarn)
 > **Date**: 2026-09-07
-> **Version**: 0.11 (§2.6 — device_state.persona_summary/persona_keywords 신규, design §2.11 4단계 페르소나 스냅샷 로컬 캐시)
+> **Version**: 0.12 (§2.6 — device_state.user_id 신규, "사진 추가하기" 화면(M-05) 구현 후속)
 > **Status**: Draft — Do 단계에서 Room Entity로 구현 시 최종 확정
 
 > 서버 `schema.md`가 SoR(전체 마스터 데이터)이며, 본 문서는 온디바이스가 오프라인 동작을 위해 로컬에 보관하는 **서브셋**을 정의한다. 컬럼명은 서버와의 동기화 페이로드 매핑을 쉽게 하기 위해 서버 필드명을 최대한 따른다.
@@ -105,6 +105,7 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 | Column | Type | Description |
 |---|---|---|
 | device_id | TEXT NULL | 서버 `devices.id`(UUID) — `POST /devices` 등록 응답을 그대로 저장. `POST /sync/upload` 등 이후 모든 동기화 호출이 이 값을 device_id로 보낸다. *(v0.4 신규 — Room Entity 구현 중 발견: 이 값을 저장할 컬럼이 없으면 등록 이후 어떤 동기화 요청도 자신의 device_id를 알 수 없다는 걸 뒤늦게 발견)* **v0.8: 앱 시작 시 이 값의 non-null 여부가 온보딩 스킵 판정 기준**(`presentation/AppEntry.kt`) — 있으면 온보딩·최초 동기화를 건너뛰고 바로 홈. |
+| user_id | TEXT NULL | 온보딩 `POST /users` 응답의 어르신(1차 사용자) 계정 id. *(v0.12 신규 — "사진 추가하기" 화면(M-05) 구현 중 발견: `OnboardingCoordinator`가 이 값을 등록 3연쇄 동안만 변수로 들고 있다가 버려서, 그 이후엔 기기 스스로 "내가 누구 계정인지"를 알 방법이 없었다. `POST /photos/upload-url`의 필수 `user_id` 바디 필드가 이를 요구해 뒤늦게 드러남 — `user_name`(v0.10)과 정확히 같은 유형의 누락이었다)* |
 | install_mode | TEXT | `kiosk` \| `normal` — 설치 시 고정, 서버 `devices.install_mode`와 동기화(조회용) |
 | registered_wifi_ssid | TEXT NULL | **로컬 전용, 서버 미전송** ([decisions.md #22](./decisions/silveryarn-platform.decisions.md)) |
 | slm_model_version | TEXT NULL | 탑재된 온디바이스 SLM 버전 — 서버 `devices.slm_model_version`과 동기화(schema.md v1.3), 프롬프트팩 정의는 [design.md §2.11 4단계](../02-design/features/silveryarn-platform.design.md)(Compaction Engine) 참조 *(v0.3: "design.md §2.10"은 에이전트 페르소나 정의 절이라 오참조였던 것을 정정, L-7)* |
@@ -141,6 +142,7 @@ CREATE VIRTUAL TABLE autobiography_fts USING fts5(
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.12 | 2026-09-14 | 모바일 "사진 추가하기" 화면(M-05) 신규 구현 후속 — §2.6 `device_state.user_id` 신규(온보딩 3연쇄 동안만 변수로 있다가 버려지던 값을 영속화, `POST /photos/upload-url` 필수 필드가 요구) | NUBiz AX Initiative |
 | 0.1 | 2026-09-06 | 사용자 제안 반영 초안 — `autobiography_fts` 등 6개 로컬 테이블 정의 | NUBiz AX Initiative |
 | 0.2 | 2026-09-07 | 2차 design-validator 검증 반영 — `autobiography_fts` 컬럼명을 sync 페이로드와 정렬(M-2), `conversations` 4컬럼의 서버 매핑 완료 명시(H-2) | NUBiz AX Initiative |
 | 0.3 | 2026-09-07 | 3차 design-validator 검증 반영 — L-7: §2.6 "§9.3"/"design.md §2.10" 문서명 없는·부정확한 인용을 decisions.md #5/design.md §2.11로 정정. L-8: `response_latency_ms`의 서버 미대응 문제를 sync-contract.md §3(Device-Only, conversation_chunks 메타 병합)으로 해소 | NUBiz AX Initiative |

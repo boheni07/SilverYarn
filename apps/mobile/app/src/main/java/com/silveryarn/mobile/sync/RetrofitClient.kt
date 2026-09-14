@@ -2,6 +2,7 @@ package com.silveryarn.mobile.sync
 
 import com.silveryarn.mobile.BuildConfig
 import com.silveryarn.mobile.onboarding.OnboardingApi
+import com.silveryarn.mobile.photos.PhotosApi
 import com.squareup.moshi.Moshi
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -29,4 +30,6 @@ object RetrofitClient {
     val syncApi: SyncApi by lazy { retrofit.create(SyncApi::class.java) }
 
     val onboardingApi: OnboardingApi by lazy { retrofit.create(OnboardingApi::class.java) }
+
+    val photosApi: PhotosApi by lazy { retrofit.create(PhotosApi::class.java) }
 }

@@ -2,7 +2,7 @@
 
 > Phase 2 Deliverable — 모노레포 전체 구조 (Design 문서 §11.1을 실행 가능한 수준으로 구체화)
 
-**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-13 · **Version**: 1.41
+**Project**: 은빛실타래 (SilverYarn) · **Date**: 2026-09-14 · **Version**: 1.42
 
 ---
 
@@ -112,7 +112,8 @@ apps/mobile/src/main/java/com/silveryarn/mobile/
 │   ├── onboarding/
 │   ├── sync/             # FirstSyncScreen(최초 동기화)
 │   ├── companion/         # CompanionScreen(은실이 대화, 유일한 홈) + ConversationSessionController
-│   └── settings/          # 일반 모드 전용 최소 진입점(하단 탭 아님)
+│   ├── settings/          # 일반 모드 전용 최소 진입점(하단 탭 아님)
+│   └── photos/            # PhotoUploadScreen — M-05 "사진 추가하기"(2026-09-14 신규, decisions.md #10)
 ├── ondevice/             # VAD·STT·SLM·TTS, 온디바이스 의도분류 라우터
 │   ├── vad/               # AmplitudeVoiceActivityDetector(진폭 임계값 임시 구현, decisions.md #68)
 │   ├── stt/
@@ -122,6 +123,7 @@ apps/mobile/src/main/java/com/silveryarn/mobile/
 │   ├── db/
 │   └── vectorstore/       # 경량 VectorDB(임베딩) — 고사양 단말 한정 Phase 2+ 검토, Phase 1 미사용
 ├── installmode/          # 설치모드 자동분기 (Device Owner Mode 프로비저닝) — decisions.md #5,#6
+├── photos/               # PhotosApi(Retrofit)·PhotoUploadService — 2026-09-14 신규, decisions.md #10
 └── sync/                 # Wi-Fi 배치 동기화 워커 (WorkManager)
 ```
 
@@ -240,3 +242,4 @@ Presentation ──→ Application ──→ Domain ←── Infrastructure
 | 1.39 | 2026-09-13 | **문서 정합성 점검** — §1/§2의 모듈 수를 "12개"에서 **14개**로 정정(`organizations`/`retention` 누락 반영, 위 1.37/1.38 갱신 누락분). 헤더 Version이 실제 최신 변경이력(1.36)보다 뒤처져 있던 걸 발견(1.27로 정지) — 정정. **버전 이력 표 자체가 1.22 이후 뒤죽박죽(날짜순 아님)으로 append돼 있던 걸 발견해 1.22→1.39 오름차순으로 재정렬**(내용은 변경 없음, 순서만 정정) | NUBiz AX Initiative |
 | 1.40 | 2026-09-13 | `publications` 모듈 신규(4계층 전부) — 출판/인쇄 파이프라인(design.md §2.6, v0.53). §1/§2 모듈 수를 14개→**15개**로 정정. `author` 모듈의 `deps.py`를 교차 참조해 전체 챕터 confirmed 여부를 검증. 조판 엔진(reportlab/EbookLib)은 외부 서비스가 아니라 이 모듈만의 로직이라 `core/clients/`가 아니라 `application/book_builder_service.py`에 위치시킨 이유를 명시 | NUBiz AX Initiative |
 | 1.41 | 2026-09-13 | **문서 정합성 점검(모바일 UI 패러다임 전환 후속, decisions.md #66~#68)** — §3(모바일 내부 구조) 트리가 이미 삭제된 `presentation/{author,care,assistant}` 패키지를 여전히 보여주고 있던 걸 발견해 정정: 하나로 통합된 `presentation/companion/`으로 교체, 실제로는 있었지만 트리에 누락돼 있던 `presentation/sync/`도 추가, `ondevice/vad/`(신규 `AmplitudeVoiceActivityDetector`) 반영. §5 화면 인벤토리 매핑 표의 "자서전 작가모드 인터뷰 → presentation/author/" 행을 "은실이 대화 화면 → presentation/companion/"으로 교체 | NUBiz AX Initiative |
+| 1.42 | 2026-09-14 | 모바일 "사진 추가하기"(M-05) 신규 구현 후속(사용자 요청, decisions.md #10) — §3 트리에 신규 최상위 `photos/`(PhotosApi·PhotoUploadService)와 `presentation/photos/`(PhotoUploadScreen) 반영 | NUBiz AX Initiative |
