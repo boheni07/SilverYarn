@@ -1,10 +1,10 @@
 # silveryarn-platform — Do 단계 사이클 보고서
 
-> **작성일**: 2026-09-10 (§1 최초 작성 시점 — PR #1~11 기준. §1의 지표·서술은 그 시점 스냅샷으로 남겨두고, #12 이후 확장분은 아래 **§3-2**·**§3-3**·부록에 이어 적었다)
-> **갱신일**: 2026-09-11 — PR #12~24 반영 → **2026-09-13 재갱신 — PR #25~42 반영, §3-3 신설**
-> **대상 사이클**: CTO 착수 심사(`docs/02-design/cto-review-2026-09-05.md`) 보안 블로커 해소 + Design v0.6→v0.52 잔여 구현 + 법무·인프라·경영 미결 14건 전체 확정·구현
-> **PR 범위**: #1 ~ #42 (전부 main squash 머지, #38 결번)
-> **PDCA 위치**: Do 완료 → Check 2회(`docs/03-check/gap-analysis-2026-09-10.md`, `-11.md`) → 본 Report. **[`blocked-decisions-tracker.md`](../../03-check/blocked-decisions-tracker.md)의 법무 6건·인프라 5건·경영 3건(14건 전체)이 2026-09-13 PR #39로 전부 확정+구현 완료** — 이 사이클이 추적하던 외부 회신 대기 항목은 더 이상 없다(§5 갱신 참조). 남은 후속은 실측 성격의 온디바이스 SLM 벤치마크(§3-3)뿐
+> **작성일**: 2026-09-10 (§1 최초 작성 시점 — PR #1~11 기준. §1의 지표·서술은 그 시점 스냅샷으로 남겨두고, #12 이후 확장분은 아래 **§3-2**·**§3-3**·**§3-4**·부록에 이어 적었다)
+> **갱신일**: 2026-09-11 — PR #12~24 반영 → 2026-09-13 재갱신 — PR #25~42 반영, §3-3 신설 → **2026-09-14 재갱신 — PR #43~50 반영, §3-4 신설**
+> **대상 사이클**: CTO 착수 심사(`docs/02-design/cto-review-2026-09-05.md`) 보안 블로커 해소 + Design v0.6→v0.58 잔여 구현 + 법무·인프라·경영 미결 14건 전체 확정·구현 + Do 단계 후속(출판 파이프라인·모바일 UI 전면 개편·웹 실 인증 세션 연결)
+> **PR 범위**: #1 ~ #50 (전부 main squash 머지, #38 결번)
+> **PDCA 위치**: Do 진행 중 → Check 2회(`docs/03-check/gap-analysis-2026-09-10.md`, `-11.md`) → 본 Report(3차 갱신). **[`blocked-decisions-tracker.md`](../../03-check/blocked-decisions-tracker.md)의 법무 6건·인프라 5건·경영 3건(14건 전체)이 2026-09-13 PR #39로 전부 확정+구현 완료** — 이 사이클이 추적하던 외부 회신 대기 항목은 더 이상 없다(§5 갱신 참조). 그 이후에도 Do 단계는 계속 진행 중(§3-4) — 남은 후속은 실측 성격의 온디바이스 SLM 벤치마크(§3-3, §7, 실기기 확보 대기)와 미착수 화면 1건(모바일 사진 화면, §7)뿐
 
 ---
 
@@ -101,6 +101,30 @@ PR #31, 순수 문서)한 뒤, 그 결정들을 작은 것부터 순서대로 �
 
 ---
 
+## 3-4. 4차 확장 — PR #43~50, 법무·인프라·경영 14건 완료 이후 Do 단계 후속 (갱신일 2026-09-14)
+
+법무·인프라·경영 14건(§3-3)이 끝난 뒤에도 사이클을 종료하지 않고, "다음 사이클 진행해줘" 반복 요청에 매번
+report.md 권고(§7)·design-validator·사용자 직접 요청을 근거로 계속 진행했다. 이 구간의 특징은 **문서
+정합성 점검을 3회(PR #40/#43/#48) 반복**했다는 것 — 매번 큰 기능 PR 뒤에 실제 드리프트가 발견됐다(패턴은
+§6 L9 참조). 또한 페르소나가 "은빛이"에서 **"은실이"**로 재명명되고(decisions #66), 모바일 UI가 하단
+탭 방식에서 **대화 전용 단일 화면**으로 전면 개편됐다(decisions #66~#68) — 둘 다 사용자가 세션 중
+직접 결정한 사항이다.
+
+| 영역 | 실적 | 관련 decisions | PR |
+|---|---|---|---|
+| 문서 정비 | `docs/presentations/.bkit/`(2026-09-06부터 방치된 고아 디렉터리) 삭제, structure.md 변경이력 표 재정렬(v1.22 이후 날짜순 뒤섞임 발견), report.md의 CTO 블로커 상태표가 "법무 회신 대기"로 정정 안 된 채 남아있던 것 수정 | — | #43 |
+| **출판 파이프라인** | Phase 3 출판/인쇄 파이프라인(design.md §2.6) — 신규 `publications` 모듈(15번째 도메인 모듈), 전체 챕터 confirmed 검증 → arq 비동기 잡 → reportlab(PDF, 한글 Adobe 표준 CJK CID 폰트)·EbookLib(ePub) 실 조판 → 전용 MinIO 버킷 → presigned 다운로드. apps/web `(family)/publications` 신규 | — | #44 |
+| 말벗돌봄 대화 | 대화 화면·세션·mock STT/SLM 최초 구현(`ConversationSessionController`, `MockSttEngine`/`MockSlmEngine`) — 이후 PR #47에서 UI가 전면 개편되며 대화 엔진 자체는 그대로 이어받음 | — | #45 |
+| 화면설계서 | UI/UX 관점 전용 신규 문서 `docs/02-design/screen-definitions.md` — 실제 구현 코드를 SoR로 모바일·웹 사용자·웹 관리자 전 화면(당시 27개)을 목적·구성요소·구현상태(✅완료/🟡mock/⬜스텁/⚠️임시방편/🔒비활성) 뱃지로 전수 정의 | — | #46 |
+| **모바일 UI 전면 개편** | "은실이" 대화 전용 UI(사용자 요청, decisions #66~#68) — 하단 4탭·화면 4종 완전 제거, `presentation/companion/` 패키지 하나로 통합. 신규 실 VAD(`AmplitudeVoiceActivityDetector`, 진폭 임계값 기반) — 버튼 클릭과 자연스러운 발화 둘 다 같은 파이프라인으로 수렴. 페르소나명 "은빛이"→"은실이" 재명명, 자서전 작가·비서 모드까지 하나의 대화 안에서 통합 | #66~#68 | #47 |
+| 문서 정합성 2차 | PR #47 반영 누락분 정정 — "은빛이" 잔존 표기 8곳, structure.md 모바일 폴더 트리 드리프트(삭제된 `presentation/{author,care,assistant}` 계속 서술), `_INDEX.md` 버전 참조 재동기화(structure.md가 **6버전** 밀려 있던 것이 최대 발견) | — | #48 |
+| **웹 실 인증 세션 연결** | 신규 `GET /me` — `require_auth`가 이미 계산해 두던 `AuthContext.memberships`를 그대로 직렬화(새 도메인/서비스 로직 0). apps/web 9개 화면이 `?userId=` 수동 입력 대신 `?elder=`+`resolveCurrentUserId()`로 전환, W-02(임시 홈)를 세션 자동 연결 홈으로 재정의, notification-settings·consent의 "구성원 먼저 선택" 단계도 `resolveCurrentMembership()`으로 제거. apps/admin은 조사 결과 대상이 아님을 확인(role 기반 전체 열람) | #69 | #49 |
+| 발표자료 | 설계발표 PPT 신규(사용자 요청 — 시스템 흐름 이해 중심 재구성) — 44슬라이드, 전체 컴포넌트 다이어그램·Closed-Loop·마스터 업무흐름도(Swimlane)·ERD를 전부 네이티브 PPT 도형으로 시각화, 단위 시스템별 상세 흐름 13종 + UI/UX 실 구현 화면 목업. PowerPoint COM으로 전체 렌더링해 육안 검증(§6 L10) | — | #50 |
+
+**§1 지표 재갱신(2026-09-14 기준)**: 머지된 PR **49건**(#1~#50, #38 결번) · 마이그레이션 0002~**0012**(변경 없음) · 백엔드 단위 테스트 **223** · Design 문서 v0.6 → **v0.58** · decisions.md → **v0.27**(§2.10~§2.11 신설, #66~#69) · screen-definitions.md → **v0.3**(신규, 24개 화면) · workflow-diagrams.md → **v0.7** · schema.md → **v1.18** · glossary.md → **v1.3** · structure.md → **v1.41**. import-linter 4 contract는 계속 4 kept·0 broken.
+
+---
+
 ## 4. 검증
 
 ### 실 인프라 e2e (Docker: postgres·redis·qdrant·neo4j·minio·keycloak, 마이그레이션 0006)
@@ -119,7 +143,7 @@ PR #31, 순수 문서)한 뒤, 그 결정들을 작은 것부터 순서대로 �
 
 ## 5. 미해결 / 다음 사이클 이월
 
-> §1~4는 PR #1~11 시점 기준, §3-2는 #12~24, §3-3은 #25~42까지 갱신했다. 상세·회신 관리는
+> §1~4는 PR #1~11 시점 기준, §3-2는 #12~24, §3-3은 #25~42, §3-4는 #43~50까지 갱신했다. 상세·회신 관리는
 > **[`docs/03-check/blocked-decisions-tracker.md`](../../03-check/blocked-decisions-tracker.md)** (살아있는 트래커).
 
 ### 외부 결정 대기 — 2026-09-13 기준 전부 해소됨
@@ -151,8 +175,8 @@ PR #31, 순수 문서)한 뒤, 그 결정들을 작은 것부터 순서대로 �
 - ~~모바일 홈 셸(M2) + 하단 탭 4개~~ — **완료 (PR #23)**.
 - ~~§4.2 endpoint 표 ↔ 구현 1:1 정비~~ — **완료 (PR #26, design.md v0.40)**. OpenAPI 스키마 전수 대조로 실제 갭이 G11이 지목한 6건보다 컸음을 확인(17행 추가 — `family-members` 목록/생성 전체 누락 등).
 - ~~첫 가족 구성원 연결 경로~~ — **완료 (PR #28, decisions #51)**. 사용자 결정: admin 중개 경로. apps/admin `(admin)/family-members`(첫 쓰기 화면) + apps/web `/invitations/[token]`(수락). **모바일 화면은 필요 없었음** — device-token 부트스트랩 안을 채택하지 않아 모바일 쪽 변경 자체가 없다.
-- **온디바이스 SLM 의도 라우터** (workflow-diagrams.md §19) — 모바일 홈 셸(PR #23)의 마이크 세션이 말벗돌봄 모드로 고정돼 있는 이유. 모델 선정(decisions #27, 실기기 벤치마크) 선행 필요.
-- 온디바이스 STT/SLM/TTS 런타임 — 모델 선정(decisions #27, 실기기 벤치마크) 대기.
+- ~~온디바이스 SLM 의도 라우터 (workflow-diagrams.md §19) — 마이크 세션이 말벗돌봄 모드로 고정된 문제~~ — **PR #47로 재해결**: 모드 고정 자체가 사라졌다. "은실이" 대화 전용 UI 개편으로 자서전 작가·말벗돌봄·비서 3모드가 화면 분리 없이 하나의 대화로 통합됐고, `ConversationSessionController`가 턴마다 응답 키워드로 `author`/`care` 기록 모드를 동적 판정한다. 다만 이 라우팅은 여전히 `MockSlmEngine`의 얕은 키워드 매칭 — 실 SLM 붙으면 의도분류 로직 자체는 보강 필요.
+- 온디바이스 STT/SLM/TTS 런타임 — 모델 선정(decisions #27, 실기기 벤치마크) 대기. VAD만 임시로 실구현됨(`AmplitudeVoiceActivityDetector`, PR #47, decisions #68).
 
 ---
 
@@ -168,18 +192,25 @@ PR #31, 순수 문서)한 뒤, 그 결정들을 작은 것부터 순서대로 �
 | L6 | **세션 중 사고 1건** — 포트 8000 정리 중 `taskkill`로 Docker Desktop 백엔드 프로세스를 죽여 infra 컨테이너 전부 다운. 이후 포트 프로세스는 식별 후에만 종료. | (세션 로그) |
 | L7 | **npm 워크스페이스로 전환하면 플랫폼별 네이티브 바이너리가 lockfile에서 조용히 빠질 수 있다** — 기존 win32 `node_modules` 위에 증분 `npm install`을 돌리자 lightningcss/@tailwindcss/oxide의 비호스트(linux-x64-gnu 등) optional dependency가 lockfile에서 pruning됐다. `npm ci`는 로컬에서 통과하지만 CI(Linux)의 `next build`가 "Cannot find lightningcss.linux-x64-gnu.node"로 실패 — `node_modules`+lockfile을 완전히 지우고 처음부터 재설치해야 전 플랫폼 바이너리가 복원된다. | PR #21, CI 왕복 2회 |
 | L8 | **Keycloak 테스트 유저는 firstName/lastName 없이 만들면 direct grant가 거부된다** — Admin REST로 만든 유저에 `requiredActions: []`를 명시해도, realm User Profile이 요구하는 `firstName`/`lastName`이 없으면 password grant가 "Account is not fully set up"(400)으로 실패한다. e2e 스크립트들은 이미 이 필드를 채우고 있었지만, 새 검증 스크립트를 짤 때 빠뜨려 재발했다. | PR #24 실 인프라 검증 |
+| L9 | **큰 기능 PR 뒤엔 항상 문서 드리프트가 남는다 — 특히 버전 헤더와 폴더 트리** — "정합성 점검"을 세션 중 3번(PR #40/#43/#48) 반복했고 매번 실제 드리프트를 발견했다. 가장 흔한 두 지점: ① `_INDEX.md`의 각 문서 버전 표기(structure.md가 한때 6버전 밀려 있었음), ② 구조 문서가 실제 패키지 구조를 텍스트 트리로 하드코딩한 부분(모바일 폴더 개편 후 갱신 누락). 큰 PR 머지 직후엔 이 두 곳부터 확인하면 점검 시간이 준다. | PR #40, #43, #48 |
+| L10 | **LibreOffice 없는 환경에서도 PPT를 실제로 렌더링해 육안 검증할 수 있다** — Windows에 설치된 PowerPoint를 `pywin32`(`win32com.client.Dispatch('PowerPoint.Application')`)로 열어 `Presentation.SaveAs(dir, 18)`(ppSaveAsPNG)를 호출하면 전체 슬라이드가 PNG로 내보내진다. 이 검증으로 좌표 계산 버그(엉뚱한 박스를 가리키던 연결선) 1건을 실제로 찾아 고쳤다 — python-pptx는 예외 없이 저장돼도 시각적으로는 틀릴 수 있다. | PR #50 |
+| L11 | **Jetpack Compose의 "스코프 암시적 리시버 멤버"와 "평범한 top-level 확장함수"는 반대로 다뤄야 한다** — `Modifier.weight()`/`align()`은 `ColumnScope`/`RowScope`/`BoxScope`의 멤버 확장이라 명시적 import하면 오히려 컴파일 에러가 난다. 반면 `InfiniteTransition.animateFloat()`은 평범한 top-level 확장함수라 명시적 `import`가 반드시 필요하다 — 이 둘을 헷갈려 같은 PR에서 CI가 2연속 실패했다(처음엔 Gradle 의존성 자체를 잘못 의심). | PR #47 |
+| L12 | **import-linter 콘솔 스크립트가 PATH에 없으면 설치 경로의 `.exe`를 직접 호출한다** — 이 환경은 venv가 없어 `lint-imports`가 bash PATH에 노출되지 않는다. `pip show import-linter`로 설치는 확인되지만 `python -m importlinter`류의 모듈 진입점도 없다 — 실제로는 `.../Python314/Scripts/lint-imports.exe`가 그대로 존재하므로 절대경로로 직접 실행하면 정상 동작한다. | PR #49 |
 
 ---
 
 ## 7. 다음 사이클 권고
 
-> 2026-09-13 갱신: 아래 1·2번 권고는 **이 사이클(§3-3, PR #31~#40)에서 전부 실행되고 완료됐다**. 원문은
-> 이력으로 남기고, 완료 표시만 추가한다.
+> 2026-09-13 갱신: 아래 1·2번 권고는 **§3-3(PR #31~#40)에서 전부 실행되고 완료됐다**. 원문은
+> 이력으로 남기고, 완료 표시만 추가한다. → **2026-09-14 재갱신**: §3-4(PR #43~50) 반영, 3번 재확인
+> 결과와 신규 권고 4~6번 추가.
 
 1. ~~**법무 회신 취합** — B1(정서)·B2(대리동의)·B3(보유기간)·B5(제3자제공)가 한 묶음. 회신이 오면 retention 정책 + 파기 오케스트레이션이 가장 큰 단일 작업.~~ — **완료**. 사용자가 직접 결정 대화를 요청해 14건 일괄 확정(decisions #52~#65, PR #31) 후 전부 구현(PR #32~#39).
 2. ~~**infra-architect 착수** — B6(egress), `organizations` 테넌시, `PII_KEK` Vault, GPU 토폴로지, 관측 스택(self-hosted).~~ — **대부분 완료**: egress 경계 문서화(PR #40), organizations 테넌시(PR #37), 관측 스택(PR #36). `PII_KEK` Vault 이전과 GPU 토폴로지(VRAM 예산표)만 계속 보류(각각 시크릿 매니저 인프라, 실기기 벤치마크 선결).
-3. **온디바이스 SLM 모델 선정 벤치마크**(decisions #27, 실기기) — 착수하면 §19 의도 라우터(현재 모바일 홈 셸에서 말벗돌봄 모드 고정, PR #23)와 §2.10 페르소나 JSON 룰셋(서버측 생성은 PR #27로 완료, 온디바이스 소비만 잔여)이 같이 풀린다. **이 사이클 종료 시점 기준 유일하게 남은, 외부 회신이 아니라 실기기 확보가 선결조건**인 항목 — 다음 사이클 최우선 권고.
-4. (완료) ~~`core/auth.py` 포트 리팩터링~~ → PR #13. ~~apps/web·admin 공유 코드 추출~~ → PR #21. ~~§4.2 endpoint 표 정비~~ → PR #26. ~~법무·인프라·경영 14건~~ → PR #31~#39.
+3. **온디바이스 SLM 모델 선정 벤치마크**(decisions #27, 실기기) — §19 의도 라우터는 PR #47로 이미 재해결됐고(모드 고정 자체가 사라짐, 코드 후속 절 참조), §2.10 페르소나 JSON 룰셋도 온디바이스 소비까지 PR #47에서 연결됐다 — 남은 건 순수하게 실 STT/SLM/TTS 엔진 자체뿐. **2026-09-14 재확인**: 이 세션 환경에 `adb`/`emulator`/`ANDROID_HOME`이 전혀 없어 여전히 착수 불가능 — 계속 다음 사이클 최우선 권고(실기기 확보가 유일한 선결조건).
+4. (완료) ~~`core/auth.py` 포트 리팩터링~~ → PR #13. ~~apps/web·admin 공유 코드 추출~~ → PR #21. ~~§4.2 endpoint 표 정비~~ → PR #26. ~~법무·인프라·경영 14건~~ → PR #31~#39. ~~Phase 3 출판 파이프라인~~ → PR #44. ~~모바일 UI 전면 개편~~ → PR #47(decisions #66~#68). ~~웹 `?userId=` 임시 패턴 제거~~ → PR #49(decisions #69).
+5. **모바일 사진 화면 신규** — report.md 이전 갱신부터 계속 후보로 남아있던 항목, 아직 미착수. 웹(사진 갤러리·사진 요청)은 이미 구현됐으나 모바일 쪽 "사진 추가하기" 전용 화면은 screen-definitions.md에도 스텁으로만 존재 — 다음 사이클 후보 1순위(실기기 불필요, 바로 착수 가능).
+6. **문서 정합성 점검 4차 필요 시점 예측** — L9(§6) 패턴대로면 PR #44(출판)·#47(모바일 UI 개편) 같은 큰 기능 PR 뒤엔 버전헤더·폴더트리 드리프트가 남기 쉽다. 이번엔 §3-4 작성과 동시에 `_INDEX.md`·CLAUDE.md·workflow-diagrams.md 버전 교차참조를 함께 재확인해 반영했다(신규 드리프트 없음 확인) — 다음 대형 PR 이후에도 이 습관을 유지 권고.
 
 ---
 
@@ -228,5 +259,13 @@ PR #31, 순수 문서)한 뒤, 그 결정들을 작은 것부터 순서대로 �
 | #40 | 설계문서 최신화 — 코드 대비 드리프트 정정 + `data-classification-policy.md` 신규 | — |
 | #41 | FP(기능점수) 기반 SW개발비 산정 내역서 신규 작성 (정통법) | — |
 | #42 | FP 산정 내역서 간이법(Simplified Method) 버전 신규 작성 | — |
+| #43 | 문서 정합성 전수점검 — 고아 `.bkit/` 삭제, structure.md 변경이력 재정렬, report.md CTO 블로커 상태표 정정 | — |
+| #44 | Phase 3 출판 파이프라인 — `publications` 모듈 신규(reportlab/EbookLib 실 조판), apps/web `(family)/publications` | — |
+| #45 | 말벗돌봄 대화 화면·세션·mock STT/SLM 최초 구현 | — |
+| #46 | 화면설계서(UI/UX 전용) 신규 작성 — `docs/02-design/screen-definitions.md` | — |
+| #47 | "은실이" 대화 전용 UI 전면 개편(decisions #66~#68) — 하단 4탭 제거, 신규 실 VAD, 페르소나 재명명 | — |
+| #48 | 문서 정합성 전수점검 2차 — "은빛이" 잔존 표기 8곳·structure.md 모바일 트리 드리프트(6버전) 정정 | — |
+| #49 | 웹 실 인증 세션 연결(decisions #69) — 신규 `GET /me`, apps/web `?userId=` 임시 패턴 제거 | — |
+| #50 | 설계발표 PPT 신규 — 시스템 흐름·단위 시스템별 업무흐름도 시각화 중심 재구성(44슬라이드) | — |
 
 > #38은 결번(머지되지 않음).
