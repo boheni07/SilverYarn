@@ -74,6 +74,9 @@ dependencies {
     implementation("androidx.compose.animation:animation-core")
     implementation("androidx.activity:activity-compose:1.9.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    // FileProvider(presentation/photos/PhotoUploadScreen.kt — 카메라 촬영 결과 Uri) —
+    // activity-compose·material3의 전이 의존성으로 이미 딸려 오지만 API를 직접 쓰므로 명시.
+    implementation("androidx.core:core-ktx:1.13.1")
 
     // --- Room(SQLite, FTS5) — local/db, mobile-schema.md ---
     implementation("androidx.room:room-runtime:2.6.1")

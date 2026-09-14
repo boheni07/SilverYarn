@@ -30,6 +30,19 @@
             </intent-filter>
         </activity>
 
+        <!-- presentation/photos/PhotoUploadScreen.kt — 카메라 촬영 결과(ActivityResultContracts.
+             TakePicture)를 content:// Uri로 시스템 카메라 앱에 넘기기 위한 FileProvider.
+             CAMERA 런타임 권한은 촬영을 시스템 앱에 위임하는 방식이라 필요 없다. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- decisions.md #6 — Device Owner Mode(COSU) 키오스크 잠금의 진입점.
              zero-touch/QR 프로비저닝 자체(재활용 단말 공장초기화 후 최초 설정 시
              자동 등록)는 실기기 배포 인프라가 있어야 검증 가능해 이 스캐폴딩

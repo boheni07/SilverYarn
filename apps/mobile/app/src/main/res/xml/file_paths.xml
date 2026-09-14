@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- presentation/photos/PhotoUploadScreen.kt의 FileProvider가 카메라 촬영 결과를
+     받을 임시 파일 위치 선언 — 앱 캐시 디렉터리 아래 photos/ 하위만 노출한다. -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path name="photos" path="photos/" />
+</paths>

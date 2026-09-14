@@ -13,6 +13,10 @@ data class DeviceStateEntity(
     // POST /devices 등록 응답의 서버 devices.id — mobile-schema.md v0.4 신규(sync/SyncWorker
     // 참조: 이 값 없이는 어떤 동기화 호출도 자기 device_id를 못 보냄).
     @ColumnInfo(name = "device_id") val deviceId: String?,
+    // 온보딩 POST /users 응답의 어르신(1차 사용자) 계정 id(mobile-schema.md v0.12, 신규) —
+    // 온보딩 3연쇄 동안만 변수로 들고 있다가 버려지던 값을 영속화했다. photos/PhotosApi의
+    // user_id 필수 필드가 이를 요구해 뒤늦게 드러남(user_name과 같은 유형의 누락).
+    @ColumnInfo(name = "user_id") val userId: String?,
     // "kiosk" | "normal"
     @ColumnInfo(name = "install_mode") val installMode: String,
     // 로컬 전용, 서버 미전송(decisions.md #22)

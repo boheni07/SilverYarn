@@ -8,7 +8,7 @@ version: 1.3
 > **Summary**: 온디바이스 오프라인 우선 + 온프레미스 서버 하이브리드 아키텍처 기술 설계
 >
 > **Project**: 은빛실타래 (SilverYarn)
-> **Version**: 0.58 (웹 실 인증 세션 연결 — `GET /me` 신규)
+> **Version**: 0.59 (모바일 "사진 추가하기"(M-05) 신규 — decisions.md #10)
 > **Author**: NUBiz AX(AI Transformation) Initiative
 > **Date**: 2026-09-08
 > **Status**: Draft
@@ -701,11 +701,11 @@ interface RetentionPolicy {     // v0.51 신규 — 보유기간 admin 설정(de
 
 > ✅ = apps/web·apps/mobile·apps/admin에 구현됨. 나머지는 미착수 또는 외부 결정 대기.
 >
-> **상세 화면정의서**: 아래는 요약표다 — 화면별 구성요소·사용자 액션·전체/영역별 화면 흐름도는 [`screen-definitions.md`](../screen-definitions.md)(v0.1, 신규) 참조.
+> **상세 화면정의서**: 아래는 요약표다 — 화면별 구성요소·사용자 액션·전체/영역별 화면 흐름도는 [`screen-definitions.md`](../screen-definitions.md)(v0.4) 참조.
 
 | 영역 | 화면 |
 |---|---|
-| 모바일앱(당사자) | 온보딩·동의 ✅, **은실이 대화 화면 ✅(mock)**(v0.56, decisions.md #67 — 하단 4탭·홈/말벗돌봄/작가모드/비서모드 개별 화면을 전부 걷어내고 `CompanionScreen` 하나로 통합. 자서전 회고·일정 안내도 은실이가 대화 중에 스스로 꺼낸다. STT/SLM만 §2.12 참조 Mock, VAD는 실 진폭감지 구현), 설정(일반 모드 전용 최소 진입점, 최초 동기화 ✅), 사진 추가하기 |
+| 모바일앱(당사자) | 온보딩·동의 ✅, **은실이 대화 화면 ✅(mock)**(v0.56, decisions.md #67 — 하단 4탭·홈/말벗돌봄/작가모드/비서모드 개별 화면을 전부 걷어내고 `CompanionScreen` 하나로 통합. 자서전 회고·일정 안내도 은실이가 대화 중에 스스로 꺼낸다. STT/SLM만 §2.12 참조 Mock, VAD는 실 진폭감지 구현), 설정(일반 모드 전용 최소 진입점, 최초 동기화 ✅), **사진 추가하기 ✅**(v0.59, `presentation/photos/PhotoUploadScreen.kt` — 카메라 즉시촬영·갤러리 선택 모두 지원, 클라이언트 리사이즈(1600px)·JPEG 80% 압축 후 sync-contract.md §4 Presigned URL 흐름으로 업로드, decisions.md #10) |
 | 웹·자서전 사용자 | **로그인 ✅**(`/login` — Keycloak SSO, v0.34), 자서전 뷰어 ✅, 사진·타임라인 갤러리 ✅, ~~구독·결제 관리~~(스코프 아웃, decisions.md #18), 계정 설정 |
 | 웹·가족 | 가족 대시보드(오늘의 기억 리포트) ✅(`(family)/dashboard`, v0.37 — 정서 항목은 안내문구로 대체), 원고 감수·대조편집 ✅, 사진 업로드·타임라인 배치(사진 요청 ✅), 정서 모니터링 상세(⚖️ 정서 파이프라인 OFF), 알림·가족구성원 설정 ✅(`(family)/notification-settings`), **초대 수락 ✅**(`/invitations/[token]`, v0.42), **출판 요청 ✅**(`(family)/publications`, v0.53 — 요청·이력·다운로드) |
 | 웹·관리자 | 관리자 대시보드, 사용자 관리 ✅, Wi-Fi 동기화 모니터링 ✅, 정서 알림 이력 관리(⚖️ OFF), 시스템 설정·리소스 모니터링, 기기 관리 ✅, **가족 구성원 관리(초대) ✅**(`(admin)/family-members`, v0.42 — admin의 첫 쓰기 화면), **시설 관리(B2G) ✅**(`(admin)/organizations`, v0.50 — 시설 등록·목록 + family-members 화면 시설 배정), **보유기간 설정 ✅**(`(admin)/retention-policies`, v0.51) + **계정 삭제(danger-zone) ✅**(사용자 목록, 어르신 이름 재입력 2단계 확인) |
@@ -930,16 +930,18 @@ Application은 Domain에 항상 의존하며, Infrastructure는 Domain이 정의
 >
 > **v0.30 — `core/auth.py` 순수화**: contract ④의 예외였던 "`auth.py`가 principal 해석에 `family_members`/`devices` 리포지토리를 지연 import" 2건을 제거했다. `core/auth.py`는 이제 순수(토큰 검증·인가 규칙·조회 포트 `FamilyMemberDirectory`/`DeviceTokenDirectory` Protocol만), 리포지토리와 엮는 FastAPI 의존성(`require_family`/`require_device`/`require_principal`/`require_roles`)은 `core_service/auth_deps.py`(최상위 조립 모듈, `main.py`/`model_registry`처럼 `modules` import 허용)로 이동. 라우터는 인증 심볼을 전부 `auth_deps`에서 가져온다. contract ④의 남은 예외는 `model_registry` 1건뿐. 실 인프라 e2e 17/17·13/13·9/9 재확인.
 
-### 11.1 File Structure (실제 구현 — v0.57 기준 재검증)
+### 11.1 File Structure (실제 구현 — v0.59 기준 재검증)
 
 ```
 silveryarn/
 ├── apps/
 │   ├── mobile/             # 온디바이스 앱 (Kotlin, 설치모드 자동분기 포함)
 │   │   └── app/src/main/java/com/silveryarn/mobile/
-│   │       ├── auth/ installmode/ local/ ondevice/{vad,stt,slm,tts}/ onboarding/ sync/
-│   │       └── presentation/{companion,onboarding,sync,settings}/   # 2026-09-13: 하단 4탭 제거,
+│   │       ├── auth/ installmode/ local/ ondevice/{vad,stt,slm,tts}/ onboarding/ sync/ photos/
+│   │       │   #   photos/ — 2026-09-14 신규(PhotosApi·PhotoUploadService, decisions.md #10)
+│   │       └── presentation/{companion,onboarding,sync,settings,photos}/   # 2026-09-13: 하단 4탭 제거,
 │   │           #   {assistant,author,care,home} → companion/ 하나로 통합(decisions.md #66~#68)
+│   │           #   presentation/photos/ — 2026-09-14 신규, M-05 "사진 추가하기"(decisions.md #10)
 │   ├── web/                # 자서전 사용자·가족 웹 콘솔 (Next.js App Router)
 │   └── admin/              # 관리자 콘솔 (Next.js App Router)
 ├── services/
@@ -998,6 +1000,7 @@ silveryarn/
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.59 | 2026-09-14 | **모바일 "사진 추가하기"(M-05) 신규**(사용자 요청, report.md §7 다음 사이클 권고 1순위) — §5.1 화면 인벤토리에 이름만 있고 실제 화면이 없던 유일한 항목을 구현. decisions.md #10을 그대로 구현: 카메라 즉시촬영(`ActivityResultContracts.TakePicture` + `FileProvider`, CAMERA 런타임 권한 불요)·갤러리 선택(`PickVisualMedia`) 모두 지원, 업로드 전 클라이언트 리사이즈(장변 1600px)·JPEG 80% 압축(`PhotoUploadService`). sync-contract.md §4 Presigned URL 3단계를 어르신 본인 기기(Device Token, `uploader_type=self`)로 수행 — apps/web W-05(가족용 업로드)와 백엔드 엔드포인트를 공유하되 인증 경로만 다름, 새 서버 코드 0줄. 신규 발견: 온보딩이 `POST /users` 응답의 `user_id`를 3연쇄 동안만 변수로 들고 있다가 버려서 기기가 자기 계정을 몰랐다 — `device_state.user_id`(mobile-schema.md v0.12) 신규 컬럼으로 영속화(`user_name`, v0.10과 같은 유형의 누락). apps/mobile `presentation/photos/PhotoUploadScreen.kt` + `photos/{PhotosApi,PhotoUploadService}.kt` 신규, `AppShell`에 "설정"과 대칭인 "📷 사진 추가" 진입점(설치모드 무관 항상 노출) 추가. §11.1 모바일 트리·structure.md §3 동시 갱신(L9 교훈 적용 — 문서 드리프트를 뒤늦게 발견하기 전에 같은 PR에서 미리 반영) | NUBiz AX Initiative (사용자 결정) |
 | 0.58 | 2026-09-13 | **웹 실 인증 세션 연결(사용자 결정 — report.md 다음 사이클 후보 3건 중 선택)** — 신규 `GET /me`(§4.2) — 새 조회 로직 없이 기존 `require_auth`가 이미 계산해 두던 `AuthContext.memberships`를 그대로 직렬화. apps/web `services/me.ts`(`getMyMemberships`/`resolveCurrentUserId`/`resolveCurrentMembership`)이 이를 소비해, 예전에 화면마다 `?userId=`를 사람이 직접 입력받던 임시 진입점(W-02, screen-definitions.md §0.3)을 세션 자동 해석으로 대체 — 어르신 1명 연결(파일럿 지배적 케이스)이면 URL에 어떤 식별자도 없이 곧장 대시보드로 이동. apps/web 9개 화면(dashboard/review/photo-requests/publications/notification-settings/consent/chapters/chapters/[id]/photos)이 `?userId=` 대신 `?elder=`(클릭으로만 채워짐)+`resolveCurrentUserId()`로 전환. notification-settings·consent 2개 화면은 `resolveCurrentMembership()`이 `family_member_id`까지 함께 알려줘 "구성원 먼저 선택" 1단계도 제거. apps/admin은 조사 결과 role 기반 전체 사용자 열람 구조라 이 기능 대상이 아님을 확인, 홈 화면(A-02)의 스캐폴딩 시절 문구만 정정. 백엔드 신규 코드는 API 레이어 파일 1개뿐(`modules/family_members/api/v1/me.py`) — domain/infra/service 계층 변경 없음, import-linter 4개 계약 전부 유지. 유닛테스트 2건 신규(223개) | NUBiz AX Initiative (사용자 결정) |
 | 0.57 | 2026-09-13 | **문서 정합성 전수점검(사용자 요청)** — v0.56(모바일 UI 전환) 반영 시 놓친 드리프트 2건 발견·정정: §2.11의 "구현 상태 (v0.31)" 콜아웃이 여전히 "은빛이"·"CareAgent 전용으로 스코프를 좁혔다"·"온디바이스 소비 미구현"이라고 말하고 있던 걸 발견해 정정(실제로는 `ConversationSessionController.loadPersonaContext()`가 이미 소비 중이고, 페르소나 통일로 스코프 제한 자체가 해소됨). §11.1 File Structure의 모바일 트리가 삭제된 `presentation/{assistant,author,care}`를 여전히 보여주고 있던 걸 정정(`presentation/companion/`으로). workflow-diagrams.md·sync-contract.md·glossary.md·blocked-decisions-tracker.md·CLAUDE.md·structure.md·services/backend 코드 주석 2건에 남아있던 "은빛이" 표기도 함께 "은실이"로 정정 | NUBiz AX Initiative |
 | 0.56 | 2026-09-13 | **모바일 UI 패러다임 전환 — 대화 전용 인터페이스**(사용자 요청 "어르신용 안드로이드폰 UI/UX는 대화형으로, 모든 조작이 대화로 가능해야"; decisions.md #66~#68). §2.10 페르소나를 "은실이" 하나로 통일(원안 "은빛이"에서 재명명, AuthorAgent/ScheduleAgent "미정" 해소). §2.12에 실 VAD(`AmplitudeVoiceActivityDetector`, `AudioRecord` 진폭 임계값) 구현 상태 반영 — 버튼 트리거·자동감지 트리거 두 경로가 동일한 무음 800ms 종료판정을 공유. §5.1 화면 인벤토리에서 하단 4탭(대화/자서전/일정/설정, PR #23)과 개별 화면 4종(홈·말벗돌봄·작가모드·비서모드) 표기를 `CompanionScreen` 통합 표기로 교체. 모바일 코드: `AppShell.kt`에서 `BottomTab`/`BottomNavBar` 제거, `presentation/companion/` 패키지 신규(`CompanionScreen`·`ConversationSessionController`·`CompanionStats`·`CompanionModels`), 기존 `home`/`care`/`author`/`assistant` 4개 화면 삭제. 설정은 `installMode=="normal"`일 때만 보이는 최소 텍스트 진입점으로 축소(키오스크는 원래도 잠김, decisions.md #6). 실 로컬 데이터(`unrecalled_photos.peekNext()` — 기존에 있었지만 아무 화면도 안 쓰던 훅) 최초 연결 — 은실이 인사말·사진 카드에 사용 | NUBiz AX Initiative (사용자 결정) |

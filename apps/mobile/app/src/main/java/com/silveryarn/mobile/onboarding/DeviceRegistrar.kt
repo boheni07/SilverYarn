@@ -53,6 +53,7 @@ class DeviceRegistrar(private val context: Context) {
             AppDatabase.getInstance(context).deviceStateDao().upsert(
                 DeviceStateEntity(
                     deviceId = device.id,
+                    userId = userId,
                     installMode = device.installMode,
                     registeredWifiSsid = null,
                     slmModelVersion = device.slmModelVersion,

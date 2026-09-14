@@ -9,12 +9,12 @@
 
 | Document | Status | Last Modified | Owner | Description |
 |----------|--------|---------------|-------|-------------|
-| [features/silveryarn-platform.design.md](./features/silveryarn-platform.design.md) | 🔄 In Progress | 2026-09-13 (v0.58) | NUBiz AX Initiative | 온디바이스-온프레미스 하이브리드 아키텍처, 데이터 모델, API/UI 인벤토리 — Do 단계 구현과 지속 동기화 |
+| [features/silveryarn-platform.design.md](./features/silveryarn-platform.design.md) | 🔄 In Progress | 2026-09-14 (v0.59) | NUBiz AX Initiative | 온디바이스-온프레미스 하이브리드 아키텍처, 데이터 모델, API/UI 인벤토리 — Do 단계 구현과 지속 동기화 |
 | [sync-contract.md](./sync-contract.md) | ✅ Approved | 2026-09-13 (v0.8) | NUBiz AX Initiative | 온디바이스↔서버 동기화 계약 — 비동기 처리, 엔티티별 충돌정책, Presigned URL, 증분 다운로드 |
 | [design-tokens.md](./design-tokens.md) | ✅ Approved | 2026-09-07 (v1.2) | NUBiz AX Initiative | BI 가이드 컬러/타이포 → Tailwind 토큰 매핑, WCAG AA 대비 규칙, 접근성 최소기준 |
 | [workflow-diagrams.md](./workflow-diagrams.md) | 🔄 In Progress | 2026-09-13 (v0.7) | NUBiz AX Initiative | 비즈니스/업무/프로세스 흐름도 Mermaid 21종 (흑백 고대비판) |
 | [data-classification-policy.md](./data-classification-policy.md) | ✅ Approved | 2026-09-13 (v0.1, 신규) | NUBiz AX Initiative | PII/메타데이터 4단계 분류 + 외부 통신 경계 정책 (decisions.md #58/I1 후속) |
-| [screen-definitions.md](./screen-definitions.md) | 🔄 In Progress | 2026-09-13 (v0.3) | NUBiz AX Initiative | 사용자 화면(UI/UX) 기준 화면정의서 — 모바일앱(대화 전용 UI, 4개)·웹(사용자·가족, 12개)·웹(관리자, 8개) 총 24개 화면 전수, 전체/영역별 화면 흐름도 포함 |
+| [screen-definitions.md](./screen-definitions.md) | 🔄 In Progress | 2026-09-14 (v0.4) | NUBiz AX Initiative | 사용자 화면(UI/UX) 기준 화면정의서 — 모바일앱(대화 전용 UI + 사진 추가하기, 5개)·웹(사용자·가족, 12개)·웹(관리자, 8개) 총 25개 화면 전수, 전체/영역별 화면 흐름도 포함 |
 | [cto-review-2026-09-05.md](./cto-review-2026-09-05.md) | ✅ Approved | 2026-09-06 | CTO팀(7개 관점) | 개발팀 착수회의 대비 아키텍처/인프라/보안/FE/백엔드·API/QA/PM 심사 — Blocker 28건, 전원 Go with Conditions |
 
 ---
@@ -90,3 +90,4 @@ Plan(✅) → Design(✅ 기준선 확정, Do와 병행 갱신) → Do(🔄 현�
 | 2026-09-13 | `screen-definitions.md` v0.2 — 모바일 UI 패러다임 전환(하단 4탭 제거, 은실이 대화 화면 통합) 반영, Part A 7개→4개 화면, 전체 27→24개 |
 | 2026-09-13 | **문서 정합성 전수점검(사용자 요청)** — 이 표의 스테일 버전 참조 정정(design.md v0.52→v0.56, workflow-diagrams v0.6→v0.7, sync-contract v0.7→v0.8). design.md·workflow-diagrams.md·sync-contract.md·blocked-decisions-tracker.md·glossary.md에 남아있던 페르소나 구 명칭 "은빛이"를 "은실이"로 정정(decisions.md #66), workflow-diagrams.md §19 "표시명 미정" 표기 정정 |
 | 2026-09-13 | **웹 실 인증 세션 연결(사용자 결정)** — design.md v0.57→v0.58(`GET /me` §4.2 신규 행), screen-definitions.md v0.2→v0.3(W-02를 임시 홈에서 세션 자동 연결 홈으로 재정의, W-09/W-10 구성원 선택 단계 제거 반영, A-02 배지 정정) | NUBiz AX Initiative |
+| 2026-09-14 | **모바일 "사진 추가하기"(M-05) 신규(사용자 요청)** — design.md v0.58→v0.59(§5.1/§11.1), screen-definitions.md v0.3→v0.4(Part A 4개→5개, 전체 24→25개). mobile-schema.md v0.12(device_state.user_id 신규)는 `docs/01-plan/_INDEX.md`에서 관리 | NUBiz AX Initiative |
